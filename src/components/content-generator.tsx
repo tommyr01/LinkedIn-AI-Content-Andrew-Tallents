@@ -131,61 +131,86 @@ export function ContentGenerator({ onContentSaved }: ContentGeneratorProps) {
 
       {/* Generated Content */}
       {variations.length > 0 && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Generated Variations</h3>
-          {variations.map((variation, index) => (
-            <Card key={index}>
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">Variation {index + 1}</CardTitle>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">
-                      Voice Score: {variation.estimated_voice_score}%
-                    </span>
+        <div className="space-y-6">
+          <div className="text-center">
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">Generated Content</h3>
+            <p className="text-gray-600">Choose your favorite variation and copy it to LinkedIn</p>
+          </div>
+          
+          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-1">
+            {variations.map((variation, index) => (
+              <Card key={index} className="border-2 hover:border-blue-200 transition-colors">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
+                        {index + 1}
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg text-gray-900">Variation {index + 1}</CardTitle>
+                        <p className="text-sm text-gray-500">Voice Score: {variation.estimated_voice_score}%</p>
+                      </div>
+                    </div>
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleCopyToClipboard(variation.content)}
-                        title="Copy content only"
+                        className="hover:bg-blue-50 hover:border-blue-300"
                       >
                         <Copy className="h-4 w-4 mr-1" />
-                        Copy
+                        Copy Post
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleCopyWithHashtags(variation.content, variation.hashtags)}
-                        title="Copy content with hashtags"
+                        className="hover:bg-green-50 hover:border-green-300"
                       >
                         <Copy className="h-4 w-4 mr-1" />
-                        + Tags
+                        Copy + Tags
                       </Button>
                     </div>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="bg-muted p-4 rounded-lg">
-                    <p className="whitespace-pre-wrap text-sm">{variation.content}</p>
-                  </div>
-                  {variation.hashtags.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {variation.hashtags.map((hashtag, i) => (
-                        <span
-                          key={i}
-                          className="bg-primary/10 text-primary px-2 py-1 rounded-full text-xs"
-                        >
-                          {hashtag}
-                        </span>
-                      ))}
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {/* Content */}
+                    <div className="bg-white border-2 border-gray-100 rounded-lg p-6 shadow-sm">
+                      <div className="prose prose-sm max-w-none">
+                        <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
+                          {variation.content}
+                        </p>
+                      </div>
                     </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                    
+                    {/* Hashtags */}
+                    {variation.hashtags.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-medium text-gray-700">Suggested Hashtags:</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {variation.hashtags.map((hashtag, i) => (
+                            <span
+                              key={i}
+                              className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-medium border border-blue-200"
+                            >
+                              {hashtag}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          
+          <div className="text-center">
+            <p className="text-sm text-gray-500">
+              💡 Tip: "Copy Post" gives you just the content, "Copy + Tags" includes hashtags
+            </p>
+          </div>
         </div>
       )}
     </div>
