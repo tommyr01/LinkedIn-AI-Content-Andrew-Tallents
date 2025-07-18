@@ -114,6 +114,46 @@ export class LindyClient {
   }
 }
 
+// Webhook response handlers
+export const handleLindyWebhook = async (request: Request): Promise<Response> => {
+  try {
+    const body = await request.json()
+    
+    // Handle different webhook types
+    switch (body.type) {
+      case 'linkedin.post.completed':
+        // Handle successful post
+        console.log('LinkedIn post completed:', body.data)
+        break
+      case 'linkedin.post.failed':
+        // Handle failed post
+        console.error('LinkedIn post failed:', body.error)
+        break
+      case 'linkedin.comment.completed':
+        // Handle successful comment
+        console.log('LinkedIn comment completed:', body.data)
+        break
+      case 'linkedin.comment.failed':
+        // Handle failed comment
+        console.error('LinkedIn comment failed:', body.error)
+        break
+      default:
+        console.warn('Unknown webhook type:', body.type)
+    }
+
+    return new Response(JSON.stringify({ success: true }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    })
+  } catch (error) {
+    console.error('Webhook handler error:', error)
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    })
+  }
+}
+
 // Utility functions
 export const createLindyClient = (webhookUrl?: string, token?: string) => {
   const baseUrl = webhookUrl || process.env.LINDY_WEBHOOK_URL || ''

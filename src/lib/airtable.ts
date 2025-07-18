@@ -11,7 +11,7 @@ export const ContentPostSchema = z.object({
     'Status': z.enum(['Draft', 'Review', 'Approved', 'Published']).optional(),
     'Hashtags': z.array(z.string()).optional(),
     'Scheduled Date': z.string().optional(),
-    'Created By': z.enum(['Andrew', 'Erska']).optional(),
+    'Created By': z.enum(['Andrew', 'Erska', 'AI Assistant']).optional(),
     'Views': z.number().optional(),
     'Likes': z.number().optional(),
     'Comments': z.number().optional(),
@@ -44,11 +44,19 @@ export class AirtableClient {
     } = {}
   ): Promise<ContentPost[]> {
     try {
-      const records = await this.base(this.tableId).select({
+      const selectOptions: any = {
         maxRecords: options.maxRecords || 100,
-        filterByFormula: options.filterByFormula,
-        sort: options.sort
-      }).all()
+      }
+      
+      if (options.filterByFormula) {
+        selectOptions.filterByFormula = options.filterByFormula
+      }
+      
+      if (options.sort) {
+        selectOptions.sort = options.sort
+      }
+      
+      const records = await this.base(this.tableId).select(selectOptions).all()
 
       return records.map(record => ({
         id: record.id,
