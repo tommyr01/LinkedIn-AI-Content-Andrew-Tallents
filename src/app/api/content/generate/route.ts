@@ -94,26 +94,8 @@ export async function POST(request: NextRequest) {
       // Continue without Airtable integration
     }
     
-    // Save to Airtable if available
-    if (airtableClient) {
-      const savePromises = parsedResponse.variations.map(async (variation: any) => {
-        try {
-          await airtableClient.createContentPost({
-            'Content': variation.content,
-            'Post Type': postType,
-            'Status': 'Draft',
-            'Hashtags': variation.hashtags || [],
-            'Created By': 'AI Assistant',
-            'Created': new Date().toISOString(),
-          })
-        } catch (error) {
-          console.error('Error saving generated content to Airtable:', error)
-        }
-      })
-
-      // Don't await these saves to avoid blocking the response
-      Promise.all(savePromises)
-    }
+    // Skip Airtable saving - just return the generated content
+    console.log('Generated content variations:', parsedResponse.variations.length)
 
     return NextResponse.json(parsedResponse)
 

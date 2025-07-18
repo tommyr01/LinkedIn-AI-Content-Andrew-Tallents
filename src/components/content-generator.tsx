@@ -61,36 +61,13 @@ export function ContentGenerator({ onContentSaved }: ContentGeneratorProps) {
 
   const handleCopyToClipboard = (content: string) => {
     navigator.clipboard.writeText(content)
-    toast.success("Content copied to clipboard")
+    toast.success("Content copied to clipboard!")
   }
 
-  const handleSaveToAirtable = async (content: string, hashtags: string[]) => {
-    try {
-      const response = await fetch('/api/airtable/posts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          content,
-          hashtags,
-          postType,
-          status: 'Draft',
-          createdBy: 'AI Assistant'
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to save to Airtable')
-      }
-
-      toast.success("Content saved to Airtable")
-      onContentSaved?.(content)
-
-    } catch (error) {
-      console.error('Error saving content:', error)
-      toast.error('Failed to save content')
-    }
+  const handleCopyWithHashtags = (content: string, hashtags: string[]) => {
+    const fullContent = `${content}\n\n${hashtags.join(' ')}`
+    navigator.clipboard.writeText(fullContent)
+    toast.success("Content with hashtags copied!")
   }
 
   return (
@@ -170,15 +147,19 @@ export function ContentGenerator({ onContentSaved }: ContentGeneratorProps) {
                         variant="outline"
                         size="sm"
                         onClick={() => handleCopyToClipboard(variation.content)}
+                        title="Copy content only"
                       >
-                        <Copy className="h-4 w-4" />
+                        <Copy className="h-4 w-4 mr-1" />
+                        Copy
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleSaveToAirtable(variation.content, variation.hashtags)}
+                        onClick={() => handleCopyWithHashtags(variation.content, variation.hashtags)}
+                        title="Copy content with hashtags"
                       >
-                        <Save className="h-4 w-4" />
+                        <Copy className="h-4 w-4 mr-1" />
+                        + Tags
                       </Button>
                     </div>
                   </div>
