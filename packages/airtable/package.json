@@ -1,0 +1,21 @@
+{
+  "name": "@linkedin-automation/airtable",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Airtable integration for LinkedIn automation tool",
+  "main": "index.ts",
+  "scripts": {
+    "dev": "tsup src/index.ts --watch",
+    "build": "tsup src/index.ts",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "airtable": "^0.12.2",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.3"
+  }
+}
