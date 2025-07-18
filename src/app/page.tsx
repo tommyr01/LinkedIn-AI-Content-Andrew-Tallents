@@ -4,6 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ArrowRight, Linkedin, Bot, Zap } from 'lucide-react'
 
 export default function HomePage() {
+  console.log('HomePage rendering at:', new Date().toISOString())
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="max-w-2xl w-full space-y-8">
