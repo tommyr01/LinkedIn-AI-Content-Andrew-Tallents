@@ -2,9 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { OpenAI } from 'openai'
 import { createAirtableClient } from '@/lib/airtable'
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+// Initialize OpenAI client only when needed to avoid build-time errors
+const createOpenAIClient = () => {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY environment variable is required')
+  }
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  })
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -48,6 +54,7 @@ export async function POST(request: NextRequest) {
       ]
     }`
 
+    const openai = createOpenAIClient()
     const completion = await openai.chat.completions.create({
       model: "gpt-4-turbo-preview",
       messages: [
@@ -79,25 +86,34 @@ export async function POST(request: NextRequest) {
     }
 
     // Save generated content to Airtable for tracking
-    const airtableClient = createAirtableClient()
+    let airtableClient
+    try {
+      airtableClient = createAirtableClient()
+    } catch (error) {
+      console.warn('Airtable client not available:', error)
+      // Continue without Airtable integration
+    }
     
-    const savePromises = parsedResponse.variations.map(async (variation: any) => {
-      try {
-        await airtableClient.createContentPost({
-          'Content': variation.content,
-          'Post Type': postType,
-          'Status': 'Draft',
-          'Hashtags': variation.hashtags || [],
-          'Created By': 'AI Assistant',
-          'Created': new Date().toISOString(),
-        })
-      } catch (error) {
-        console.error('Error saving generated content to Airtable:', error)
-      }
-    })
+    // Save to Airtable if available
+    if (airtableClient) {
+      const savePromises = parsedResponse.variations.map(async (variation: any) => {
+        try {
+          await airtableClient.createContentPost({
+            'Content': variation.content,
+            'Post Type': postType,
+            'Status': 'Draft',
+            'Hashtags': variation.hashtags || [],
+            'Created By': 'AI Assistant',
+            'Created': new Date().toISOString(),
+          })
+        } catch (error) {
+          console.error('Error saving generated content to Airtable:', error)
+        }
+      })
 
-    // Don't await these saves to avoid blocking the response
-    Promise.all(savePromises)
+      // Don't await these saves to avoid blocking the response
+      Promise.all(savePromises)
+    }
 
     return NextResponse.json(parsedResponse)
 
