@@ -68,16 +68,6 @@ export default function HomePage() {
           </Button>
         </div>
 
-        {/* Auto-redirect script */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              setTimeout(function() {
-                window.location.href = '/dashboard';
-              }, 3000);
-            `
-          }}
-        />
       </div>
     </div>
   )
