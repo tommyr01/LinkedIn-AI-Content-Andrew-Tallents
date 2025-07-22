@@ -263,7 +263,7 @@ Return as JSON array with this structure:
     return NextResponse.json({
       success: true,
       postId,
-      comments: comments.map((comment, index) => ({
+      comments: comments.map((comment: any, index: number) => ({
         ...comment,
         qualityScore: qualityScores[index],
         id: `comment_${Date.now()}_${index}`
