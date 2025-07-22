@@ -234,7 +234,7 @@ Return as JSON array with this structure:
     }
 
     // Calculate quality scores (simple heuristic)
-    const qualityScores = comments.map(comment => {
+    const qualityScores = comments.map((comment: { text: string; length: number }) => {
       let score = 70 // Base score
       
       // Length appropriateness
