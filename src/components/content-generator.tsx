@@ -2,14 +2,24 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
+import { Textarea } from "@/components/ui/textarea"
+import { Progress } from "@/components/ui/progress"
 import { toast } from "sonner"
-import { Sparkles, Copy, Save, Wand2 } from "lucide-react"
+import { Sparkles, Copy, Save, Wand2, TrendingUp, User, Zap } from "lucide-react"
 
 interface ContentVariation {
   content: string
   hashtags: string[]
   estimated_voice_score: number
+  approach?: string
+  tone?: string
+  wordCount?: number
 }
 
 interface ContentGeneratorProps {
@@ -19,6 +29,11 @@ interface ContentGeneratorProps {
 export function ContentGenerator({ onContentSaved }: ContentGeneratorProps) {
   const [topic, setTopic] = useState("")
   const [postType, setPostType] = useState("Thought Leadership")
+  const [tone, setTone] = useState("professional")
+  const [useAndrewVoice, setUseAndrewVoice] = useState(true)
+  const [targetLength, setTargetLength] = useState("medium")
+  const [includeHashtags, setIncludeHashtags] = useState(true)
+  const [includeCTA, setIncludeCTA] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [variations, setVariations] = useState<ContentVariation[]>([])
 
@@ -39,7 +54,12 @@ export function ContentGenerator({ onContentSaved }: ContentGeneratorProps) {
         body: JSON.stringify({
           topic,
           postType,
-          tone: 'professional',
+          tone,
+          andrewVoice: useAndrewVoice,
+          targetLength,
+          includeHashtags,
+          includeCTA,
+          variationCount: 3,
         }),
       })
 
@@ -48,8 +68,17 @@ export function ContentGenerator({ onContentSaved }: ContentGeneratorProps) {
       }
 
       const data = await response.json()
-      setVariations(data.variations || [])
-      toast.success(`Generated ${data.variations?.length || 0} variations`)
+      
+      // Enhance variations with additional metadata
+      const enhancedVariations = data.variations?.map((variation: any, index: number) => ({
+        ...variation,
+        wordCount: variation.content.split(' ').length,
+        approach: variation.approach || `Approach ${index + 1}`,
+        tone: variation.tone || tone,
+      })) || []
+
+      setVariations(enhancedVariations)
+      toast.success(`Generated ${enhancedVariations.length} variations with Andrew's voice`)
 
     } catch (error) {
       console.error('Error generating content:', error)
@@ -57,6 +86,20 @@ export function ContentGenerator({ onContentSaved }: ContentGeneratorProps) {
     } finally {
       setIsGenerating(false)
     }
+  }
+
+  const getVoiceScoreColor = (score: number) => {
+    if (score >= 85) return "text-green-600"
+    if (score >= 70) return "text-yellow-600"
+    if (score >= 50) return "text-orange-600"
+    return "text-red-600"
+  }
+
+  const getVoiceScoreBg = (score: number) => {
+    if (score >= 85) return "bg-green-100"
+    if (score >= 70) return "bg-yellow-100"
+    if (score >= 50) return "bg-orange-100"
+    return "bg-red-100"
   }
 
   const handleCopyToClipboard = (content: string) => {
@@ -80,49 +123,130 @@ export function ContentGenerator({ onContentSaved }: ContentGeneratorProps) {
             AI Content Generator
           </CardTitle>
           <CardDescription>
-            Generate LinkedIn posts in Andrew's authentic voice
+            Generate LinkedIn posts with Andrew's authentic voice and style
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
+          {/* Topic Input */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Topic or Idea</label>
-            <textarea
+            <Label htmlFor="topic">Topic or Idea</Label>
+            <Textarea
+              id="topic"
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
-              className="w-full min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              placeholder="Enter your topic or idea for the LinkedIn post..."
+              className="min-h-[100px]"
+              placeholder="Enter your topic, idea, or key message for the LinkedIn post..."
             />
           </div>
           
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Post Type</label>
-            <select
-              value={postType}
-              onChange={(e) => setPostType(e.target.value)}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-            >
-              <option>Thought Leadership</option>
-              <option>Tips</option>
-              <option>Story</option>
-              <option>Question</option>
-              <option>Announcement</option>
-            </select>
-          </div>
+          {/* Voice Settings */}
+          <Card className="border-2 border-dashed border-blue-200 bg-blue-50/50">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Voice & Style Settings
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Use Andrew's Voice</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Generate content using Andrew's authentic coaching voice and style
+                  </p>
+                </div>
+                <Switch
+                  checked={useAndrewVoice}
+                  onCheckedChange={setUseAndrewVoice}
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="postType">Post Type</Label>
+                  <Select value={postType} onValueChange={setPostType}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Thought Leadership">Thought Leadership</SelectItem>
+                      <SelectItem value="Tips">Tips & Insights</SelectItem>
+                      <SelectItem value="Story">Personal Story</SelectItem>
+                      <SelectItem value="Question">Engaging Question</SelectItem>
+                      <SelectItem value="Announcement">Announcement</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="tone">Tone</Label>
+                  <Select value={tone} onValueChange={setTone}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="professional">Professional</SelectItem>
+                      <SelectItem value="conversational">Conversational</SelectItem>
+                      <SelectItem value="inspiring">Inspiring</SelectItem>
+                      <SelectItem value="educational">Educational</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="length">Target Length</Label>
+                  <Select value={targetLength} onValueChange={setTargetLength}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="short">Short (50-100 words)</SelectItem>
+                      <SelectItem value="medium">Medium (100-200 words)</SelectItem>
+                      <SelectItem value="long">Long (200-300 words)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="hashtags"
+                      checked={includeHashtags}
+                      onCheckedChange={setIncludeHashtags}
+                    />
+                    <Label htmlFor="hashtags" className="text-sm">Include Hashtags</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="cta"
+                      checked={includeCTA}
+                      onCheckedChange={setIncludeCTA}
+                    />
+                    <Label htmlFor="cta" className="text-sm">Include Call-to-Action</Label>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           <Button 
             onClick={handleGenerate}
             disabled={isGenerating || !topic.trim()}
             className="w-full"
+            size="lg"
           >
             {isGenerating ? (
               <>
                 <Sparkles className="h-4 w-4 mr-2 animate-spin" />
-                Generating...
+                Generating Content...
               </>
             ) : (
               <>
-                <Sparkles className="h-4 w-4 mr-2" />
-                Generate Content
+                <Zap className="h-4 w-4 mr-2" />
+                Generate {useAndrewVoice ? "with Andrew's Voice" : "Professional Content"}
               </>
             )}
           </Button>
@@ -133,22 +257,40 @@ export function ContentGenerator({ onContentSaved }: ContentGeneratorProps) {
       {variations.length > 0 && (
         <div className="space-y-6">
           <div className="text-center">
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">Generated Content</h3>
-            <p className="text-gray-600">Choose your favorite variation and copy it to LinkedIn</p>
+            <h3 className="text-2xl font-bold tracking-tight mb-2">Generated Content</h3>
+            <p className="text-muted-foreground">
+              {useAndrewVoice ? "Content generated with Andrew's authentic voice" : "Professional LinkedIn content"}
+            </p>
           </div>
           
           <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-1">
             {variations.map((variation, index) => (
-              <Card key={index} className="border-2 hover:border-blue-200 transition-colors">
+              <Card key={index} className="border-2 hover:border-primary/20 transition-colors">
                 <CardHeader className="pb-4">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
+                    <div className="flex items-center gap-4">
+                      <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold">
                         {index + 1}
                       </div>
-                      <div>
-                        <CardTitle className="text-lg text-gray-900">Variation {index + 1}</CardTitle>
-                        <p className="text-sm text-gray-500">Voice Score: {variation.estimated_voice_score}%</p>
+                      <div className="space-y-1">
+                        <CardTitle className="text-lg">Variation {index + 1}</CardTitle>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs">
+                            {variation.approach}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {variation.wordCount} words
+                          </Badge>
+                          {useAndrewVoice && (
+                            <Badge 
+                              variant="outline" 
+                              className={`text-xs ${getVoiceScoreBg(variation.estimated_voice_score)} ${getVoiceScoreColor(variation.estimated_voice_score)}`}
+                            >
+                              <TrendingUp className="h-3 w-3 mr-1" />
+                              Voice: {variation.estimated_voice_score}%
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="flex gap-2">
@@ -156,60 +298,103 @@ export function ContentGenerator({ onContentSaved }: ContentGeneratorProps) {
                         variant="outline"
                         size="sm"
                         onClick={() => handleCopyToClipboard(variation.content)}
-                        className="hover:bg-blue-50 hover:border-blue-300"
                       >
                         <Copy className="h-4 w-4 mr-1" />
                         Copy Post
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleCopyWithHashtags(variation.content, variation.hashtags)}
-                        className="hover:bg-green-50 hover:border-green-300"
-                      >
-                        <Copy className="h-4 w-4 mr-1" />
-                        Copy + Tags
-                      </Button>
+                      {includeHashtags && variation.hashtags.length > 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleCopyWithHashtags(variation.content, variation.hashtags)}
+                        >
+                          <Copy className="h-4 w-4 mr-1" />
+                          Copy + Tags
+                        </Button>
+                      )}
                     </div>
                   </div>
+
+                  {/* Voice Score Progress Bar */}
+                  {useAndrewVoice && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Voice Match Score</span>
+                        <span className={getVoiceScoreColor(variation.estimated_voice_score)}>
+                          {variation.estimated_voice_score}%
+                        </span>
+                      </div>
+                      <Progress 
+                        value={variation.estimated_voice_score} 
+                        className="h-2"
+                      />
+                    </div>
+                  )}
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     {/* Content */}
-                    <div className="bg-white border-2 border-gray-100 rounded-lg p-6 shadow-sm">
+                    <div className="bg-muted/20 border rounded-lg p-6">
                       <div className="prose prose-sm max-w-none">
-                        <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
+                        <p className="leading-relaxed whitespace-pre-wrap text-foreground">
                           {variation.content}
                         </p>
                       </div>
                     </div>
                     
                     {/* Hashtags */}
-                    {variation.hashtags.length > 0 && (
-                      <div className="space-y-2">
-                        <h4 className="text-sm font-medium text-gray-700">Suggested Hashtags:</h4>
+                    {variation.hashtags.length > 0 && includeHashtags && (
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium">Suggested Hashtags:</Label>
                         <div className="flex flex-wrap gap-2">
                           {variation.hashtags.map((hashtag, i) => (
-                            <span
+                            <Badge
                               key={i}
-                              className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-medium border border-blue-200"
+                              variant="secondary"
+                              className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
+                              onClick={() => {
+                                navigator.clipboard.writeText(hashtag)
+                                toast.success(`Copied ${hashtag}`)
+                              }}
                             >
                               {hashtag}
-                            </span>
+                            </Badge>
                           ))}
                         </div>
                       </div>
                     )}
+
+                    {/* Additional Metadata */}
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground pt-2 border-t">
+                      <span>Style: {variation.tone}</span>
+                      <span>•</span>
+                      <span>Length: {targetLength}</span>
+                      {useAndrewVoice && (
+                        <>
+                          <span>•</span>
+                          <span className={getVoiceScoreColor(variation.estimated_voice_score)}>
+                            {variation.estimated_voice_score >= 85 ? "Excellent voice match" :
+                             variation.estimated_voice_score >= 70 ? "Good voice match" :
+                             variation.estimated_voice_score >= 50 ? "Fair voice match" : "Needs refinement"}
+                          </span>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             ))}
           </div>
           
-          <div className="text-center">
-            <p className="text-sm text-gray-500">
-              💡 Tip: "Copy Post" gives you just the content, "Copy + Tags" includes hashtags
+          <div className="text-center space-y-2">
+            <p className="text-sm text-muted-foreground">
+              💡 Click any hashtag to copy it individually, or use the copy buttons for full content
             </p>
+            {useAndrewVoice && (
+              <p className="text-xs text-muted-foreground">
+                Voice scores above 70% indicate strong alignment with Andrew's authentic style
+              </p>
+            )}
           </div>
         </div>
       )}

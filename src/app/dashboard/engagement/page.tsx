@@ -1,130 +1,165 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { MessageSquare, Heart, Share2, Send, Sparkles, User } from 'lucide-react'
+import { RefreshCw, Plus, Settings } from 'lucide-react'
 import { toast } from "sonner"
-
-interface ConnectionPost {
-  id: string
-  author: string
-  role: string
-  content: string
-  timeAgo: string
-  likes: number
-  comments: number
-  imageUrl?: string
-}
-
-// Mock data for demonstration
-const mockPosts: ConnectionPost[] = [
-  {
-    id: '1',
-    author: 'Sarah Johnson',
-    role: 'CEO at TechStartup Inc',
-    content: 'Just closed our Series A funding! Excited to announce we raised $10M to expand our AI-powered analytics platform. Thanks to everyone who believed in our vision!',
-    timeAgo: '2h',
-    likes: 245,
-    comments: 32
-  },
-  {
-    id: '2',
-    author: 'Michael Chen',
-    role: 'VP of Sales at Enterprise Corp',
-    content: 'Leadership tip: The best way to predict the future is to create it. What are you creating today?',
-    timeAgo: '5h',
-    likes: 189,
-    comments: 27
-  },
-  {
-    id: '3',
-    author: 'Jennifer Williams',
-    role: 'Founder at Growth Consulting',
-    content: 'Three keys to scaling your business:\n\n1. Focus on customer success\n2. Build systems, not just solutions\n3. Invest in your team\n\nWhat would you add?',
-    timeAgo: '1d',
-    likes: 567,
-    comments: 89
-  }
-]
+import { InfluencerPostsTable, type InfluencerPost } from '@/components/influencer-posts-table'
 
 export default function EngagementPage() {
-  const [selectedPost, setSelectedPost] = useState<string | null>(null)
-  const [commentText, setCommentText] = useState('')
-  const [generatingComment, setGeneratingComment] = useState(false)
+  const [posts, setPosts] = useState<InfluencerPost[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [stats, setStats] = useState({
+    totalEngagements: 0,
+    commentsPosted: 0,
+    connectionsTracked: 0
+  })
 
-  const generateComment = async (postContent: string) => {
-    setGeneratingComment(true)
+  // Fetch influencer posts from Airtable
+  const fetchPosts = async () => {
+    setIsLoading(true)
     try {
-      // In a real implementation, this would call your AI API
-      // For now, we'll simulate with a timeout
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      // In a real implementation, you'd have an API endpoint that fetches from Airtable
+      // For now, we'll create a mock fetch that simulates the real data structure
       
-      // Mock AI-generated comment
-      const suggestions = [
-        "Great insights! I particularly resonated with your point about building systems. In my experience, sustainable growth comes from repeatable processes.",
-        "Congratulations on this milestone! Your team's dedication to innovation is truly inspiring. Looking forward to seeing what you build next!",
-        "This is exactly what leadership is about - creating the vision and empowering others to achieve it. Thanks for sharing!"
+      // This would be: const response = await fetch('/api/influencers/posts')
+      // But since we haven't created that endpoint yet, we'll simulate it
+      
+      const mockInfluencerPosts: InfluencerPost[] = [
+        {
+          id: 'rec1234567890',
+          influencerName: 'Sarah Johnson',
+          influencerCompany: 'TechStartup Inc',
+          content: 'Just closed our Series A funding! Excited to announce we raised $10M to expand our AI-powered analytics platform. The journey has been incredible - from a team of 3 to 25 amazing people who believe in our vision of making data accessible to everyone.\n\nSpecial thanks to our investors, advisors, and early customers who took a chance on us. This is just the beginning! 🚀\n\n#SeriesA #AI #DataAnalytics #StartupLife',
+          postedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
+          linkedinPostId: 'activity-7123456789',
+          likesCount: 245,
+          commentsCount: 32,
+          engagementStatus: 'Not Engaged',
+          scrapedAt: new Date().toISOString(),
+          postUrl: 'https://linkedin.com/posts/sarah-johnson_seriesa-ai-dataanalytics-activity-7123456789'
+        },
+        {
+          id: 'rec1234567891',
+          influencerName: 'Michael Chen',
+          influencerCompany: 'Enterprise Corp',
+          content: 'Leadership tip for the week: The best way to predict the future is to create it.\n\nI\'ve been reflecting on this quote by Peter Drucker lately. In my 15 years leading sales teams, I\'ve seen that the most successful leaders don\'t wait for opportunities - they create them.\n\nThree ways to "create your future":\n1. Set bold, specific goals (not just "grow revenue")\n2. Take calculated risks daily\n3. Invest in your team\'s growth\n\nWhat are you creating today? 💪\n\n#Leadership #SalesLeadership #Growth #Mindset',
+          postedAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), // 5 hours ago
+          linkedinPostId: 'activity-7123456790',
+          likesCount: 189,
+          commentsCount: 27,
+          engagementStatus: 'Commented',
+          scrapedAt: new Date().toISOString(),
+          postUrl: 'https://linkedin.com/posts/michael-chen_leadership-salesleadership-growth-activity-7123456790'
+        },
+        {
+          id: 'rec1234567892',
+          influencerName: 'Jennifer Williams',
+          influencerCompany: 'Growth Consulting',
+          content: 'After working with 50+ scaling companies, here are the THREE keys to sustainable growth:\n\n🎯 1. Focus on customer SUCCESS, not just acquisition\n→ It costs 5x more to acquire than retain\n→ Happy customers become your best salespeople\n→ Churn kills growth faster than slow acquisition\n\n⚙️ 2. Build SYSTEMS, not just solutions\n→ Document processes before you need them\n→ Automate repetitive tasks early\n→ Create workflows that work without you\n\n👥 3. Invest in your TEAM\'s growth\n→ Your people are your competitive advantage\n→ Skills gaps compound over time\n→ Culture scales, tactics don\'t\n\nWhat would you add to this list? I\'d love to hear your thoughts! 👇\n\n#ScaleUp #BusinessGrowth #Leadership #Systems #CustomerSuccess',
+          postedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
+          linkedinPostId: 'activity-7123456791',
+          likesCount: 567,
+          commentsCount: 89,
+          engagementStatus: 'Not Engaged',
+          scrapedAt: new Date().toISOString(),
+          postUrl: 'https://linkedin.com/posts/jennifer-williams_scaleup-businessgrowth-leadership-activity-7123456791'
+        },
+        {
+          id: 'rec1234567893',
+          influencerName: 'David Rodriguez',
+          influencerCompany: 'Innovation Labs',
+          content: 'Unpopular opinion: Most "AI transformations" fail because companies focus on the technology, not the transformation.\n\nI\'ve seen this pattern dozens of times:\n❌ Company buys AI tools\n❌ Expects immediate ROI\n❌ Doesn\'t change processes\n❌ Ignores change management\n❌ Wonders why it didn\'t work\n\nSuccessful AI adoption looks different:\n✅ Start with the problem, not the tool\n✅ Redesign workflows around AI capabilities\n✅ Train people on new ways of working\n✅ Measure impact, not just usage\n✅ Iterate based on real results\n\nAI is a multiplier, not magic. It amplifies what you already do well (and poorly).\n\nWhat\'s your experience been with AI implementation?\n\n#AI #DigitalTransformation #ChangeManagement #Innovation #Leadership',
+          postedAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(), // 8 hours ago
+          linkedinPostId: 'activity-7123456792',
+          likesCount: 123,
+          commentsCount: 45,
+          engagementStatus: 'Liked',
+          scrapedAt: new Date().toISOString(),
+          postUrl: 'https://linkedin.com/posts/david-rodriguez_ai-digitaltransformation-changemanagement-activity-7123456792'
+        }
       ]
       
-      setCommentText(suggestions[Math.floor(Math.random() * suggestions.length)])
-      toast.success('Comment suggestion generated!')
+      setPosts(mockInfluencerPosts)
+
+      // Update stats based on posts
+      setStats({
+        totalEngagements: mockInfluencerPosts.filter(p => p.engagementStatus !== 'Not Engaged').length,
+        commentsPosted: mockInfluencerPosts.filter(p => p.engagementStatus === 'Commented').length,
+        connectionsTracked: new Set(mockInfluencerPosts.map(p => p.influencerName)).size
+      })
+      
+      toast.success(`Loaded ${mockInfluencerPosts.length} recent posts`)
+
     } catch (error) {
-      toast.error('Failed to generate comment suggestion')
+      console.error('Error fetching posts:', error)
+      toast.error('Failed to load influencer posts')
     } finally {
-      setGeneratingComment(false)
+      setIsLoading(false)
     }
   }
 
-  const postComment = async () => {
-    if (!commentText.trim()) {
-      toast.error('Please enter a comment')
-      return
-    }
-
+  // Trigger influencer post scraping
+  const triggerScraping = async () => {
     try {
-      const response = await fetch('/api/linkedin/comment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          postUrl: `https://linkedin.com/posts/${selectedPost}`,
-          comment: commentText,
-        }),
+      const response = await fetch('/api/influencers/webhook', {
+        method: 'GET'
       })
 
       if (response.ok) {
-        toast.success('Comment posted successfully!')
-        setCommentText('')
-        setSelectedPost(null)
+        const result = await response.json()
+        toast.success(`Scraping started for ${result.influencerCount} influencers`)
+        
+        // Refresh posts after a delay to show new results
+        setTimeout(() => {
+          fetchPosts()
+        }, 5000)
       } else {
-        toast.error('Failed to post comment')
+        toast.error('Failed to trigger scraping')
       }
     } catch (error) {
-      toast.error('Error posting comment')
+      console.error('Error triggering scraping:', error)
+      toast.error('Error starting scraping process')
     }
+  }
+
+  // Load posts on component mount
+  useEffect(() => {
+    fetchPosts()
+  }, [])
+
+  const handleRefresh = () => {
+    fetchPosts()
   }
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">
       <div className="flex items-center justify-between space-y-2">
         <h2 className="text-3xl font-bold tracking-tight">Engagement Hub</h2>
-        <Button>
-          <MessageSquare className="mr-2 h-4 w-4" />
-          Track New Connection
-        </Button>
+        <div className="flex items-center space-x-2">
+          <Button variant="outline" onClick={triggerScraping}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Scrape Posts
+          </Button>
+          <Button variant="outline">
+            <Settings className="mr-2 h-4 w-4" />
+            Manage Influencers
+          </Button>
+        </div>
       </div>
 
+      {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Engagements</CardTitle>
-            <MessageSquare className="h-4 w-4 text-muted-foreground" />
+            <RefreshCw className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">148</div>
+            <div className="text-2xl font-bold">{stats.totalEngagements}</div>
             <p className="text-xs text-muted-foreground">
-              +12% from last week
+              Posts engaged with
             </p>
           </CardContent>
         </Card>
@@ -132,118 +167,36 @@ export default function EngagementPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Comments Posted</CardTitle>
-            <Send className="h-4 w-4 text-muted-foreground" />
+            <Plus className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">43</div>
+            <div className="text-2xl font-bold">{stats.commentsPosted}</div>
             <p className="text-xs text-muted-foreground">
-              This week
+              This period
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Connections Tracked</CardTitle>
-            <User className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Influencers Tracked</CardTitle>
+            <Settings className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">24</div>
+            <div className="text-2xl font-bold">{stats.connectionsTracked}</div>
             <p className="text-xs text-muted-foreground">
-              Key relationships
+              Active influencers
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Connection Posts Feed */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Posts from Key Connections</CardTitle>
-          <CardDescription>
-            Engage with posts from your tracked connections
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {mockPosts.map((post) => (
-            <div key={post.id} className="space-y-4 border-b pb-6 last:border-0">
-              <div className="flex items-start space-x-4">
-                <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center">
-                  <User className="h-6 w-6 text-gray-600" />
-                </div>
-                <div className="flex-1 space-y-2">
-                  <div>
-                    <p className="font-semibold">{post.author}</p>
-                    <p className="text-sm text-muted-foreground">{post.role}</p>
-                    <p className="text-xs text-muted-foreground">{post.timeAgo}</p>
-                  </div>
-                  <p className="text-sm">{post.content}</p>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Heart className="h-4 w-4" />
-                      {post.likes}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <MessageSquare className="h-4 w-4" />
-                      {post.comments}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {selectedPost === post.id ? (
-                <div className="ml-16 space-y-3">
-                  <Textarea
-                    placeholder="Write a thoughtful comment..."
-                    value={commentText}
-                    onChange={(e) => setCommentText(e.target.value)}
-                    rows={3}
-                  />
-                  <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => generateComment(post.content)}
-                      disabled={generatingComment}
-                    >
-                      <Sparkles className="mr-2 h-4 w-4" />
-                      {generatingComment ? 'Generating...' : 'Generate Comment'}
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={postComment}
-                      disabled={!commentText.trim()}
-                    >
-                      Post Comment
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        setSelectedPost(null)
-                        setCommentText('')
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="ml-16">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setSelectedPost(post.id)}
-                  >
-                    <MessageSquare className="mr-2 h-4 w-4" />
-                    Comment
-                  </Button>
-                </div>
-              )}
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+      {/* Influencer Posts Table */}
+      <InfluencerPostsTable
+        posts={posts}
+        onRefresh={handleRefresh}
+        isLoading={isLoading}
+      />
     </div>
   )
 }
