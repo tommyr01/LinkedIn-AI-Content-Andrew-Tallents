@@ -72,13 +72,28 @@ export function ContentGenerator({ onContentSaved }: ContentGeneratorProps) {
       // Send data to webhook
       const webhookUrl = "https://t01rich.app.n8n.cloud/webhook-test/4da72753-ab1b-4973-917f-23e6bdc97d23"
       
+      // Format the super prompt template with the user's input
+      const superPromptTemplate = `Act as an informed ${selectedPlatform.charAt(0).toUpperCase() + selectedPlatform.slice(1)} expert specializing in content for **Target Avatar**. You will be provided with specific details about a news topic relevant to this audience. You must only provide the output required. Do not include any other additional information about how or why the response is good. Provide only the output according to the below guidelines.
+
+**Mandatory Tone of Voice:**
+You must consult the tone of voice guidelines in all of the responses you create. The required tone is: **"${voiceGuidelines}"**. You must write by those guidelines. Before you write any text, thoroughly embody this tone.
+
+**Output Format:**
+Please provide your response in **plain text format only**, without any special formatting elements such as hashtags, asterisks, or other markdown syntax in the main body. Use clear and concise language, and structure your response using paragraphs. Emojis may be used appropriately for emphasis and engagement if they fit the specified tone of voice.
+
+**Input Topic Data (Use this information to craft the post):**
+Topic: ${topic}
+Post Type: ${postType}
+Platform: ${selectedPlatform.charAt(0).toUpperCase() + selectedPlatform.slice(1)}`
+      
       // Data to send to webhook
       const webhookData = {
         topic,
         voiceGuidelines,
         platform: selectedPlatform,
         postType,
-        tone
+        tone,
+        superPrompt: superPromptTemplate
       }
       
       toast.loading("Sending data to webhook...")
