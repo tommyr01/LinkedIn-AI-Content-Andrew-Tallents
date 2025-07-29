@@ -70,13 +70,15 @@ export function ContentGenerator({ onContentSaved }: ContentGeneratorProps) {
     setIsSendingWebhook(true)
     try {
       // Send data to webhook
-      const webhookUrl = "https://t01rich.app.n8n.cloud/webhook/4da72753-ab1b-4973-917f-23e6bdc97d23"
+      const webhookUrl = "https://t01rich.app.n8n.cloud/webhook-test/4da72753-ab1b-4973-917f-23e6bdc97d23"
       
       // Data to send to webhook
       const webhookData = {
         topic,
         voiceGuidelines,
-        platform: selectedPlatform
+        platform: selectedPlatform,
+        postType,
+        tone
       }
       
       toast.loading("Sending data to webhook...")
