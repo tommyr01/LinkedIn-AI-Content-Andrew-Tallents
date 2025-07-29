@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { Progress } from "@/components/ui/progress"
 import { toast } from "sonner"
-import { Sparkles, Copy, Save, Wand2, TrendingUp, User, Zap } from "lucide-react"
+import { Sparkles, Copy, Save, Wand2, TrendingUp, User, Zap, Linkedin, Twitter, Instagram } from "lucide-react"
 
 interface ContentVariation {
   content: string
@@ -36,6 +36,29 @@ export function ContentGenerator({ onContentSaved }: ContentGeneratorProps) {
   const [includeCTA, setIncludeCTA] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [variations, setVariations] = useState<ContentVariation[]>([])
+  const [voiceGuidelines, setVoiceGuidelines] = useState<string>("")
+  const [isSavingVoice, setIsSavingVoice] = useState(false)
+  const [selectedPlatform, setSelectedPlatform] = useState<string>("linkedin")
+
+  // Load saved voice guidelines on component mount
+  useEffect(() => {
+    const savedVoiceGuidelines = localStorage.getItem('voiceGuidelines')
+    if (savedVoiceGuidelines) {
+      setVoiceGuidelines(savedVoiceGuidelines)
+    }
+  }, [])
+
+  const handleSaveVoiceGuidelines = () => {
+    setIsSavingVoice(true)
+    try {
+      localStorage.setItem('voiceGuidelines', voiceGuidelines)
+      toast.success("Voice guidelines saved successfully")
+    } catch (error) {
+      toast.error("Failed to save voice guidelines")
+    } finally {
+      setIsSavingVoice(false)
+    }
+  }
 
   const handleGenerate = async () => {
     if (!topic.trim()) {
@@ -46,6 +69,32 @@ export function ContentGenerator({ onContentSaved }: ContentGeneratorProps) {
     setIsGenerating(true)
     
     try {
+      // Send data to webhook
+      const webhookUrl = "https://t01rich.app.n8n.cloud/webhook/4da72753-ab1b-4973-917f-23e6bdc97d23"
+      
+      // Data to send to webhook
+      const webhookData = {
+        topic,
+        voiceGuidelines,
+        platform: selectedPlatform
+      }
+      
+      // Send data to webhook
+      const webhookResponse = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(webhookData),
+      })
+      
+      if (!webhookResponse.ok) {
+        console.warn('Webhook call failed, but continuing with content generation')
+      } else {
+        console.log('Webhook call successful')
+      }
+
+      // Continue with content generation
       const response = await fetch('/api/content/generate', {
         method: 'POST',
         headers: {
@@ -60,6 +109,8 @@ export function ContentGenerator({ onContentSaved }: ContentGeneratorProps) {
           includeHashtags,
           includeCTA,
           variationCount: 3,
+          voiceGuidelines: voiceGuidelines.trim() ? voiceGuidelines : undefined,
+          platform: selectedPlatform,
         }),
       })
 
@@ -137,6 +188,62 @@ export function ContentGenerator({ onContentSaved }: ContentGeneratorProps) {
               className="min-h-[100px]"
               placeholder="Enter your topic, idea, or key message for the LinkedIn post..."
             />
+          </div>
+          
+          {/* Tone of Voice Guidelines */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="voiceGuidelines">Tone of Voice</Label>
+              <Button 
+                onClick={handleSaveVoiceGuidelines} 
+                variant="outline" 
+                size="sm"
+                disabled={isSavingVoice}
+              >
+                {isSavingVoice ? 'Saving...' : 'Save'}
+              </Button>
+            </div>
+            <Textarea
+              id="voiceGuidelines"
+              value={voiceGuidelines}
+              onChange={(e) => setVoiceGuidelines(e.target.value)}
+              className="min-h-[80px] resize-y"
+              placeholder="Enter tone of voice guidelines or examples to help shape AI content generation..."
+            />
+          </div>
+          
+          {/* Social Media Platform Selection */}
+          <div className="space-y-2">
+            <Label>Social Media Platform</Label>
+            <div className="grid grid-cols-3 gap-4">
+              <Button
+                type="button"
+                variant={selectedPlatform === "linkedin" ? "default" : "outline"}
+                className={`flex items-center gap-2 ${selectedPlatform === "linkedin" ? "bg-blue-600 hover:bg-blue-700" : ""}`}
+                onClick={() => setSelectedPlatform("linkedin")}
+              >
+                <Linkedin className="h-4 w-4" />
+                LinkedIn
+              </Button>
+              <Button
+                type="button"
+                variant={selectedPlatform === "twitter" ? "default" : "outline"}
+                className={`flex items-center gap-2 ${selectedPlatform === "twitter" ? "bg-sky-500 hover:bg-sky-600" : ""}`}
+                onClick={() => setSelectedPlatform("twitter")}
+              >
+                <Twitter className="h-4 w-4" />
+                X.com
+              </Button>
+              <Button
+                type="button"
+                variant={selectedPlatform === "instagram" ? "default" : "outline"}
+                className={`flex items-center gap-2 ${selectedPlatform === "instagram" ? "bg-pink-600 hover:bg-pink-700" : ""}`}
+                onClick={() => setSelectedPlatform("instagram")}
+              >
+                <Instagram className="h-4 w-4" />
+                Instagram
+              </Button>
+            </div>
           </div>
           
           {/* Voice Settings */}
@@ -247,6 +354,7 @@ export function ContentGenerator({ onContentSaved }: ContentGeneratorProps) {
               <>
                 <Zap className="h-4 w-4 mr-2" />
                 Generate {useAndrewVoice ? "with Andrew's Voice" : "Professional Content"}
+                {selectedPlatform && ` for ${selectedPlatform.charAt(0).toUpperCase() + selectedPlatform.slice(1)}`}
               </>
             )}
           </Button>

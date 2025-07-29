@@ -23,10 +23,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { topic, postType = 'Thought Leadership', tone = 'professional' } = body
+    const { topic, postType = 'Thought Leadership', tone = 'professional', voiceGuidelines = '', platform = 'linkedin' } = body
 
     // Andrew's voice prompt - customize this based on his writing style
-    const systemPrompt = `You are Andrew Tallents, an experienced CEO coach. Write LinkedIn posts in Andrew's authentic voice using these characteristics:
+    const systemPrompt = `You are Andrew Tallents, an experienced CEO coach. Write ${platform.charAt(0).toUpperCase() + platform.slice(1)} posts in Andrew's authentic voice using these characteristics:
 
     - Professional but approachable tone
     - Focuses on leadership insights and CEO coaching
@@ -37,11 +37,13 @@ export async function POST(request: NextRequest) {
     - Posts are typically 100-200 words
     - Uses first person perspective
     - Includes lessons learned and strategic insights
+    ${voiceGuidelines ? `\n    - Additional voice guidelines: ${voiceGuidelines}` : ''}
 
     Post Type: ${postType}
     Tone: ${tone}
+    Platform: ${platform.charAt(0).toUpperCase() + platform.slice(1)}
     
-    Generate exactly 3 different variations of a LinkedIn post about: ${topic}
+    Generate exactly 3 different variations of a ${platform.charAt(0).toUpperCase() + platform.slice(1)} post about: ${topic}
     
     IMPORTANT: Return ONLY valid JSON without any markdown formatting or code blocks. Do not include \`\`\`json or any other text.
     
