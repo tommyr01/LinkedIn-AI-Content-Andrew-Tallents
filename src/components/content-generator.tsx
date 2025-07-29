@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { Progress } from "@/components/ui/progress"
 import { toast } from "sonner"
-import { Sparkles, Copy, Save, Wand2, TrendingUp, User, Zap, Linkedin, Twitter, Instagram } from "lucide-react"
+import { Sparkles, Copy, Save, Wand2, TrendingUp, User, Zap, Linkedin, Twitter, Instagram, Send } from "lucide-react"
 
 interface ContentVariation {
   content: string
@@ -39,6 +39,7 @@ export function ContentGenerator({ onContentSaved }: ContentGeneratorProps) {
   const [voiceGuidelines, setVoiceGuidelines] = useState<string>("")
   const [isSavingVoice, setIsSavingVoice] = useState(false)
   const [selectedPlatform, setSelectedPlatform] = useState<string>("linkedin")
+  const [isSendingWebhook, setIsSendingWebhook] = useState(false)
 
   // Load saved voice guidelines on component mount
   useEffect(() => {
@@ -59,15 +60,14 @@ export function ContentGenerator({ onContentSaved }: ContentGeneratorProps) {
       setIsSavingVoice(false)
     }
   }
-
-  const handleGenerate = async () => {
+  
+  const sendToWebhook = async () => {
     if (!topic.trim()) {
-      toast.error("Please enter a topic")
+      toast.error("Please enter a topic first")
       return
     }
-
-    setIsGenerating(true)
     
+    setIsSendingWebhook(true)
     try {
       // Send data to webhook
       const webhookUrl = "https://t01rich.app.n8n.cloud/webhook/4da72753-ab1b-4973-917f-23e6bdc97d23"
@@ -79,6 +79,8 @@ export function ContentGenerator({ onContentSaved }: ContentGeneratorProps) {
         platform: selectedPlatform
       }
       
+      toast.loading("Sending data to webhook...")
+      
       // Send data to webhook
       const webhookResponse = await fetch(webhookUrl, {
         method: 'POST',
@@ -89,11 +91,29 @@ export function ContentGenerator({ onContentSaved }: ContentGeneratorProps) {
       })
       
       if (!webhookResponse.ok) {
-        console.warn('Webhook call failed, but continuing with content generation')
+        toast.error("Failed to send data to webhook")
+        console.error('Webhook call failed')
       } else {
+        toast.success("Data sent to webhook successfully")
         console.log('Webhook call successful')
       }
+    } catch (error) {
+      toast.error("Error sending data to webhook")
+      console.error('Error sending to webhook:', error)
+    } finally {
+      setIsSendingWebhook(false)
+    }
+  }
 
+  const handleGenerate = async () => {
+    if (!topic.trim()) {
+      toast.error("Please enter a topic")
+      return
+    }
+
+    setIsGenerating(true)
+    
+    try {
       // Continue with content generation
       const response = await fetch('/api/content/generate', {
         method: 'POST',
@@ -242,6 +262,27 @@ export function ContentGenerator({ onContentSaved }: ContentGeneratorProps) {
               >
                 <Instagram className="h-4 w-4" />
                 Instagram
+              </Button>
+            </div>
+            <div className="mt-4">
+              <Button 
+                onClick={sendToWebhook}
+                disabled={isSendingWebhook || !topic.trim()}
+                className="w-full"
+                variant="outline"
+                size="lg"
+              >
+                {isSendingWebhook ? (
+                  <>
+                    <Sparkles className="h-4 w-4 mr-2 animate-spin" />
+                    Sending Data to Webhook...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4 mr-2" />
+                    Send Data to Webhook
+                  </>
+                )}
               </Button>
             </div>
           </div>
