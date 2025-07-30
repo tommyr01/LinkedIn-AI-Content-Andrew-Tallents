@@ -6,9 +6,13 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export async function POST(request: NextRequest) {
+  let usernameToUse = ''
+  let createRecord = true
+  
   try {
     const body = await request.json()
-    const { username, linkedinUrl, createRecord = true } = body
+    const { username, linkedinUrl, createRecord: shouldCreate = true } = body
+    createRecord = shouldCreate
 
     if (!username && !linkedinUrl) {
       return NextResponse.json({ 
@@ -17,7 +21,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Extract username from URL if provided
-    const usernameToUse = username || extractUsernameFromLinkedInUrl(linkedinUrl)
+    usernameToUse = username || extractUsernameFromLinkedInUrl(linkedinUrl)
     
     if (!usernameToUse) {
       return NextResponse.json({ 
