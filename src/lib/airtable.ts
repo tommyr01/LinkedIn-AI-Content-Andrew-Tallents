@@ -552,8 +552,8 @@ export const createAirtableClient = (
   
   const tables = {
     contentPosts: tableIds?.contentPosts || process.env.AIRTABLE_CONTENT_POSTS_TABLE_ID || process.env.AIRTABLE_TABLE_ID || '',
-    influencers: tableIds?.influencers || process.env.AIRTABLE_INFLUENCERS_TABLE_ID || '',
-    influencerPosts: tableIds?.influencerPosts || process.env.AIRTABLE_INFLUENCER_POSTS_TABLE_ID || '',
+    influencers: tableIds?.influencers || process.env.AIRTABLE_INFLUENCERS_TABLE_ID || process.env.AIRTABLE_CONNECTIONS_TABLE_ID || '',
+    influencerPosts: tableIds?.influencerPosts || process.env.AIRTABLE_INFLUENCER_POSTS_TABLE_ID || process.env.AIRTABLE_CONNECTION_POSTS_TABLE_ID || '',
     leads: tableIds?.leads || process.env.AIRTABLE_LEADS_TABLE_ID || '',
     generatedComments: tableIds?.generatedComments || process.env.AIRTABLE_GENERATED_COMMENTS_TABLE_ID || ''
   }
