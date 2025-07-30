@@ -304,9 +304,9 @@ async function fetchAndSaveConnectionPosts(username: string, connectionId: strin
         'Post URN': post.id,
         'Full URN': post.id, // Using same as Post URN for now
         
-        // Dates
-        'Posted Date': post.posted_at,
-        'Relative Posted': '', // LinkedIn API doesn't provide this
+        // Dates - extract just the date string from the LinkedIn API response
+        'Posted Date': post.posted_at?.date || post.posted_at || '',
+        'Relative Posted': post.posted_at?.relative || '', // Now we can use the relative date
         
         // Post details  
         'Post Type': 'Post', // Default value, LinkedIn API doesn't specify

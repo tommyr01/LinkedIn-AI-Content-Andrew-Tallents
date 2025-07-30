@@ -127,7 +127,7 @@ export async function GET(request: NextRequest) {
               'Connection': [connectionId],
               'Post URN': post.id,
               'Full URN': post.id,
-              'Posted Date': post.posted_at,
+              'Posted Date': post.posted_at?.date || post.posted_at || '',
               'Post Type': 'Post',
               'Post Text': post.text || '',
               'Post URL': post.post_url || '',
