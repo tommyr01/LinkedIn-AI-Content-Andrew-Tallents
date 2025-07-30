@@ -49,7 +49,7 @@ export async function GET() {
                    typeof value === 'string' ? value.substring(0, 50) + (value.length > 50 ? '...' : '') :
                    typeof value === 'boolean' ? value :
                    typeof value === 'number' ? value :
-                   Array.isArray(value) ? `Array(${value.length})` :
+                   Array.isArray(value) ? `Array(${(value as any[]).length})` :
                    'Object'
           }
         }
