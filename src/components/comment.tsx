@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { format } from "date-fns"
-import { ThumbsUp, Heart, Lightbulb, Trophy, Handshake, MessageSquare, User, ChevronDown, ChevronUp } from "lucide-react"
+import { ThumbsUp, Heart, Lightbulb, Trophy, Users, MessageSquare, User, ChevronDown, ChevronUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
@@ -16,7 +16,7 @@ interface CommentProps {
 
 const REACTION_ICONS = {
   like: ThumbsUp,
-  appreciation: Handshake,
+  appreciation: Users,
   empathy: Heart,
   interest: Lightbulb,
   praise: Trophy,
