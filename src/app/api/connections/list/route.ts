@@ -1,29 +1,20 @@
 import { NextResponse } from 'next/server'
-import { createAirtableClient } from '@/lib/airtable'
+import { getConnections } from '@/lib/airtable-simple'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
-    // Log environment check
-    console.log('Checking environment variables:', {
-      hasApiKey: !!process.env.AIRTABLE_API_KEY,
-      hasBaseId: !!process.env.AIRTABLE_BASE_ID,
-      hasConnectionsTableId: !!process.env.AIRTABLE_CONNECTIONS_TABLE_ID,
-    })
-
-    const airtable = createAirtableClient()
-    console.log('Airtable client created successfully')
-    
-    const rows = await airtable.getConnections({ maxRecords: 200 })
+    // Use the simplified Airtable client
+    const rows = await getConnections(200)
     console.log(`Fetched ${rows.length} connections from Airtable`)
     
     // map to front-end friendly shape with error handling for each record
     const connections = rows.map((r, index) => {
       try {
         // Safely access numeric fields
-        const followerCount = typeof r.fields['Follower Count'] === 'number' ? r.fields['Follower Count'] : 0
-        const connectionCount = typeof r.fields['Connection Count'] === 'number' ? r.fields['Connection Count'] : 0
+        const followerCount = r.fields['Follower Count'] || 0
+        const connectionCount = r.fields['Connection Count'] || 0
         const engagementScore = Math.min(100, Math.round((followerCount + connectionCount) / 100))
         
         // Extract tags from headline or other fields

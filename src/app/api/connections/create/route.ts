@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAirtableClient } from '@/lib/airtable'
+import { createConnection } from '@/lib/airtable-simple'
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,8 +13,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Name and LinkedIn URL are required' }, { status: 400 })
     }
 
-    const airtable = createAirtableClient()
-    
     // Extract username from LinkedIn URL
     let username = linkedinUrl
     const match = linkedinUrl.match(/linkedin\.com\/in\/([^/]+)/)
@@ -22,7 +20,7 @@ export async function POST(req: NextRequest) {
       username = match[1]
     }
 
-    const record = await airtable.createConnection({
+    const record = await createConnection({
       'Full Name': name,
       'Username': username,
       'Profile Picture About': linkedinUrl, // Store full URL in this field
