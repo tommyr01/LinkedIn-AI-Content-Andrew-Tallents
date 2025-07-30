@@ -70,7 +70,7 @@ interface ConnectionPostsTableProps {
 export function ConnectionPostsTable({ posts, stats, onRefresh, isLoading = false }: ConnectionPostsTableProps) {
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState("")
-  const [mediaFilter, setMediaFilter] = useState<"all" | "text" | "image" | "video">("all")
+  const [timeFilter, setTimeFilter] = useState<"all" | "1day" | "3day" | "7day" | "1month">("all")
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [currentPage, setCurrentPage] = useState(1)
   const postsPerPage = 12
@@ -93,13 +93,25 @@ export function ConnectionPostsTable({ posts, stats, onRefresh, isLoading = fals
       post.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (post.authorHeadline && post.authorHeadline.toLowerCase().includes(searchTerm.toLowerCase()))
 
-    const matchesMediaFilter = 
-      mediaFilter === "all" ||
-      (mediaFilter === "text" && !post.hasMedia) ||
-      (mediaFilter === "image" && post.mediaType?.toLowerCase().includes('image')) ||
-      (mediaFilter === "video" && post.mediaType?.toLowerCase().includes('video'))
+    // Time filter logic
+    const matchesTimeFilter = (() => {
+      if (timeFilter === "all") return true
+      
+      const postDate = new Date(post.postedAt)
+      const now = new Date()
+      const diffInMs = now.getTime() - postDate.getTime()
+      const diffInDays = diffInMs / (1000 * 60 * 60 * 24)
+      
+      switch (timeFilter) {
+        case "1day": return diffInDays <= 1
+        case "3day": return diffInDays <= 3
+        case "7day": return diffInDays <= 7
+        case "1month": return diffInDays <= 30
+        default: return true
+      }
+    })()
 
-    return matchesSearch && matchesMediaFilter
+    return matchesSearch && matchesTimeFilter
   })
 
   // Pagination logic
@@ -110,7 +122,7 @@ export function ConnectionPostsTable({ posts, stats, onRefresh, isLoading = fals
   // Reset page when filters change
   React.useEffect(() => {
     setCurrentPage(1)
-  }, [searchTerm, mediaFilter])
+  }, [searchTerm, timeFilter])
 
   const handleOpenPostDetail = (post: ConnectionPost) => {
     setSelectedPostForDetail(post)
@@ -190,7 +202,7 @@ export function ConnectionPostsTable({ posts, stats, onRefresh, isLoading = fals
           <h2 className="text-2xl font-bold tracking-tight">Connection Posts</h2>
           <p className="text-muted-foreground">
             {filteredPosts.length} of {posts.length} posts
-            {(searchTerm || mediaFilter !== "all") && " (filtered)"}
+            {(searchTerm || timeFilter !== "all") && " (filtered)"}
           </p>
         </div>
         
@@ -226,32 +238,39 @@ export function ConnectionPostsTable({ posts, stats, onRefresh, isLoading = fals
           </div>
           <div className="flex items-center space-x-2">
             <Button
-              variant={mediaFilter === "all" ? "default" : "outline"}
+              variant={timeFilter === "all" ? "default" : "outline"}
               size="sm"
-              onClick={() => setMediaFilter("all")}
+              onClick={() => setTimeFilter("all")}
             >
               All
             </Button>
             <Button
-              variant={mediaFilter === "text" ? "default" : "outline"}
+              variant={timeFilter === "1day" ? "default" : "outline"}
               size="sm"
-              onClick={() => setMediaFilter("text")}
+              onClick={() => setTimeFilter("1day")}
             >
-              Text
+              1 Day
             </Button>
             <Button
-              variant={mediaFilter === "image" ? "default" : "outline"}
+              variant={timeFilter === "3day" ? "default" : "outline"}
               size="sm"
-              onClick={() => setMediaFilter("image")}
+              onClick={() => setTimeFilter("3day")}
             >
-              Images
+              3 Days
             </Button>
             <Button
-              variant={mediaFilter === "video" ? "default" : "outline"}
+              variant={timeFilter === "7day" ? "default" : "outline"}
               size="sm"
-              onClick={() => setMediaFilter("video")}
+              onClick={() => setTimeFilter("7day")}
             >
-              Videos
+              7 Days
+            </Button>
+            <Button
+              variant={timeFilter === "1month" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setTimeFilter("1month")}
+            >
+              1 Month
             </Button>
           </div>
         </div>
@@ -288,7 +307,7 @@ export function ConnectionPostsTable({ posts, stats, onRefresh, isLoading = fals
             <div className="text-center space-y-2">
               <div className="text-2xl font-semibold text-muted-foreground">No posts found</div>
               <div className="text-muted-foreground">
-                {searchTerm || mediaFilter !== "all" 
+                {searchTerm || timeFilter !== "all" 
                   ? "Try adjusting your search or filters" 
                   : "No connection posts available yet"}
               </div>

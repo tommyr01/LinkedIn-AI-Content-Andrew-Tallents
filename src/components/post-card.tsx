@@ -183,50 +183,34 @@ export function PostCard({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center justify-between pt-2 space-x-2">
-          <div className="flex items-center space-x-1">
-            {post.postUrl && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  window.open(post.postUrl, '_blank')
-                }}
-                className="h-8 px-2"
-              >
-                <ExternalLink className="h-3 w-3" />
-              </Button>
-            )}
-            
-            {post.authorLinkedInUrl && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  window.open(post.authorLinkedInUrl, '_blank')
-                }}
-                className="h-8 px-2"
-              >
-                <User className="h-3 w-3" />
-              </Button>
-            )}
-          </div>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation()
-              onGenerateComment(post)
-            }}
-            disabled={isGenerating}
-            className="h-8 text-xs"
-          >
-            <Sparkles className="h-3 w-3 mr-1" />
-            {isGenerating && selectedPostId === post.id ? "Generating..." : "Generate"}
-          </Button>
+        <div className="flex items-center justify-start pt-2 space-x-1">
+          {post.postUrl && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation()
+                window.open(post.postUrl, '_blank')
+              }}
+              className="h-8 px-2"
+            >
+              <ExternalLink className="h-3 w-3" />
+            </Button>
+          )}
+          
+          {post.authorLinkedInUrl && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation()
+                window.open(post.authorLinkedInUrl, '_blank')
+              }}
+              className="h-8 px-2"
+            >
+              <User className="h-3 w-3" />
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>
