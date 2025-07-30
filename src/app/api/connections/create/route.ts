@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     const record = await createConnection({
       'Full Name': name,
       'Username': username,
-      'Profile Picture About': linkedinUrl, // Store full URL in this field
+      'Profile Picture URL': linkedinUrl, // Fixed: was 'Profile Picture About'
       'Is Current': true,
       'Start Date': new Date().toISOString(),
     })

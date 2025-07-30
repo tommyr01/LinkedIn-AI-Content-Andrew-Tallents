@@ -23,7 +23,7 @@ export async function GET() {
         if (r.fields['Is Creator'] === true) tags.push('Creator')
         if (r.fields['Is Premium'] === true) tags.push('Premium')
         
-        const title = r.fields['Current Company Title']
+        const title = r.fields['Title'] // Fixed: was 'Current Company Title'
         if (title && typeof title === 'string') {
           const lowerTitle = title.toLowerCase()
           if (lowerTitle.includes('founder') || lowerTitle.includes('ceo')) {
@@ -34,8 +34,8 @@ export async function GET() {
         return {
           id: r.id || `connection-${index}`,
           name: r.fields['Full Name'] || 'Unknown',
-          role: r.fields['Current Company Title'] || '',
-          company: r.fields['Company Name'] || '',
+          role: r.fields['Title'] || '', // Fixed: was 'Current Company Title'
+          company: r.fields['Current Company'] || '', // Fixed: was 'Company Name'
           linkedinUrl: r.fields['Username'] ? `https://linkedin.com/in/${r.fields['Username']}` : '',
           lastEngagement: 'Never', // This field doesn't exist in Airtable yet
           engagementScore,

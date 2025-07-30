@@ -19,7 +19,7 @@ export const tables = {
   contentPosts: process.env.AIRTABLE_TABLE_ID || '', // Andrew's Posts table
 };
 
-// Simple type definitions for connections
+// Simple type definitions for connections - matching exact Airtable column names
 export interface ConnectionRecord {
   id: string;
   fields: {
@@ -28,21 +28,26 @@ export interface ConnectionRecord {
     'Last Name'?: string;
     'Headline'?: string;
     'Username'?: string;
-    'Profile Picture About'?: string;
-    'Full Location Hashtags'?: string;
+    'Profile Picture URL'?: string;
+    'About'?: string;
+    'Full Location'?: string;
+    'Hashtags'?: string;
     'Is Creator'?: boolean;
     'Is Influencer'?: boolean;
     'Is Premium'?: boolean;
-    'Show Follow Background I URN'?: string;
+    'Show Follower Count'?: boolean;
+    'Background Picture URL'?: string;
+    'URN'?: string;
     'Follower Count'?: number;
     'Connection Count'?: number;
-    'Current Company Title'?: string;
+    'Current Company'?: string;
+    'Title'?: string;
     'Company Location'?: string;
     'Duration'?: string;
     'Start Date'?: string;
     'Is Current'?: boolean;
-    'Company Name'?: string;
-    'Current Company ID'?: string;
+    'Company LinkedIn URL'?: string;
+    'Current Company URN'?: string;
     [key: string]: any; // Allow other fields
   };
 }
@@ -57,7 +62,7 @@ export async function getConnections(maxRecords = 200) {
       })
       .all();
     
-    return records.map(record => ({
+    return records.map((record: any) => ({
       id: record.id,
       fields: record.fields
     })) as ConnectionRecord[];
