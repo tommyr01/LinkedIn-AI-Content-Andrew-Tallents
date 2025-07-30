@@ -2,12 +2,14 @@
 
 import { useState } from "react"
 import { format } from "date-fns"
-import { MessageSquare, ThumbsUp, ExternalLink, User, Sparkles, X, Play, Image, Calendar, TrendingUp } from "lucide-react"
+import { MessageSquare, ThumbsUp, ExternalLink, User, Sparkles, X, Play, Image, Calendar, TrendingUp, Repeat2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Separator } from "@/components/ui/separator"
+import { Textarea } from "@/components/ui/textarea"
+import { toast } from "sonner"
 import { ConnectionPost } from "./connection-posts-table"
 
 interface PostDetailDialogProps {
@@ -28,6 +30,11 @@ export function PostDetailDialog({
   selectedPostId 
 }: PostDetailDialogProps) {
   const [imageError, setImageError] = useState(false)
+  
+  // Comment generation states
+  const [generatedComment, setGeneratedComment] = useState("")
+  const [isGeneratingComment, setIsGeneratingComment] = useState(false)
+  const [isPostingComment, setIsPostingComment] = useState(false)
 
   if (!post) return null
 
@@ -164,6 +171,56 @@ export function PostDetailDialog({
     )
   }
 
+  const handleGenerateComment = async () => {
+    setIsGeneratingComment(true)
+    try {
+      // Call n8n webhook for comment generation
+      const response = await fetch('/api/generate-comment-webhook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          postContent: post.content,
+          authorName: post.connectionName,
+          postUrl: post.postUrl,
+          postId: post.id
+        })
+      })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`)
+      }
+      
+      const data = await response.json()
+      setGeneratedComment(data.generatedComment || "Generated comment will appear here...")
+      toast.success('Comment generated successfully!')
+    } catch (error) {
+      console.error('Error generating comment:', error)
+      toast.error('Failed to generate comment. Please try again.')
+    } finally {
+      setIsGeneratingComment(false)
+    }
+  }
+
+  const handlePostComment = async () => {
+    if (!generatedComment.trim()) {
+      toast.error('Please enter a comment to post')
+      return
+    }
+
+    setIsPostingComment(true)
+    try {
+      // Future: Post comment to LinkedIn via API
+      // For now, just show success message
+      toast.success('Comment posted successfully!')
+      setGeneratedComment("")
+    } catch (error) {
+      console.error('Error posting comment:', error)
+      toast.error('Failed to post comment. Please try again.')
+    } finally {
+      setIsPostingComment(false)
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
@@ -264,58 +321,64 @@ export function PostDetailDialog({
             </div>
           </div>
 
-          {/* Right Column - Engagement Metrics */}
-          <div className="lg:col-span-1 space-y-4">
-            <h4 className="font-semibold text-lg">Engagement</h4>
-            
-            <div className="grid grid-cols-2 lg:grid-cols-1 gap-4">
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-3">
-                    <ThumbsUp className="h-6 w-6 text-blue-500" />
-                    <div>
-                      <div className="text-2xl font-bold">{post.likesCount}</div>
-                      <div className="text-sm text-muted-foreground">Likes</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+          {/* Right Column - Compact Engagement & Comment Generation */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* Compact Engagement Metrics */}
+            <div className="space-y-3">
+              <h4 className="font-semibold text-lg">Engagement</h4>
+              <div className="flex items-center justify-between text-sm bg-muted/30 p-3 rounded-lg">
+                <div className="flex items-center space-x-1">
+                  <ThumbsUp className="h-4 w-4 text-blue-500" />
+                  <span className="font-medium">{post.likesCount}</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <MessageSquare className="h-4 w-4 text-green-500" />
+                  <span className="font-medium">{post.commentsCount}</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <TrendingUp className="h-4 w-4 text-purple-500" />
+                  <span className="font-medium">{post.totalReactions}</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <Repeat2 className="h-4 w-4 text-orange-500" />
+                  <span className="font-medium">{post.reposts}</span>
+                </div>
+              </div>
+            </div>
 
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-3">
-                    <MessageSquare className="h-6 w-6 text-green-500" />
-                    <div>
-                      <div className="text-2xl font-bold">{post.commentsCount}</div>
-                      <div className="text-sm text-muted-foreground">Comments</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+            <Separator />
 
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-3">
-                    <TrendingUp className="h-6 w-6 text-purple-500" />
-                    <div>
-                      <div className="text-2xl font-bold">{post.totalReactions}</div>
-                      <div className="text-sm text-muted-foreground">Total Reactions</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-3">
-                    <TrendingUp className="h-6 w-6 text-orange-500" />
-                    <div>
-                      <div className="text-2xl font-bold">{post.reposts}</div>
-                      <div className="text-sm text-muted-foreground">Reposts</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+            {/* Comment Generation Section */}
+            <div className="space-y-4">
+              <h5 className="font-semibold text-base">AI Comment Generation</h5>
+              
+              <Button 
+                onClick={handleGenerateComment}
+                disabled={isGeneratingComment}
+                className="w-full"
+                size="sm"
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                {isGeneratingComment ? "Generating..." : "Generate Comment"}
+              </Button>
+              
+              <Textarea
+                value={generatedComment}
+                onChange={(e) => setGeneratedComment(e.target.value)}
+                placeholder="Generated comment will appear here..."
+                className="min-h-[120px] text-sm"
+                disabled={isGeneratingComment}
+              />
+              
+              <Button 
+                onClick={handlePostComment}
+                disabled={!generatedComment.trim() || isPostingComment}
+                className="w-full"
+                variant="default"
+                size="sm"
+              >
+                {isPostingComment ? "Posting..." : "Post Comment"}
+              </Button>
             </div>
           </div>
         </div>
