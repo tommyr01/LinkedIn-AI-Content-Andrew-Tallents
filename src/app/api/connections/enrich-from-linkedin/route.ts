@@ -87,12 +87,13 @@ export async function POST(request: NextRequest) {
       })
 
       // Create the connection in Airtable
-      const fieldsToCreate = {
-        ...cleanedFields,
-        // Add profile picture as attachment if available (currently disabled)
-        ...(profilePictureAttachment && {
-          'Profile Picture URL': [profilePictureAttachment]
-        })
+      const fieldsToCreate: any = {
+        ...cleanedFields
+      }
+      
+      // Add profile picture as attachment if available (currently disabled)
+      if (profilePictureAttachment) {
+        fieldsToCreate['Profile Picture URL'] = [profilePictureAttachment]
       }
 
       console.log(`📝 Creating Airtable record with ${Object.keys(fieldsToCreate).length} fields...`)
