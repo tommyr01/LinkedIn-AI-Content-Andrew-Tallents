@@ -24,9 +24,10 @@ interface ContentVariation {
 
 interface ContentGeneratorProps {
   onContentSaved?: (content: string) => void
+  onWebhookResponses?: (responses: string[]) => void
 }
 
-export function ContentGenerator({ onContentSaved }: ContentGeneratorProps) {
+export function ContentGenerator({ onContentSaved, onWebhookResponses }: ContentGeneratorProps) {
   const [topic, setTopic] = useState("")
   const [postType, setPostType] = useState("Thought Leadership")
   const [tone, setTone] = useState("professional")
@@ -70,7 +71,7 @@ export function ContentGenerator({ onContentSaved }: ContentGeneratorProps) {
     setIsSendingWebhook(true)
     try {
       // Send data to webhook
-      const webhookUrl = "https://t01rich.app.n8n.cloud/webhook-test/4da72753-ab1b-4973-917f-23e6bdc97d23"
+      const webhookUrl = "https://t01rich.app.n8n.cloud/webhook/4da72753-ab1b-4973-917f-23e6bdc97d23"
       
       // Format the super prompt template with the user's input
       const superPromptTemplate = `Act as an informed ${selectedPlatform.charAt(0).toUpperCase() + selectedPlatform.slice(1)} expert specializing in content for **Target Avatar**. You will be provided with specific details about a news topic relevant to this audience. You must only provide the output required. Do not include any other additional information about how or why the response is good. Provide only the output according to the below guidelines.
@@ -98,7 +99,7 @@ Platform: ${selectedPlatform.charAt(0).toUpperCase() + selectedPlatform.slice(1)
       
       toast.loading("Sending data to webhook...")
       
-      // Send data to webhook
+      // Send data to webhook and capture the response
       const webhookResponse = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
@@ -111,8 +112,29 @@ Platform: ${selectedPlatform.charAt(0).toUpperCase() + selectedPlatform.slice(1)
         toast.error("Failed to send data to webhook")
         console.error('Webhook call failed')
       } else {
-        toast.success("Data sent to webhook successfully")
-        console.log('Webhook call successful')
+        // Attempt to parse response
+        let responses: string[] = []
+        try {
+          const result = await webhookResponse.json()
+          if (Array.isArray(result)) {
+            responses = result.map(r => JSON.stringify(r))
+          } else if (result.variations && Array.isArray(result.variations)) {
+            responses = result.variations.map((v: any) => v.content || JSON.stringify(v))
+          } else if (typeof result === 'object') {
+            responses = [JSON.stringify(result, null, 2)]
+          } else {
+            responses = [String(result)]
+          }
+        } catch (e) {
+          const text = await webhookResponse.text()
+          responses = [text]
+        }
+
+        // Notify parent component
+        onWebhookResponses?.(responses)
+
+        toast.success("Webhook responded successfully")
+        console.log('Webhook response:', responses)
       }
     } catch (error) {
       toast.error("Error sending data to webhook")
