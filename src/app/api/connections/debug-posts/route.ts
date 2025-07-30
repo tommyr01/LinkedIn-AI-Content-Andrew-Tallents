@@ -32,21 +32,21 @@ export async function GET(request: NextRequest) {
           success: true,
           count: posts.length,
           samplePost: posts[0] ? {
-            id: posts[0].id,
+            urn: posts[0].urn,
             textPreview: posts[0].text?.substring(0, 100) + '...',
             engagement: {
-              likes: posts[0].likes_count,
-              comments: posts[0].comments_count,
-              shares: posts[0].shares_count
+              likes: posts[0].stats?.like,
+              comments: posts[0].stats?.comments,
+              reposts: posts[0].stats?.reposts
             },
             author: posts[0].author,
-            hasMedia: !!posts[0].media && posts[0].media.length > 0
+            hasMedia: !!posts[0].media
           } : null,
           allPosts: posts.map(p => ({
-            id: p.id,
+            urn: p.urn,
             preview: p.text?.substring(0, 50) + '...',
             posted_at: p.posted_at,
-            engagement: `${p.likes_count}L, ${p.comments_count}C, ${p.shares_count}S`
+            engagement: `${p.stats?.like || 0}L, ${p.stats?.comments || 0}C, ${p.stats?.reposts || 0}S`
           }))
         }
         console.log(`✅ LinkedIn API success: ${posts.length} posts fetched`)
