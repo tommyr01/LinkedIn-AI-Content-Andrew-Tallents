@@ -50,18 +50,46 @@ export async function POST(request: NextRequest) {
     })
 
     // Handle profile picture separately if needed
-    const profilePictureAttachment = await linkedInScraper.getProfilePictureAsAttachment(
-      profile.data.basic_info.profile_picture_url
-    )
-    console.log(`📸 Profile picture attachment:`, profilePictureAttachment ? 'Created' : 'None')
+    // Temporarily disable profile picture to isolate field errors
+    const profilePictureAttachment = null // await linkedInScraper.getProfilePictureAsAttachment(profile.data.basic_info.profile_picture_url)
+    console.log(`📸 Profile picture attachment: Temporarily disabled for debugging`)
 
     let airtableRecord = null;
     
     if (createRecord) {
+      // Validate and clean fields before sending to Airtable
+      const cleanedFields: any = {}
+      
+      for (const [key, value] of Object.entries(mappedData)) {
+        // Skip null/undefined values
+        if (value === null || value === undefined || value === '') {
+          console.log(`⚠️ Skipping empty field: ${key}`)
+          continue
+        }
+        
+        // Validate field types
+        if (key.includes('Count') && typeof value !== 'number') {
+          cleanedFields[key] = Number(value) || 0
+        } else if (key.startsWith('Is ') && typeof value !== 'boolean') {
+          cleanedFields[key] = Boolean(value)
+        } else if (key === 'Start Date' && value) {
+          // Ensure proper date format
+          cleanedFields[key] = String(value)
+        } else {
+          cleanedFields[key] = value
+        }
+      }
+      
+      console.log(`🧹 Cleaned fields for Airtable:`, {
+        originalCount: Object.keys(mappedData).length,
+        cleanedCount: Object.keys(cleanedFields).length,
+        skippedFields: Object.keys(mappedData).filter(key => !cleanedFields[key])
+      })
+
       // Create the connection in Airtable
       const fieldsToCreate = {
-        ...mappedData,
-        // Add profile picture as attachment if available
+        ...cleanedFields,
+        // Add profile picture as attachment if available (currently disabled)
         ...(profilePictureAttachment && {
           'Profile Picture URL': [profilePictureAttachment]
         })
@@ -85,10 +113,30 @@ export async function POST(request: NextRequest) {
       } catch (airtableError: any) {
         console.error(`💥 Airtable creation failed:`, {
           message: airtableError.message,
+          statusCode: airtableError.statusCode,
+          airtableError: airtableError.error,
           fieldsAttempted: Object.keys(fieldsToCreate),
-          sampleFields: fieldsToCreate
+          fieldValues: Object.fromEntries(
+            Object.entries(fieldsToCreate).map(([key, value]) => [
+              key, 
+              typeof value === 'object' ? `[${typeof value}]` : String(value).substring(0, 50)
+            ])
+          )
         })
-        throw new Error(`Airtable creation failed: ${airtableError.message}`)
+        
+        // More specific error message based on Airtable error
+        let specificError = 'Airtable creation failed'
+        if (airtableError.message.includes('INVALID_MULTIPLE_CHOICE_OPTIONS')) {
+          specificError = 'Invalid field value - check dropdown/select field options'
+        } else if (airtableError.message.includes('UNKNOWN_FIELD_NAME')) {
+          specificError = 'Field name not found in Airtable schema'
+        } else if (airtableError.message.includes('INVALID_VALUE_FOR_COLUMN')) {
+          specificError = 'Invalid data type for field'
+        } else if (airtableError.message.includes('NOT_A_VALID_ATTACHMENT')) {
+          specificError = 'Profile picture attachment error'
+        }
+        
+        throw new Error(`${specificError}: ${airtableError.message}`)
       }
     } else {
       console.log(`ℹ️ Skipping Airtable creation (createRecord = false)`)
