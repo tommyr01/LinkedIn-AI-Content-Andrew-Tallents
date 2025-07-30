@@ -57,56 +57,25 @@ export async function POST(request: NextRequest) {
     let airtableRecord = null;
     
     if (createRecord) {
-      // Validate and clean fields before sending to Airtable
-      const cleanedFields: any = {}
+      // SIMPLIFIED APPROACH: Use only essential fields that we know work
+      console.log(`🎯 Using MINIMAL field set to get basic save working...`)
       
-      for (const [key, value] of Object.entries(mappedData)) {
-        // Skip null/undefined values
-        if (value === null || value === undefined || value === '') {
-          console.log(`⚠️ Skipping empty field: ${key}`)
-          continue
-        }
-        
-        // Validate field types and handle problematic fields
-        if (key === 'Show Follower Count') {
-          // Skip this field temporarily - it's causing the error
-          console.log(`⚠️ Skipping problematic field: ${key} (value: ${value})`)
-          continue
-        } else if (key.includes('Count') && !key.includes('Show') && typeof value !== 'number') {
-          cleanedFields[key] = Number(value) || 0
-        } else if (key.startsWith('Is ') && typeof value !== 'boolean') {
-          cleanedFields[key] = Boolean(value)
-        } else if (key === 'Start Date' && value) {
-          // Ensure proper date format
-          cleanedFields[key] = String(value)
-        } else {
-          cleanedFields[key] = value
+      const essentialFields = {
+        'Full Name': mappedData['Full Name'] || 'Unknown',
+        'Username': mappedData['Username'] || '',
+        'Current Company': mappedData['Current Company'] || '',
+        'Title': mappedData['Title'] || ''
+      }
+      
+      // Only include fields that have actual values
+      const fieldsToCreate: any = {}
+      for (const [key, value] of Object.entries(essentialFields)) {
+        if (value && value !== '') {
+          fieldsToCreate[key] = value
         }
       }
       
-      console.log(`🧹 Cleaned fields for Airtable:`, {
-        originalCount: Object.keys(mappedData).length,
-        cleanedCount: Object.keys(cleanedFields).length,
-        skippedFields: Object.keys(mappedData).filter(key => !cleanedFields[key])
-      })
-
-      // Create the connection in Airtable
-      const fieldsToCreate: any = {
-        ...cleanedFields
-      }
-      
-      // Add profile picture as attachment if available (currently disabled)
-      if (profilePictureAttachment) {
-        fieldsToCreate['Profile Picture URL'] = [profilePictureAttachment]
-      }
-
-      console.log(`📝 Creating Airtable record with ${Object.keys(fieldsToCreate).length} fields...`)
-      console.log(`🎯 Sample fields to create:`, {
-        'Full Name': fieldsToCreate['Full Name'],
-        'Current Company': fieldsToCreate['Current Company'],
-        'Follower Count': fieldsToCreate['Follower Count'],
-        hasProfilePicture: !!fieldsToCreate['Profile Picture URL']
-      })
+      console.log(`📝 Creating Airtable record with MINIMAL ${Object.keys(fieldsToCreate).length} essential fields:`, fieldsToCreate)
 
       try {
         airtableRecord = await createConnection(fieldsToCreate)
