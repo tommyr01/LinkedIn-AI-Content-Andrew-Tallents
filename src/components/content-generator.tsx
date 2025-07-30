@@ -117,11 +117,28 @@ Platform: ${selectedPlatform.charAt(0).toUpperCase() + selectedPlatform.slice(1)
         try {
           const result = await webhookResponse.json()
           if (Array.isArray(result)) {
-            responses = result.map(r => JSON.stringify(r))
+            // Response is an array – assume each element is a string or object with content
+            responses = result.map((r: any) => {
+              if (typeof r === 'string') return r
+              if (r?.content) return r.content
+              if (typeof r === 'object') return JSON.stringify(r, null, 2)
+              return String(r)
+            })
           } else if (result.variations && Array.isArray(result.variations)) {
+            // Our own content generation format
             responses = result.variations.map((v: any) => v.content || JSON.stringify(v))
           } else if (typeof result === 'object') {
-            responses = [JSON.stringify(result, null, 2)]
+            // Check for post_1, post_2, post_3 keys
+            const postKeys = Object.keys(result).filter(k => k.startsWith('post_'))
+            if (postKeys.length) {
+              responses = postKeys.map(k => {
+                const postObj = (result as any)[k]
+                if (postObj && postObj["LinkedIn Post"]) return postObj["LinkedIn Post"]
+                return JSON.stringify(postObj, null, 2)
+              })
+            } else {
+              responses = [JSON.stringify(result, null, 2)]
+            }
           } else {
             responses = [String(result)]
           }
@@ -131,7 +148,9 @@ Platform: ${selectedPlatform.charAt(0).toUpperCase() + selectedPlatform.slice(1)
         }
 
         // Notify parent component
-        onWebhookResponses?.(responses)
+        if(responses.length){
+          onWebhookResponses?.(responses)
+        }
 
         toast.success("Webhook responded successfully")
         console.log('Webhook response:', responses)

@@ -11,7 +11,7 @@ function WebhookResponses({ responses }: { responses: string[] }) {
       {responses.map((response: string, index: number) => (
         <div key={index} className="p-4 border rounded-md">
           <h3 className="text-xl font-semibold">Response {index + 1}</h3>
-          <p>{response}</p>
+          <pre className="whitespace-pre-wrap font-sans text-sm">{response}</pre>
         </div>
       ))}
     </div>
