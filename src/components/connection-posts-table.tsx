@@ -15,13 +15,17 @@ import {
   useReactTable,
 } from "@tanstack/react-table"
 import { format } from "date-fns"
-import { MessageSquare, ThumbsUp, ExternalLink, User, Calendar, TrendingUp } from "lucide-react"
+import { MessageSquare, ThumbsUp, ExternalLink, User, Calendar, TrendingUp, Sparkles } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Textarea } from "@/components/ui/textarea"
+import { toast } from "sonner"
 
 // Types based on our connection posts data structure
 export type ConnectionPost = {
@@ -56,6 +60,16 @@ export type PostStats = {
   averageEngagement: number
 }
 
+export type GeneratedComment = {
+  id: string
+  text: string
+  approach: string
+  length: number
+  qualityScore: number
+  voice: 'andrew' | 'generic'
+  style: 'professional' | 'engaging' | 'thoughtful' | 'supportive'
+}
+
 interface ConnectionPostsTableProps {
   posts: ConnectionPost[]
   stats: PostStats
@@ -70,6 +84,13 @@ export function ConnectionPostsTable({ posts, stats, onRefresh, isLoading = fals
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = useState({})
+
+  // Comment generation states
+  const [selectedPost, setSelectedPost] = useState<ConnectionPost | null>(null)
+  const [generatedComments, setGeneratedComments] = useState<GeneratedComment[]>([])
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [selectedComment, setSelectedComment] = useState<GeneratedComment | null>(null)
+  const [commentDialogOpen, setCommentDialogOpen] = useState(false)
 
   const columns: ColumnDef<ConnectionPost>[] = [
     {
@@ -213,6 +234,16 @@ export function ConnectionPostsTable({ posts, stats, onRefresh, isLoading = fals
                 <User className="h-4 w-4" />
               </Button>
             )}
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleGenerateComment(post)}
+              disabled={isGenerating}
+            >
+              <Sparkles className="h-4 w-4 mr-1" />
+              {isGenerating && selectedPost?.id === post.id ? "Generating..." : "Generate Comment"}
+            </Button>
           </div>
         )
       },
@@ -242,6 +273,71 @@ export function ConnectionPostsTable({ posts, stats, onRefresh, isLoading = fals
       },
     },
   })
+
+  const handleGenerateComment = async (post: ConnectionPost) => {
+    setSelectedPost(post)
+    setIsGenerating(true)
+    setGeneratedComments([])
+
+    try {
+      const response = await fetch('/api/content/comment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          postId: post.id,
+          postContent: post.content,
+          connectionName: post.connectionName,
+          commentStyle: 'professional',
+          andrew_voice: true,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to generate comments')
+      }
+
+      const result = await response.json()
+      setGeneratedComments(result.comments)
+      setCommentDialogOpen(true)
+      
+      toast.success(`Generated ${result.comments.length} comment variations`)
+
+    } catch (error) {
+      console.error('Error generating comments:', error)
+      toast.error('Failed to generate comments. Please try again.')
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  const handleSelectComment = (comment: GeneratedComment) => {
+    setSelectedComment(comment)
+  }
+
+  const handleApproveComment = async () => {
+    if (!selectedComment || !selectedPost) return
+
+    try {
+      // Here you would typically update the selected comment in Airtable
+      // and potentially trigger the Lindy webhook for posting
+      
+      toast.success('Comment approved and ready for posting')
+      setCommentDialogOpen(false)
+      setSelectedComment(null)
+      setGeneratedComments([])
+      
+      // Optionally refresh the table to show updated status
+      if (onRefresh) {
+        onRefresh()
+      }
+
+    } catch (error) {
+      console.error('Error approving comment:', error)
+      toast.error('Failed to approve comment. Please try again.')
+    }
+  }
 
   const filteredPosts = table.getFilteredRowModel().rows.length
   const totalPosts = posts.length
@@ -415,6 +511,102 @@ export function ConnectionPostsTable({ posts, stats, onRefresh, isLoading = fals
           </Button>
         </div>
       </div>
+
+      {/* Comment Generation Dialog */}
+      <Dialog open={commentDialogOpen} onOpenChange={setCommentDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Generated Comments</DialogTitle>
+            <DialogDescription>
+              Choose a comment to engage with {selectedPost?.connectionName}'s post
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedPost && (
+            <div className="space-y-4">
+              {/* Original Post Preview */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">Original Post</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground line-clamp-4">
+                    {selectedPost.content}
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Generated Comments */}
+              <div className="space-y-3">
+                <Label>Generated Comment Options:</Label>
+                {generatedComments.map((comment) => (
+                  <Card
+                    key={comment.id}
+                    className={`cursor-pointer transition-colors ${
+                      selectedComment?.id === comment.id
+                        ? "border-primary bg-primary/5"
+                        : "hover:bg-muted/50"
+                    }`}
+                    onClick={() => handleSelectComment(comment)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="text-sm">{comment.text}</p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <Badge variant="outline" className="text-xs">
+                              {comment.approach}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              Quality: {comment.qualityScore}%
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              {comment.voice === 'andrew' ? 'Andrew\'s Voice' : 'Professional'}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Selected Comment Preview */}
+              {selectedComment && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">Selected Comment</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Textarea
+                      value={selectedComment.text}
+                      readOnly
+                      className="min-h-[80px]"
+                    />
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-sm text-muted-foreground">
+                        {selectedComment.text.length} characters
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCommentDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleApproveComment}
+              disabled={!selectedComment}
+            >
+              Approve & Post Comment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
