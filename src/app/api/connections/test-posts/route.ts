@@ -18,14 +18,14 @@ export async function GET(request: NextRequest) {
     
     // Map a sample post to show the data structure
     const samplePost = posts[0] ? {
-      id: posts[0].id,
+      urn: posts[0].urn,
       text: posts[0].text?.substring(0, 100) + '...',
       posted_at: posts[0].posted_at,
-      likes_count: posts[0].likes_count,
-      comments_count: posts[0].comments_count,
-      shares_count: posts[0].shares_count,
+      likes_count: posts[0].stats?.like,
+      comments_count: posts[0].stats?.comments,
+      reposts_count: posts[0].stats?.reposts,
       author: posts[0].author,
-      has_media: !!posts[0].media && posts[0].media.length > 0
+      has_media: !!posts[0].media
     } : null
     
     return NextResponse.json({
@@ -36,12 +36,12 @@ export async function GET(request: NextRequest) {
       requestedMax: maxPosts,
       samplePost,
       postsData: posts.slice(0, 3).map(post => ({
-        id: post.id,
+        urn: post.urn,
         preview: post.text?.substring(0, 150) + '...',
         engagement: {
-          likes: post.likes_count,
-          comments: post.comments_count,
-          shares: post.shares_count
+          likes: post.stats?.like,
+          comments: post.stats?.comments,
+          reposts: post.stats?.reposts
         },
         posted_at: post.posted_at
       })),
