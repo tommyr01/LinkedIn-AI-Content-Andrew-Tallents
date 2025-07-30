@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
           data: {
             postsCount: posts.length,
             firstPost: posts[0] ? {
-              id: posts[0].id,
+              urn: posts[0].urn,
               textPreview: posts[0].text?.substring(0, 50)
             } : null
           }
