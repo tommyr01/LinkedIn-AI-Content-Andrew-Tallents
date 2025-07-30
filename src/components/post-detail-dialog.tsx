@@ -224,18 +224,18 @@ export function PostDetailDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className="max-w-none w-[95vw] max-h-[90vh] overflow-y-auto"
-        style={{ width: '95vw', maxWidth: 'none' }}
+        className="max-w-none w-[95vw] h-[85vh] overflow-hidden flex flex-col"
+        style={{ width: '95vw', maxWidth: 'none', height: '85vh' }}
       >
-        <DialogHeader>
+        <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center justify-between">
             <span>Post Details</span>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 flex-1 overflow-hidden">
           {/* Left Column - Post Content */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-6 overflow-y-auto pr-2">
             {/* Author Header */}
             <div className="flex items-start space-x-4">
               <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center text-lg font-medium shrink-0">
@@ -322,7 +322,7 @@ export function PostDetailDialog({
           </div>
 
           {/* Right Column - Compact Engagement & Comment Generation */}
-          <div className="lg:col-span-1 space-y-6">
+          <div className="lg:col-span-1 space-y-6 overflow-y-auto pl-2">
             {/* Compact Engagement Metrics */}
             <div className="space-y-3">
               <h4 className="font-semibold text-lg">Engagement</h4>
