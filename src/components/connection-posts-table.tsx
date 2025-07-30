@@ -2,20 +2,7 @@
 
 import * as React from "react"
 import { useState } from "react"
-import {
-  ColumnDef,
-  ColumnFiltersState,
-  SortingState,
-  VisibilityState,
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from "@tanstack/react-table"
-import { format } from "date-fns"
-import { MessageSquare, ThumbsUp, ExternalLink, User, Calendar, TrendingUp, Sparkles } from "lucide-react"
+import { MessageSquare, ThumbsUp, User, TrendingUp, Search, Grid, List } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -23,9 +10,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
+import { PostCard } from "./post-card"
+import { PostDetailDialog } from "./post-detail-dialog"
 
 // Types based on our connection posts data structure
 export type ConnectionPost = {
@@ -48,7 +36,9 @@ export type ConnectionPost = {
   postType: string
   mediaType?: string
   mediaUrl?: string
+  mediaThumbnail?: string
   createdTime: string
+  hasMedia?: boolean
 }
 
 export type PostStats = {
@@ -78,12 +68,16 @@ interface ConnectionPostsTableProps {
 }
 
 export function ConnectionPostsTable({ posts, stats, onRefresh, isLoading = false }: ConnectionPostsTableProps) {
-  const [sorting, setSorting] = useState<SortingState>([
-    { id: "postedAt", desc: true }
-  ])
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
-  const [rowSelection, setRowSelection] = useState({})
+  // Search and filter states
+  const [searchTerm, setSearchTerm] = useState("")
+  const [mediaFilter, setMediaFilter] = useState<"all" | "text" | "image" | "video">("all")
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
+  const [currentPage, setCurrentPage] = useState(1)
+  const postsPerPage = 12
+
+  // Dialog states
+  const [selectedPostForDetail, setSelectedPostForDetail] = useState<ConnectionPost | null>(null)
+  const [postDetailOpen, setPostDetailOpen] = useState(false)
 
   // Comment generation states
   const [selectedPost, setSelectedPost] = useState<ConnectionPost | null>(null)
@@ -92,187 +86,36 @@ export function ConnectionPostsTable({ posts, stats, onRefresh, isLoading = fals
   const [selectedComment, setSelectedComment] = useState<GeneratedComment | null>(null)
   const [commentDialogOpen, setCommentDialogOpen] = useState(false)
 
-  const columns: ColumnDef<ConnectionPost>[] = [
-    {
-      accessorKey: "connectionName",
-      header: "Connection",
-      cell: ({ row }) => {
-        const post = row.original
-        return (
-          <div className="flex items-center space-x-3">
-            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
-              {post.authorFirstName?.[0]}{post.authorLastName?.[0]}
-            </div>
-            <div className="flex flex-col">
-              <div className="font-medium">{post.connectionName}</div>
-              {post.authorHeadline && (
-                <div className="text-xs text-muted-foreground line-clamp-1 max-w-[200px]">
-                  {post.authorHeadline}
-                </div>
-              )}
-            </div>
-          </div>
-        )
-      },
-    },
-    {
-      accessorKey: "content",
-      header: "Post Content",
-      cell: ({ row }) => {
-        const content = row.getValue("content") as string
-        return (
-          <div className="max-w-[400px]">
-            <p className="text-sm line-clamp-3">{content}</p>
-            {content.length > 200 && (
-              <span className="text-xs text-muted-foreground">
-                +{content.length - 200} more characters
-              </span>
-            )}
-          </div>
-        )
-      },
-    },
-    {
-      accessorKey: "postedAt",
-      header: "Posted",
-      cell: ({ row }) => {
-        const dateStr = row.getValue("postedAt") as string
-        try {
-          const date = new Date(dateStr)
-          return (
-            <div className="text-sm">
-              <div className="flex items-center space-x-1">
-                <Calendar className="h-3 w-3 text-muted-foreground" />
-                <span>{format(date, "MMM d, yyyy")}</span>
-              </div>
-              <div className="text-xs text-muted-foreground">
-                {format(date, "h:mm a")}
-              </div>
-            </div>
-          )
-        } catch {
-          return (
-            <div className="text-sm text-muted-foreground">
-              {dateStr}
-            </div>
-          )
-        }
-      },
-    },
-    {
-      accessorKey: "engagement",
-      header: "Engagement",
-      cell: ({ row }) => {
-        const post = row.original
-        return (
-          <div className="flex flex-col space-y-1">
-            <div className="flex items-center space-x-2">
-              <div className="flex items-center text-sm">
-                <ThumbsUp className="h-4 w-4 mr-1 text-blue-500" />
-                {post.likesCount}
-              </div>
-              <div className="flex items-center text-sm">
-                <MessageSquare className="h-4 w-4 mr-1 text-green-500" />
-                {post.commentsCount}
-              </div>
-            </div>
-            <div className="flex items-center text-xs text-muted-foreground">
-              <TrendingUp className="h-3 w-3 mr-1" />
-              {post.totalReactions} total reactions
-            </div>
-          </div>
-        )
-      },
-    },
-    {
-      accessorKey: "postType",
-      header: "Type",
-      cell: ({ row }) => {
-        const postType = row.getValue("postType") as string
-        const mediaType = row.original.mediaType
-        
-        return (
-          <div className="flex flex-col space-y-1">
-            <Badge variant="outline">
-              {postType || 'regular'}
-            </Badge>
-            {mediaType && (
-              <Badge variant="secondary" className="text-xs">
-                {mediaType}
-              </Badge>
-            )}
-          </div>
-        )
-      },
-    },
-    {
-      id: "actions",
-      enableHiding: false,
-      cell: ({ row }) => {
-        const post = row.original
+  // Filter and search logic
+  const filteredPosts = posts.filter(post => {
+    const matchesSearch = 
+      post.connectionName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      post.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (post.authorHeadline && post.authorHeadline.toLowerCase().includes(searchTerm.toLowerCase()))
 
-        return (
-          <div className="flex items-center space-x-2">
-            {post.postUrl && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => window.open(post.postUrl, '_blank')}
-                title="View on LinkedIn"
-              >
-                <ExternalLink className="h-4 w-4" />
-              </Button>
-            )}
-            
-            {post.authorLinkedInUrl && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => window.open(post.authorLinkedInUrl, '_blank')}
-                title="View Profile"
-              >
-                <User className="h-4 w-4" />
-              </Button>
-            )}
+    const matchesMediaFilter = 
+      mediaFilter === "all" ||
+      (mediaFilter === "text" && !post.hasMedia) ||
+      (mediaFilter === "image" && post.mediaType?.toLowerCase().includes('image')) ||
+      (mediaFilter === "video" && post.mediaType?.toLowerCase().includes('video'))
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleGenerateComment(post)}
-              disabled={isGenerating}
-            >
-              <Sparkles className="h-4 w-4 mr-1" />
-              {isGenerating && selectedPost?.id === post.id ? "Generating..." : "Generate Comment"}
-            </Button>
-          </div>
-        )
-      },
-    },
-  ]
-
-  const table = useReactTable({
-    data: posts,
-    columns,
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
-    state: {
-      sorting,
-      columnFilters,
-      columnVisibility,
-      rowSelection,
-    },
-    initialState: {
-      pagination: {
-        pageSize: 25,
-      },
-    },
+    return matchesSearch && matchesMediaFilter
   })
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredPosts.length / postsPerPage)
+  const startIndex = (currentPage - 1) * postsPerPage
+  const paginatedPosts = filteredPosts.slice(startIndex, startIndex + postsPerPage)
+
+  // Reset page when filters change
+  React.useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, mediaFilter])
+
+  const handleOpenPostDetail = (post: ConnectionPost) => {
+    setSelectedPostForDetail(post)
+    setPostDetailOpen(true)
+  }
 
   const handleGenerateComment = async (post: ConnectionPost) => {
     setSelectedPost(post)
@@ -339,9 +182,6 @@ export function ConnectionPostsTable({ posts, stats, onRefresh, isLoading = fals
     }
   }
 
-  const filteredPosts = table.getFilteredRowModel().rows.length
-  const totalPosts = posts.length
-
   return (
     <div className="space-y-4">
       {/* Stats Cards */}
@@ -404,12 +244,19 @@ export function ConnectionPostsTable({ posts, stats, onRefresh, isLoading = fals
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Connection Posts</h2>
           <p className="text-muted-foreground">
-            {filteredPosts} of {totalPosts} posts
-            {columnFilters.length > 0 && " (filtered)"}
+            {filteredPosts.length} of {posts.length} posts
+            {(searchTerm || mediaFilter !== "all") && " (filtered)"}
           </p>
         </div>
         
         <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
+          >
+            {viewMode === "grid" ? <List className="h-4 w-4" /> : <Grid className="h-4 w-4" />}
+          </Button>
           <Button
             variant="outline"
             onClick={onRefresh}
@@ -421,96 +268,149 @@ export function ConnectionPostsTable({ posts, stats, onRefresh, isLoading = fals
       </div>
 
       {/* Filters */}
-      <div className="flex items-center space-x-2">
-        <Input
-          placeholder="Filter by connection name..."
-          value={(table.getColumn("connectionName")?.getFilterValue() as string) ?? ""}
-          onChange={(event) =>
-            table.getColumn("connectionName")?.setFilterValue(event.target.value)
-          }
-          className="max-w-sm"
-        />
-        <Input
-          placeholder="Filter by content..."
-          value={(table.getColumn("content")?.getFilterValue() as string) ?? ""}
-          onChange={(event) =>
-            table.getColumn("content")?.setFilterValue(event.target.value)
-          }
-          className="max-w-sm"
-        />
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center space-x-2 flex-1">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search posts, names, or headlines..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant={mediaFilter === "all" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setMediaFilter("all")}
+            >
+              All
+            </Button>
+            <Button
+              variant={mediaFilter === "text" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setMediaFilter("text")}
+            >
+              Text
+            </Button>
+            <Button
+              variant={mediaFilter === "image" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setMediaFilter("image")}
+            >
+              Images
+            </Button>
+            <Button
+              variant={mediaFilter === "video" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setMediaFilter("video")}
+            >
+              Videos
+            </Button>
+          </div>
+        </div>
       </div>
 
-      {/* Table */}
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  )
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  {isLoading ? "Loading posts..." : "No posts found."}
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      {/* Posts Grid/List */}
+      {isLoading ? (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Card key={i} className="h-80">
+              <CardContent className="p-6">
+                <div className="animate-pulse space-y-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="h-10 w-10 bg-muted rounded-full"></div>
+                    <div className="space-y-2">
+                      <div className="h-4 bg-muted rounded w-24"></div>
+                      <div className="h-3 bg-muted rounded w-32"></div>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="h-3 bg-muted rounded"></div>
+                    <div className="h-3 bg-muted rounded"></div>
+                    <div className="h-3 bg-muted rounded w-3/4"></div>
+                  </div>
+                  <div className="h-20 bg-muted rounded"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : filteredPosts.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <div className="text-center space-y-2">
+              <div className="text-2xl font-semibold text-muted-foreground">No posts found</div>
+              <div className="text-muted-foreground">
+                {searchTerm || mediaFilter !== "all" 
+                  ? "Try adjusting your search or filters" 
+                  : "No connection posts available yet"}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className={viewMode === "grid" 
+          ? "grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" 
+          : "space-y-4"
+        }>
+          {paginatedPosts.map((post) => (
+            <PostCard
+              key={post.id}
+              post={post}
+              onGenerateComment={handleGenerateComment}
+              onOpenDetails={handleOpenPostDetail}
+              isGenerating={isGenerating}
+              selectedPostId={selectedPost?.id}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Pagination */}
-      <div className="flex items-center justify-between space-x-2 py-4">
-        <div className="text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{" "}
-          {table.getFilteredRowModel().rows.length} row(s) selected.
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between space-x-2 py-4">
+          <div className="text-sm text-muted-foreground">
+            Showing {startIndex + 1} to {Math.min(startIndex + postsPerPage, filteredPosts.length)} of {filteredPosts.length} posts
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </Button>
+            <div className="flex items-center space-x-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                const page = i + 1
+                const isCurrentPage = page === currentPage
+                return (
+                  <Button
+                    key={page}
+                    variant={isCurrentPage ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(page)}
+                    className="w-8 h-8 p-0"
+                  >
+                    {page}
+                  </Button>
+                )
+              })}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            Next
-          </Button>
-        </div>
-      </div>
+      )}
 
       {/* Comment Generation Dialog */}
       <Dialog open={commentDialogOpen} onOpenChange={setCommentDialogOpen}>
@@ -607,6 +507,16 @@ export function ConnectionPostsTable({ posts, stats, onRefresh, isLoading = fals
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Post Detail Dialog */}
+      <PostDetailDialog
+        post={selectedPostForDetail}
+        open={postDetailOpen}
+        onOpenChange={setPostDetailOpen}
+        onGenerateComment={handleGenerateComment}
+        isGenerating={isGenerating}
+        selectedPostId={selectedPost?.id}
+      />
     </div>
   )
 }

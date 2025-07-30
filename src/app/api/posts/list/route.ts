@@ -87,7 +87,9 @@ export async function GET(request: NextRequest) {
         postType: fields['Post Type'] || 'regular',
         mediaType: fields['Media Type'] || '',
         mediaUrl: fields['Media URL'] || '',
-        createdTime: record.createdTime
+        mediaThumbnail: fields['Media Thumbnail'] || '',
+        createdTime: record.createdTime,
+        hasMedia: !!(fields['Media Type'] && fields['Media URL'])
       }
     }) || []
 

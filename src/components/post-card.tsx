@@ -1,0 +1,234 @@
+"use client"
+
+import { useState } from "react"
+import { format } from "date-fns"
+import { MessageSquare, ThumbsUp, ExternalLink, User, Sparkles, Play, Image } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { ConnectionPost } from "./connection-posts-table"
+
+interface PostCardProps {
+  post: ConnectionPost
+  onGenerateComment: (post: ConnectionPost) => void
+  onOpenDetails: (post: ConnectionPost) => void
+  isGenerating: boolean
+  selectedPostId?: string
+}
+
+export function PostCard({ 
+  post, 
+  onGenerateComment, 
+  onOpenDetails, 
+  isGenerating, 
+  selectedPostId 
+}: PostCardProps) {
+  const [imageError, setImageError] = useState(false)
+
+  const formatDate = (dateStr: string) => {
+    try {
+      const date = new Date(dateStr)
+      return format(date, "MMM d, yyyy 'at' h:mm a")
+    } catch {
+      return dateStr
+    }
+  }
+
+  const getMediaPreview = () => {
+    if (!post.hasMedia || !post.mediaUrl) return null
+
+    const isVideo = post.mediaType?.toLowerCase().includes('video')
+    const isImage = post.mediaType?.toLowerCase().includes('image') || post.mediaType?.toLowerCase().includes('photo')
+    
+    if (isVideo) {
+      return (
+        <div className="relative w-full h-32 bg-muted rounded-md overflow-hidden group cursor-pointer">
+          {post.mediaThumbnail && !imageError ? (
+            <img
+              src={post.mediaThumbnail}
+              alt="Video thumbnail"
+              className="w-full h-full object-cover"
+              onError={() => setImageError(true)}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-muted">
+              <Play className="h-8 w-8 text-muted-foreground" />
+            </div>
+          )}
+          <div className="absolute inset-0 bg-black/20 flex items-center justify-center group-hover:bg-black/30 transition-colors">
+            <div className="bg-black/60 rounded-full p-2">
+              <Play className="h-6 w-6 text-white fill-white" />
+            </div>
+          </div>
+          <Badge variant="secondary" className="absolute top-2 left-2 text-xs">
+            Video
+          </Badge>
+        </div>
+      )
+    }
+
+    if (isImage) {
+      return (
+        <div className="relative w-full h-32 bg-muted rounded-md overflow-hidden cursor-pointer">
+          {(post.mediaThumbnail || post.mediaUrl) && !imageError ? (
+            <img
+              src={post.mediaThumbnail || post.mediaUrl}
+              alt="Post image"
+              className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
+              onError={() => setImageError(true)}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-muted">
+              <Image className="h-8 w-8 text-muted-foreground" />
+            </div>
+          )}
+          <Badge variant="secondary" className="absolute top-2 left-2 text-xs">
+            Image
+          </Badge>
+        </div>
+      )
+    }
+
+    // Other media types
+    return (
+      <div className="w-full h-20 bg-muted rounded-md flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-sm font-medium text-muted-foreground">
+            {post.mediaType || 'Media'}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            Click to view
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const truncateText = (text: string, maxLength: number = 200) => {
+    if (text.length <= maxLength) return text
+    return text.substring(0, maxLength) + "..."
+  }
+
+  return (
+    <Card className="h-full hover:shadow-md transition-shadow duration-200 cursor-pointer group">
+      {/* Card Header */}
+      <CardHeader className="pb-3">
+        <div className="flex items-start space-x-3">
+          <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-sm font-medium shrink-0">
+            {post.authorFirstName?.[0]}{post.authorLastName?.[0]}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-sm truncate">
+              {post.connectionName}
+            </div>
+            {post.authorHeadline && (
+              <div className="text-xs text-muted-foreground line-clamp-2 leading-tight mt-1">
+                {post.authorHeadline}
+              </div>
+            )}
+            <div className="text-xs text-muted-foreground mt-1">
+              {formatDate(post.postedAt)}
+            </div>
+          </div>
+        </div>
+      </CardHeader>
+
+      {/* Card Content */}
+      <CardContent className="pt-0 space-y-3" onClick={() => onOpenDetails(post)}>
+        {/* Post Content */}
+        <div className="space-y-2">
+          <p className="text-sm leading-relaxed">
+            {truncateText(post.content, 150)}
+          </p>
+          {post.content.length > 150 && (
+            <button className="text-xs text-blue-600 hover:text-blue-800 font-medium">
+              Read more...
+            </button>
+          )}
+        </div>
+
+        {/* Media Preview */}
+        {post.hasMedia && (
+          <div className="space-y-2">
+            {getMediaPreview()}
+          </div>
+        )}
+
+        {/* Post Type Badge */}
+        {post.postType && post.postType !== 'regular' && (
+          <div>
+            <Badge variant="outline" className="text-xs">
+              {post.postType}
+            </Badge>
+          </div>
+        )}
+
+        {/* Engagement Metrics */}
+        <div className="flex items-center justify-between pt-2 border-t">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-1 text-sm text-muted-foreground">
+              <ThumbsUp className="h-4 w-4 text-blue-500" />
+              <span>{post.likesCount}</span>
+            </div>
+            <div className="flex items-center space-x-1 text-sm text-muted-foreground">
+              <MessageSquare className="h-4 w-4 text-green-500" />
+              <span>{post.commentsCount}</span>
+            </div>
+            {post.totalReactions > (post.likesCount + post.commentsCount) && (
+              <div className="text-xs text-muted-foreground">
+                {post.totalReactions} total
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex items-center justify-between pt-2 space-x-2">
+          <div className="flex items-center space-x-1">
+            {post.postUrl && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  window.open(post.postUrl, '_blank')
+                }}
+                className="h-8 px-2"
+              >
+                <ExternalLink className="h-3 w-3" />
+              </Button>
+            )}
+            
+            {post.authorLinkedInUrl && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  window.open(post.authorLinkedInUrl, '_blank')
+                }}
+                className="h-8 px-2"
+              >
+                <User className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              onGenerateComment(post)
+            }}
+            disabled={isGenerating}
+            className="h-8 text-xs"
+          >
+            <Sparkles className="h-3 w-3 mr-1" />
+            {isGenerating && selectedPostId === post.id ? "Generating..." : "Generate"}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
