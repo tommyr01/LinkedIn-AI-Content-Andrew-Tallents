@@ -166,144 +166,157 @@ export function PostDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl w-[95vw] max-h-[90vh] overflow-y-auto">
+      <DialogContent 
+        className="max-w-none w-[95vw] max-h-[90vh] overflow-y-auto"
+        style={{ width: '95vw', maxWidth: 'none' }}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>Post Details</span>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Author Header */}
-          <div className="flex items-start space-x-4">
-            <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center text-lg font-medium shrink-0">
-              {post.authorFirstName?.[0]}{post.authorLastName?.[0]}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-semibold text-lg">{post.connectionName}</h3>
-                  {post.authorHeadline && (
-                    <p className="text-muted-foreground text-sm mt-1">
-                      {post.authorHeadline}
-                    </p>
-                  )}
-                  <div className="flex items-center space-x-4 mt-2 text-sm text-muted-foreground">
-                    <div className="flex items-center space-x-1">
-                      <Calendar className="h-4 w-4" />
-                      <span>{formatRelativeDate(post.postedAt)}</span>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column - Post Content */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Author Header */}
+            <div className="flex items-start space-x-4">
+              <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center text-lg font-medium shrink-0">
+                {post.authorFirstName?.[0]}{post.authorLastName?.[0]}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="font-semibold text-xl">{post.connectionName}</h3>
+                    {post.authorHeadline && (
+                      <p className="text-muted-foreground text-base mt-1">
+                        {post.authorHeadline}
+                      </p>
+                    )}
+                    <div className="flex items-center space-x-4 mt-2 text-sm text-muted-foreground">
+                      <div className="flex items-center space-x-1">
+                        <Calendar className="h-4 w-4" />
+                        <span>{formatRelativeDate(post.postedAt)}</span>
+                      </div>
+                      {post.postType && post.postType !== 'regular' && (
+                        <Badge variant="outline">{post.postType}</Badge>
+                      )}
                     </div>
-                    {post.postType && post.postType !== 'regular' && (
-                      <Badge variant="outline">{post.postType}</Badge>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {post.authorLinkedInUrl && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(post.authorLinkedInUrl, '_blank')}
+                      >
+                        <User className="h-4 w-4 mr-2" />
+                        View Profile
+                      </Button>
+                    )}
+                    {post.postUrl && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(post.postUrl, '_blank')}
+                      >
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        View Post
+                      </Button>
                     )}
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  {post.authorLinkedInUrl && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.open(post.authorLinkedInUrl, '_blank')}
-                    >
-                      <User className="h-4 w-4 mr-2" />
-                      View Profile
-                    </Button>
-                  )}
-                  {post.postUrl && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.open(post.postUrl, '_blank')}
-                    >
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      View Post
-                    </Button>
-                  )}
-                </div>
               </div>
             </div>
-          </div>
 
-          <Separator />
+            <Separator />
 
-          {/* Post Content */}
-          <div className="space-y-4">
-            <div className="prose prose-sm max-w-none">
-              <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                {post.content}
-              </p>
+            {/* Post Content */}
+            <div className="space-y-6">
+              <div className="prose prose-base max-w-none">
+                <p className="text-base leading-relaxed whitespace-pre-wrap">
+                  {post.content}
+                </p>
+              </div>
+
+              {/* Media Content */}
+              {post.hasMedia && (
+                <div className="w-full">
+                  {renderMedia()}
+                </div>
+              )}
             </div>
 
-            {/* Media Content */}
-            {post.hasMedia && renderMedia()}
-          </div>
-
-          <Separator />
-
-          {/* Engagement Metrics */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center space-x-2">
-                  <ThumbsUp className="h-5 w-5 text-blue-500" />
-                  <div>
-                    <div className="text-lg font-semibold">{post.likesCount}</div>
-                    <div className="text-xs text-muted-foreground">Likes</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center space-x-2">
-                  <MessageSquare className="h-5 w-5 text-green-500" />
-                  <div>
-                    <div className="text-lg font-semibold">{post.commentsCount}</div>
-                    <div className="text-xs text-muted-foreground">Comments</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center space-x-2">
-                  <TrendingUp className="h-5 w-5 text-purple-500" />
-                  <div>
-                    <div className="text-lg font-semibold">{post.totalReactions}</div>
-                    <div className="text-xs text-muted-foreground">Total Reactions</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center space-x-2">
-                  <TrendingUp className="h-5 w-5 text-orange-500" />
-                  <div>
-                    <div className="text-lg font-semibold">{post.reposts}</div>
-                    <div className="text-xs text-muted-foreground">Reposts</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center justify-between pt-4 border-t">
-            <div className="text-sm text-muted-foreground">
-              {formatDate(post.postedAt)}
+            {/* Actions */}
+            <div className="flex items-center justify-between pt-4 border-t">
+              <div className="text-sm text-muted-foreground">
+                {formatDate(post.postedAt)}
+              </div>
+              <Button
+                onClick={() => onGenerateComment(post)}
+                disabled={isGenerating}
+                className="bg-primary hover:bg-primary/90"
+                size="lg"
+              >
+                <Sparkles className="h-5 w-5 mr-2" />
+                {isGenerating && selectedPostId === post.id ? "Generating Comment..." : "Generate AI Comment"}
+              </Button>
             </div>
-            <Button
-              onClick={() => onGenerateComment(post)}
-              disabled={isGenerating}
-              className="bg-primary hover:bg-primary/90"
-            >
-              <Sparkles className="h-4 w-4 mr-2" />
-              {isGenerating && selectedPostId === post.id ? "Generating Comment..." : "Generate AI Comment"}
-            </Button>
+          </div>
+
+          {/* Right Column - Engagement Metrics */}
+          <div className="lg:col-span-1 space-y-4">
+            <h4 className="font-semibold text-lg">Engagement</h4>
+            
+            <div className="grid grid-cols-2 lg:grid-cols-1 gap-4">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center space-x-3">
+                    <ThumbsUp className="h-6 w-6 text-blue-500" />
+                    <div>
+                      <div className="text-2xl font-bold">{post.likesCount}</div>
+                      <div className="text-sm text-muted-foreground">Likes</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center space-x-3">
+                    <MessageSquare className="h-6 w-6 text-green-500" />
+                    <div>
+                      <div className="text-2xl font-bold">{post.commentsCount}</div>
+                      <div className="text-sm text-muted-foreground">Comments</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center space-x-3">
+                    <TrendingUp className="h-6 w-6 text-purple-500" />
+                    <div>
+                      <div className="text-2xl font-bold">{post.totalReactions}</div>
+                      <div className="text-sm text-muted-foreground">Total Reactions</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center space-x-3">
+                    <TrendingUp className="h-6 w-6 text-orange-500" />
+                    <div>
+                      <div className="text-2xl font-bold">{post.reposts}</div>
+                      <div className="text-sm text-muted-foreground">Reposts</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       </DialogContent>
