@@ -82,20 +82,42 @@ export function AddConnectionModal({ open, onOpenChange, onConnectionCreated }: 
   const handleSave = async () => {
     if (useLinkedInData && enrichedData) {
       // Save using LinkedIn enriched data
+      console.log('🚀 Starting LinkedIn save process...', {
+        username: linkedinUsername,
+        hasEnrichedData: !!enrichedData,
+        enrichedDataName: enrichedData?.fullname
+      })
+      
       setIsSaving(true)
       try {
+        const requestBody = { 
+          username: linkedinUsername,
+          createRecord: true // Create the full enriched record
+        }
+        
+        console.log('📤 Making API request to enrich-from-linkedin:', requestBody)
+        
         const res = await fetch('/api/connections/enrich-from-linkedin', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            username: linkedinUsername,
-            createRecord: true // Create the full enriched record
-          })
+          body: JSON.stringify(requestBody)
         })
+        
+        console.log('📥 API response status:', res.status, res.statusText)
         
         if (!res.ok) {
           const errorData = await res.json()
+          console.error('❌ API Error Response:', errorData)
           throw new Error(errorData.error || 'Failed to create connection')
+        }
+        
+        const responseData = await res.json()
+        console.log('✅ API Success Response:', responseData)
+        
+        if (responseData.airtableRecord) {
+          console.log('🎯 Airtable record created:', responseData.airtableRecord.id)
+        } else {
+          console.warn('⚠️ No Airtable record in response')
         }
         
         toast.success('Connection added with LinkedIn data!')
@@ -103,7 +125,11 @@ export function AddConnectionModal({ open, onOpenChange, onConnectionCreated }: 
         handleReset()
         onOpenChange(false)
       } catch (error: any) {
-        console.error('Error saving LinkedIn connection:', error)
+        console.error('💥 Error saving LinkedIn connection:', {
+          message: error.message,
+          stack: error.stack,
+          username: linkedinUsername
+        })
         toast.error(error.message || 'Error adding connection')
       } finally {
         setIsSaving(false)
@@ -293,7 +319,15 @@ export function AddConnectionModal({ open, onOpenChange, onConnectionCreated }: 
               </Button>
             )}
             <Button 
-              onClick={handleSave} 
+              onClick={() => {
+                console.log('🔥 Save button clicked!', {
+                  useLinkedInData,
+                  hasEnrichedData: !!enrichedData,
+                  isSaving,
+                  buttonText: useLinkedInData ? 'Save with LinkedIn Data' : 'Add Connection'
+                })
+                handleSave()
+              }} 
               disabled={isSaving || (!name.trim() || !url.trim())} 
               className="flex-1"
             >

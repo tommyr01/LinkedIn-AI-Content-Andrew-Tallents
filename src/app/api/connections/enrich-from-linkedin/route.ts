@@ -29,18 +29,31 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    console.log(`Enriching profile for username: ${usernameToUse}`)
+    console.log(`🔍 Enriching profile for username: ${usernameToUse}`)
 
     // Fetch LinkedIn profile data
     const profile = await linkedInScraper.getProfile(usernameToUse)
+    console.log(`✅ LinkedIn profile fetched successfully:`, {
+      name: profile.data.basic_info.fullname,
+      company: profile.data.basic_info.current_company,
+      hasProfilePicture: !!profile.data.basic_info.profile_picture_url
+    })
     
     // Map to Airtable fields
     const mappedData = linkedInScraper.mapToAirtableFields(profile)
+    console.log(`🗂️ Mapped ${Object.keys(mappedData).length} fields for Airtable:`, {
+      'Full Name': mappedData['Full Name'],
+      'Current Company': mappedData['Current Company'],
+      'Title': mappedData['Title'],
+      'Follower Count': mappedData['Follower Count'],
+      'Start Date': mappedData['Start Date']
+    })
 
     // Handle profile picture separately if needed
     const profilePictureAttachment = await linkedInScraper.getProfilePictureAsAttachment(
       profile.data.basic_info.profile_picture_url
     )
+    console.log(`📸 Profile picture attachment:`, profilePictureAttachment ? 'Created' : 'None')
 
     let airtableRecord = null;
     
@@ -54,8 +67,30 @@ export async function POST(request: NextRequest) {
         })
       }
 
-      airtableRecord = await createConnection(fieldsToCreate)
-      console.log('Created Airtable record:', airtableRecord.id)
+      console.log(`📝 Creating Airtable record with ${Object.keys(fieldsToCreate).length} fields...`)
+      console.log(`🎯 Sample fields to create:`, {
+        'Full Name': fieldsToCreate['Full Name'],
+        'Current Company': fieldsToCreate['Current Company'],
+        'Follower Count': fieldsToCreate['Follower Count'],
+        hasProfilePicture: !!fieldsToCreate['Profile Picture URL']
+      })
+
+      try {
+        airtableRecord = await createConnection(fieldsToCreate)
+        console.log(`🎉 Airtable record created successfully:`, {
+          id: airtableRecord.id,
+          createdTime: airtableRecord.createdTime
+        })
+      } catch (airtableError: any) {
+        console.error(`💥 Airtable creation failed:`, {
+          message: airtableError.message,
+          fieldsAttempted: Object.keys(fieldsToCreate),
+          sampleFields: fieldsToCreate
+        })
+        throw new Error(`Airtable creation failed: ${airtableError.message}`)
+      }
+    } else {
+      console.log(`ℹ️ Skipping Airtable creation (createRecord = false)`)
     }
 
     // Return enriched data and Airtable record
