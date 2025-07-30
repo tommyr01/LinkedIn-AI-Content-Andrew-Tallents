@@ -5,7 +5,6 @@ import { MessageSquare, RefreshCw, AlertCircle, ChevronDown, ChevronUp } from "l
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import { Comment } from "./comment"
@@ -182,20 +181,26 @@ export function CommentsList({ postUrl, initialCommentsCount = 0 }: CommentsList
           )}
 
           {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Failed to load comments: {error}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fetchComments()}
-                  className="ml-2"
-                >
-                  Try Again
-                </Button>
-              </AlertDescription>
-            </Alert>
+            <Card className="border-red-200 bg-red-50">
+              <CardContent className="p-4">
+                <div className="flex items-start space-x-3">
+                  <AlertCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm text-red-800 mb-2">
+                      Failed to load comments: {error}
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fetchComments()}
+                      className="border-red-300 text-red-700 hover:bg-red-100"
+                    >
+                      Try Again
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           )}
 
           {hasLoaded && !isLoading && comments.length === 0 && (
