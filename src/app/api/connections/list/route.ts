@@ -38,7 +38,6 @@ export async function GET() {
           role: r.fields['Title'] || '', // Fixed: was 'Current Company Title'
           company: r.fields['Current Company'] || '', // Fixed: was 'Company Name'
           linkedinUrl: r.fields['Username'] ? `https://linkedin.com/in/${r.fields['Username']}` : '',
-          profilePictureUrl: r.fields['Profile Picture URL'] || '', // Add profile picture
           lastEngagement: 'Never', // This field doesn't exist in Airtable yet
           engagementScore,
           tags,
@@ -53,7 +52,6 @@ export async function GET() {
           role: '',
           company: '',
           linkedinUrl: '',
-          profilePictureUrl: '',
           lastEngagement: 'Never',
           engagementScore: 0,
           tags: [],
