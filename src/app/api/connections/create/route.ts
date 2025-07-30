@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createConnection } from '@/lib/airtable-simple'
+import { createConnection } from '@/lib/airtable-http'
 
 export const runtime = 'nodejs'
 
