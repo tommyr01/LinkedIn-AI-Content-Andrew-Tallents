@@ -169,7 +169,7 @@ async function findOrCreateInfluencer(airtable: any, influencerData: any): Promi
   try {
     // Try to find existing influencer by profile URL
     const existing = await airtable.getInfluencers({
-      filterByFormula: `{Profile URL} = "${influencerData.profileUrl}"`,
+      filterByFormula: `{Username} = "${influencerData.profileUrl}"`,
       maxRecords: 1
     })
 
@@ -183,8 +183,8 @@ async function findOrCreateInfluencer(airtable: any, influencerData: any): Promi
 
     // Create new influencer
     const newInfluencer = await airtable.createInfluencer({
-      'Name': influencerData.name,
-      'Profile URL': influencerData.profileUrl,
+      'Full Name': influencerData.name,
+      'Username': influencerData.profileUrl,
       'Priority Rank': 10, // Default priority
       'Engagement Count': 0,
       'Created': new Date().toISOString(),
@@ -253,8 +253,8 @@ export async function GET(request: NextRequest) {
     const automationPayload = {
       jobId,
       influencers: influencersToScrape.map(inf => ({
-        name: inf.fields['Name'],
-        profileUrl: inf.fields['Profile URL'],
+        name: inf.fields['Full Name'],
+        profileUrl: inf.fields['Username'],
         lastScraped: inf.fields['Last Engaged'] || null
       })),
       callbackUrl: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/influencers/webhook`,

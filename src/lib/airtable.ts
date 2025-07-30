@@ -24,6 +24,12 @@ export const InfluencerSchema = z.object({
   fields: z.object({
     'Full Name': z.string(),
     'Username': z.string(),
+    'Profile URL': z.string().optional(),
+    'Role': z.string().optional(),
+    'Company': z.string().optional(),
+    'Priority Rank': z.number().optional(),
+    'Last Engaged': z.string().optional(),
+    'Status': z.enum(['Active','Paused','Archived']).optional(),
     'Engagement Count': z.number().optional(),
     'Created': z.string().optional(),
   })

@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
           })
           
           if (influencers.length > 0) {
-            influencerName = influencers[0].fields['Name']
+            influencerName = influencers[0].fields['Full Name']
           }
         }
 
