@@ -42,7 +42,12 @@ export async function GET() {
           lastEngagement: 'Never', // This field doesn't exist in Airtable yet
           engagementScore,
           tags,
-          notes: r.fields['Headline'] || ''
+          notes: r.fields['Headline'] || '',
+          startDate: r.fields['Start Date'] || '',
+          followerCount: r.fields['Follower Count'] || 0,
+          connectionCount: r.fields['Connection Count'] || 0,
+          companyLinkedinUrl: r.fields['Company LinkedIn URL'] || '',
+          location: r.fields['Full Location'] || ''
         }
       } catch (recordError: any) {
         console.error(`Error mapping record ${index}:`, recordError)
@@ -56,7 +61,12 @@ export async function GET() {
           lastEngagement: 'Never',
           engagementScore: 0,
           tags: [],
-          notes: 'Error loading record data'
+          notes: 'Error loading record data',
+          startDate: '',
+          followerCount: 0,
+          connectionCount: 0,
+          companyLinkedinUrl: '',
+          location: ''
         }
       }
     })
