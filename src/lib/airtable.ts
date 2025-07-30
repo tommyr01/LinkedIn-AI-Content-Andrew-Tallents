@@ -22,13 +22,8 @@ export const ContentPostSchema = z.object({
 export const InfluencerSchema = z.object({
   id: z.string().optional(),
   fields: z.object({
-    'Name': z.string(),
-    'Profile URL': z.string(),
-    'Company': z.string().optional(),
-    'Role': z.string().optional(),
-    'Priority Rank': z.number().optional(),
-    'Last Engaged': z.string().optional(),
-    'Status': z.enum(['Active','Paused','Archived']).optional(),
+    'Full Name': z.string(),
+    'Username': z.string(),
     'Engagement Count': z.number().optional(),
     'Created': z.string().optional(),
   })
