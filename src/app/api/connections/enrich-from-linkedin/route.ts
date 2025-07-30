@@ -77,14 +77,12 @@ export async function POST(request: NextRequest) {
         'Follower Count': Number(mappedData['Follower Count']) || 0,
         'Connection Count': Number(mappedData['Connection Count']) || 0,
         
-        // GROUP A1 TEST: Just the date field
-        'Start Date': mappedData['Start Date'] || ''
-        
-        // GROUP A2: URLs (temporarily disabled to test date alone)
-        // 'Company LinkedIn URL': mappedData['Company LinkedIn URL'] || '',
-        // 'Background Picture URL': mappedData['Background Picture URL'] || '',
-        // 'URN': mappedData['URN'] || '',
-        // 'Current Company URN': mappedData['Current Company URN'] || ''
+        // GROUP A: Date + URLs (Background Picture URL handled separately as attachment)
+        'Start Date': mappedData['Start Date'] || '',
+        'Company LinkedIn URL': mappedData['Company LinkedIn URL'] || '',
+        // 'Background Picture URL' is handled separately as an attachment field
+        'URN': mappedData['URN'] || '',
+        'Current Company URN': mappedData['Current Company URN'] || ''
         
         // GROUP B: Boolean fields (temporarily disabled for testing)
         // 'Is Creator': Boolean(mappedData['Is Creator']),
@@ -103,6 +101,16 @@ export async function POST(request: NextRequest) {
         if (value !== null && value !== undefined && value !== '') {
           fieldsToCreate[key] = value
         }
+      }
+      
+      // Handle Background Picture URL as attachment if present
+      const backgroundPictureUrl = mappedData['Background Picture URL']
+      if (backgroundPictureUrl && backgroundPictureUrl !== '') {
+        console.log(`📸 Adding Background Picture URL as attachment: ${backgroundPictureUrl}`)
+        fieldsToCreate['Background Picture URL'] = [{
+          url: backgroundPictureUrl,
+          filename: 'background-picture.jpg'
+        }]
       }
       
       console.log(`📝 Creating Airtable record with ${Object.keys(fieldsToCreate).length} safe fields:`, fieldsToCreate)
