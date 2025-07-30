@@ -80,11 +80,38 @@ export const GeneratedCommentSchema = z.object({
   })
 })
 
+export const ConnectionSchema = z.object({
+  id: z.string().optional(),
+  fields: z.object({
+    'Full Name': z.string(),
+    'First Name': z.string().optional(),
+    'Last Name': z.string().optional(),
+    'Headline': z.string().optional(),
+    'Username': z.string().optional(),
+    'Profile Picture About': z.string().optional(),
+    'Full Location Hashtags': z.string().optional(),
+    'Is Creator': z.boolean().optional(),
+    'Is Influencer': z.boolean().optional(),
+    'Is Premium': z.boolean().optional(),
+    'Show Follow Background I URN': z.string().optional(),
+    'Follower Count': z.number().optional(),
+    'Connection Count': z.number().optional(),
+    'Current Company Title': z.string().optional(),
+    'Company Location': z.string().optional(),
+    'Duration': z.string().optional(),
+    'Start Date': z.string().optional(),
+    'Is Current': z.boolean().optional(),
+    'Company Name': z.string().optional(),
+    'Current Company ID': z.string().optional(),
+  })
+})
+
 export type ContentPost = z.infer<typeof ContentPostSchema>
 export type Influencer = z.infer<typeof InfluencerSchema>
 export type InfluencerPost = z.infer<typeof InfluencerPostSchema>
 export type Lead = z.infer<typeof LeadSchema>
 export type GeneratedComment = z.infer<typeof GeneratedCommentSchema>
+export type Connection = z.infer<typeof ConnectionSchema>
 
 // Airtable client
 export class AirtableClient {
@@ -95,6 +122,7 @@ export class AirtableClient {
     influencerPosts: string
     leads: string
     generatedComments: string
+    connections: string
   }
 
   constructor(apiKey: string, baseId: string, tables: {
@@ -103,6 +131,7 @@ export class AirtableClient {
     influencerPosts: string
     leads: string
     generatedComments: string
+    connections: string
   }) {
     Airtable.configure({
       endpointUrl: 'https://api.airtable.com',
@@ -502,6 +531,74 @@ export class AirtableClient {
     }
   }
 
+  // Connections operations
+  async getConnections(
+    options: {
+      maxRecords?: number
+      filterByFormula?: string
+      sort?: Array<{field: string, direction: 'asc' | 'desc'}>
+    } = {}
+  ): Promise<Connection[]> {
+    try {
+      const selectOptions: any = {
+        maxRecords: options.maxRecords || 100,
+      }
+      
+      if (options.filterByFormula) {
+        selectOptions.filterByFormula = options.filterByFormula
+      }
+      
+      if (options.sort) {
+        selectOptions.sort = options.sort
+      }
+      
+      const records = await this.base(this.tables.connections).select(selectOptions).all()
+
+      return records.map(record => ({
+        id: record.id,
+        fields: record.fields as Connection['fields']
+      }))
+    } catch (error) {
+      console.error('Error fetching connections:', error)
+      throw error
+    }
+  }
+
+  async createConnection(fields: Connection['fields']): Promise<Connection> {
+    try {
+      const record = await this.base(this.tables.connections).create(fields)
+      return {
+        id: record.id,
+        fields: record.fields as Connection['fields']
+      }
+    } catch (error) {
+      console.error('Error creating connection:', error)
+      throw error
+    }
+  }
+
+  async updateConnection(id: string, fields: Partial<Connection['fields']>): Promise<Connection> {
+    try {
+      const record = await this.base(this.tables.connections).update(id, fields)
+      return {
+        id: record.id,
+        fields: record.fields as Connection['fields']
+      }
+    } catch (error) {
+      console.error('Error updating connection:', error)
+      throw error
+    }
+  }
+
+  async deleteConnection(id: string): Promise<void> {
+    try {
+      await this.base(this.tables.connections).destroy(id)
+    } catch (error) {
+      console.error('Error deleting connection:', error)
+      throw error
+    }
+  }
+
   // Batch operations for performance
   async batchCreateInfluencerPosts(posts: InfluencerPost['fields'][]): Promise<InfluencerPost[]> {
     try {
@@ -546,6 +643,7 @@ export const createAirtableClient = (
     influencerPosts?: string
     leads?: string
     generatedComments?: string
+    connections?: string
   }
 ) => {
   const key = apiKey || process.env.AIRTABLE_API_KEY
@@ -553,10 +651,11 @@ export const createAirtableClient = (
   
   const tables = {
     contentPosts: tableIds?.contentPosts || process.env.AIRTABLE_CONTENT_POSTS_TABLE_ID || process.env.AIRTABLE_TABLE_ID || '',
-    influencers: tableIds?.influencers || process.env.AIRTABLE_INFLUENCERS_TABLE_ID || process.env.AIRTABLE_CONNECTIONS_TABLE_ID || '',
+    influencers: tableIds?.influencers || process.env.AIRTABLE_INFLUENCERS_TABLE_ID || '',
     influencerPosts: tableIds?.influencerPosts || process.env.AIRTABLE_INFLUENCER_POSTS_TABLE_ID || process.env.AIRTABLE_CONNECTION_POSTS_TABLE_ID || '',
     leads: tableIds?.leads || process.env.AIRTABLE_LEADS_TABLE_ID || '',
-    generatedComments: tableIds?.generatedComments || process.env.AIRTABLE_GENERATED_COMMENTS_TABLE_ID || ''
+    generatedComments: tableIds?.generatedComments || process.env.AIRTABLE_GENERATED_COMMENTS_TABLE_ID || '',
+    connections: tableIds?.connections || process.env.AIRTABLE_CONNECTIONS_TABLE_ID || ''
   }
 
   if (!key || !base) {
@@ -567,5 +666,5 @@ export const createAirtableClient = (
     throw new Error('Content posts table ID is required')
   }
 
-  return new AirtableClient(key, base, tables)
+  return new AirtableClient(key, base, tables as any)
 }

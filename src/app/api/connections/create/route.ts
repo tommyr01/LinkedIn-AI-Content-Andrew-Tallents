@@ -14,16 +14,25 @@ export async function POST(req: NextRequest) {
     }
 
     const airtable = createAirtableClient()
+    
+    // Extract username from LinkedIn URL
+    let username = linkedinUrl
+    const match = linkedinUrl.match(/linkedin\.com\/in\/([^/]+)/)
+    if (match) {
+      username = match[1]
+    }
 
-    const record = await airtable.createInfluencer({
+    const record = await airtable.createConnection({
       'Full Name': name,
-      'Username': linkedinUrl,
-            'Created': new Date().toISOString(),
+      'Username': username,
+      'Profile Picture About': linkedinUrl, // Store full URL in this field
+      'Is Current': true,
+      'Start Date': new Date().toISOString(),
     })
 
     return NextResponse.json(record, { status: 201 })
   } catch (error: any) {
-    console.error('Create connection error', error)
+    console.error('Create connection error:', error)
     return NextResponse.json({ error: error.message || 'Server error' }, { status: 500 })
   }
 }
