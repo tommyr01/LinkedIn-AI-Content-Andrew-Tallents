@@ -14,7 +14,7 @@ export async function GET() {
     const airtableKeyLength = process.env.AIRTABLE_API_KEY?.length || 0
     
     // Test basic LinkedIn API call
-    let linkedinTestResult = null
+    let linkedinTestResult: any = null
     let linkedinError = null
     
     if (hasRapidApiKey) {
@@ -49,7 +49,7 @@ export async function GET() {
     }
     
     // Test Airtable connection
-    let airtableTestResult = null
+    let airtableTestResult: any = null
     let airtableError = null
     
     if (hasAirtableKey && hasAirtableBase && hasConnectionsTable) {
