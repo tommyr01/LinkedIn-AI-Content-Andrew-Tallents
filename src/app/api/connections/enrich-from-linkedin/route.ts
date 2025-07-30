@@ -273,13 +273,13 @@ async function fetchAndSaveConnectionPosts(username: string, connectionId: strin
     // Log first post details for debugging
     const firstPost = posts[0];
     console.log(`🔍 [POSTS-DEBUG] First post sample:`, {
-      id: firstPost?.id,
+      urn: firstPost?.urn,
       textPreview: firstPost?.text?.substring(0, 100),
       posted_at: firstPost?.posted_at,
       engagement: {
-        likes: firstPost?.likes_count,
-        comments: firstPost?.comments_count,
-        shares: firstPost?.shares_count
+        likes: firstPost?.stats?.like,
+        comments: firstPost?.stats?.comments,
+        reposts: firstPost?.stats?.reposts
       },
       author: firstPost?.author
     });
