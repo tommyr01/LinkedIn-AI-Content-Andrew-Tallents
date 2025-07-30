@@ -5,42 +5,86 @@ export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
+    // Log environment check
+    console.log('Checking environment variables:', {
+      hasApiKey: !!process.env.AIRTABLE_API_KEY,
+      hasBaseId: !!process.env.AIRTABLE_BASE_ID,
+      hasConnectionsTableId: !!process.env.AIRTABLE_CONNECTIONS_TABLE_ID,
+    })
+
     const airtable = createAirtableClient()
-    const rows = await airtable.getConnections({ maxRecords: 200 })
+    console.log('Airtable client created successfully')
     
-    // map to front-end friendly shape
-    const connections = rows.map(r => {
-      // Calculate engagement score based on follower/connection count
-      const followerCount = r.fields['Follower Count'] || 0
-      const connectionCount = r.fields['Connection Count'] || 0
-      const engagementScore = Math.min(100, Math.round((followerCount + connectionCount) / 100))
-      
-      // Extract tags from headline or other fields
-      const tags: string[] = []
-      if (r.fields['Is Influencer']) tags.push('Influencer')
-      if (r.fields['Is Creator']) tags.push('Creator')
-      if (r.fields['Is Premium']) tags.push('Premium')
-      if (r.fields['Current Company Title']?.toLowerCase().includes('founder') || 
-          r.fields['Current Company Title']?.toLowerCase().includes('ceo')) {
-        tags.push('Decision Maker')
-      }
-      
-      return {
-        id: r.id || '',
-        name: r.fields['Full Name'] || '',
-        role: r.fields['Current Company Title'] || '',
-        company: r.fields['Company Name'] || '',
-        linkedinUrl: r.fields['Username'] ? `https://linkedin.com/in/${r.fields['Username']}` : '',
-        lastEngagement: 'Never', // This field doesn't exist in Airtable yet
-        engagementScore,
-        tags,
-        notes: r.fields['Headline'] || ''
+    const rows = await airtable.getConnections({ maxRecords: 200 })
+    console.log(`Fetched ${rows.length} connections from Airtable`)
+    
+    // map to front-end friendly shape with error handling for each record
+    const connections = rows.map((r, index) => {
+      try {
+        // Safely access numeric fields
+        const followerCount = typeof r.fields['Follower Count'] === 'number' ? r.fields['Follower Count'] : 0
+        const connectionCount = typeof r.fields['Connection Count'] === 'number' ? r.fields['Connection Count'] : 0
+        const engagementScore = Math.min(100, Math.round((followerCount + connectionCount) / 100))
+        
+        // Extract tags from headline or other fields
+        const tags: string[] = []
+        if (r.fields['Is Influencer'] === true) tags.push('Influencer')
+        if (r.fields['Is Creator'] === true) tags.push('Creator')
+        if (r.fields['Is Premium'] === true) tags.push('Premium')
+        
+        const title = r.fields['Current Company Title']
+        if (title && typeof title === 'string') {
+          const lowerTitle = title.toLowerCase()
+          if (lowerTitle.includes('founder') || lowerTitle.includes('ceo')) {
+            tags.push('Decision Maker')
+          }
+        }
+        
+        return {
+          id: r.id || `connection-${index}`,
+          name: r.fields['Full Name'] || 'Unknown',
+          role: r.fields['Current Company Title'] || '',
+          company: r.fields['Company Name'] || '',
+          linkedinUrl: r.fields['Username'] ? `https://linkedin.com/in/${r.fields['Username']}` : '',
+          lastEngagement: 'Never', // This field doesn't exist in Airtable yet
+          engagementScore,
+          tags,
+          notes: r.fields['Headline'] || ''
+        }
+      } catch (recordError: any) {
+        console.error(`Error mapping record ${index}:`, recordError)
+        // Return a minimal valid record
+        return {
+          id: r.id || `connection-${index}`,
+          name: r.fields['Full Name'] || 'Error loading record',
+          role: '',
+          company: '',
+          linkedinUrl: '',
+          lastEngagement: 'Never',
+          engagementScore: 0,
+          tags: [],
+          notes: 'Error loading record data'
+        }
       }
     })
     
+    console.log(`Successfully mapped ${connections.length} connections`)
     return NextResponse.json(connections)
   } catch (error: any) {
-    console.error('Error fetching connections:', error)
-    return NextResponse.json({ error: error.message || 'Server error' }, { status: 500 })
+    console.error('Error fetching connections - Full details:', {
+      message: error.message,
+      statusCode: error.statusCode,
+      error: error.error,
+      stack: error.stack?.split('\n').slice(0, 5)
+    })
+    
+    // Return more specific error information
+    return NextResponse.json({ 
+      error: error.message || 'Server error',
+      details: process.env.NODE_ENV === 'development' ? {
+        statusCode: error.statusCode,
+        airtableError: error.error
+      } : undefined
+    }, { status: 500 })
   }
 }
