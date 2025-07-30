@@ -1,3 +1,12 @@
+// Airtable attachment type
+interface AirtableAttachment {
+  id: string;
+  url: string;
+  filename: string;
+  type: string;
+  size: number;
+}
+
 // Direct HTTP client for Airtable API - bypasses SDK AbortSignal issues
 export interface ConnectionRecord {
   id: string;
@@ -7,7 +16,7 @@ export interface ConnectionRecord {
     'Last Name'?: string;
     'Headline'?: string;
     'Username'?: string;
-    'Profile Picture URL'?: string;
+    'Profile Picture URL'?: AirtableAttachment[]; // Attachment field is array
     'About'?: string;
     'Full Location'?: string;
     'Hashtags'?: string;
