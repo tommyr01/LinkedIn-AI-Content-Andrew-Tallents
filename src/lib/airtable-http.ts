@@ -40,6 +40,26 @@ export interface ConnectionRecord {
   };
 }
 
+export interface ConnectionPostRecord {
+  id: string;
+  fields: {
+    'Connection'?: string[]; // Link to Connections table
+    'Post ID'?: string;
+    'Content'?: string;
+    'Posted At'?: string;
+    'Likes Count'?: number;
+    'Comments Count'?: number;
+    'Shares Count'?: number;
+    'Post URL'?: string;
+    'Author Name'?: string;
+    'Author Username'?: string;
+    'Media URLs'?: string; // JSON string of media URLs
+    'Media Types'?: string; // JSON string of media types
+    'Scraped At'?: string;
+    [key: string]: any;
+  };
+}
+
 // Direct HTTP client for Airtable
 export class AirtableHttpClient {
   private apiKey: string;
@@ -132,6 +152,91 @@ export class AirtableHttpClient {
       throw error;
     }
   }
+
+  async createConnectionPost(fields: Partial<ConnectionPostRecord['fields']>): Promise<ConnectionPostRecord> {
+    const tableId = process.env.AIRTABLE_CONNECTION_POSTS_TABLE_ID!;
+    
+    if (!tableId) {
+      throw new Error('Missing AIRTABLE_CONNECTION_POSTS_TABLE_ID');
+    }
+
+    try {
+      const url = `${this.baseUrl}/${tableId}`;
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({
+          fields
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Airtable create post error:', response.status, errorText);
+        throw new Error(`Airtable create post error: ${response.status} ${errorText}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error creating connection post via HTTP:', error);
+      throw error;
+    }
+  }
+
+  async createConnectionPosts(posts: Partial<ConnectionPostRecord['fields']>[]): Promise<ConnectionPostRecord[]> {
+    const tableId = process.env.AIRTABLE_CONNECTION_POSTS_TABLE_ID!;
+    
+    if (!tableId) {
+      throw new Error('Missing AIRTABLE_CONNECTION_POSTS_TABLE_ID');
+    }
+
+    if (posts.length === 0) {
+      return [];
+    }
+
+    try {
+      const url = `${this.baseUrl}/${tableId}`;
+      
+      // Airtable batch create supports up to 10 records at a time
+      const batchSize = 10;
+      const allResults: ConnectionPostRecord[] = [];
+      
+      for (let i = 0; i < posts.length; i += batchSize) {
+        const batch = posts.slice(i, i + batchSize);
+        
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: this.getHeaders(),
+          body: JSON.stringify({
+            records: batch.map(fields => ({ fields }))
+          }),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Airtable batch create posts error:', response.status, errorText);
+          throw new Error(`Airtable batch create posts error: ${response.status} ${errorText}`);
+        }
+
+        const data = await response.json();
+        allResults.push(...data.records);
+        
+        console.log(`Created batch of ${batch.length} posts (${i + batch.length}/${posts.length})`);
+        
+        // Add a small delay between batches to be respectful to Airtable API
+        if (i + batchSize < posts.length) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
+      }
+      
+      return allResults;
+    } catch (error) {
+      console.error('Error batch creating connection posts via HTTP:', error);
+      throw error;
+    }
+  }
 }
 
 // Helper functions
@@ -143,4 +248,14 @@ export async function getConnections(maxRecords = 200): Promise<ConnectionRecord
 export async function createConnection(fields: Partial<ConnectionRecord['fields']>): Promise<ConnectionRecord> {
   const client = new AirtableHttpClient();
   return client.createConnection(fields);
+}
+
+export async function createConnectionPost(fields: Partial<ConnectionPostRecord['fields']>): Promise<ConnectionPostRecord> {
+  const client = new AirtableHttpClient();
+  return client.createConnectionPost(fields);
+}
+
+export async function createConnectionPosts(posts: Partial<ConnectionPostRecord['fields']>[]): Promise<ConnectionPostRecord[]> {
+  const client = new AirtableHttpClient();
+  return client.createConnectionPosts(posts);
 }

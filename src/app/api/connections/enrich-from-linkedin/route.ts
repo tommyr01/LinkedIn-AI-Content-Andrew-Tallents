@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { linkedInScraper, extractUsernameFromLinkedInUrl } from '@/lib/linkedin-scraper'
-import { createConnection } from '@/lib/airtable-http'
+import { createConnection, createConnectionPosts, ConnectionPostRecord } from '@/lib/airtable-http'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -130,6 +130,11 @@ export async function POST(request: NextRequest) {
           hasFields: !!airtableRecord.fields,
           fieldCount: Object.keys(airtableRecord.fields || {}).length
         })
+
+        // After successful connection creation, fetch and save posts
+        if (airtableRecord?.id) {
+          await fetchAndSaveConnectionPosts(usernameToUse, airtableRecord.id)
+        }
       } catch (airtableError: any) {
         console.error(`💥 Airtable creation failed:`, {
           message: airtableError.message,
@@ -163,14 +168,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Return enriched data and Airtable record
-    return NextResponse.json({
+    const response = {
       success: true,
       message: 'Profile enriched successfully',
       linkedinData: profile.data.basic_info,
       mappedData,
       airtableRecord,
-      profilePictureUrl: profile.data.basic_info.profile_picture_url
-    })
+      profilePictureUrl: profile.data.basic_info.profile_picture_url,
+      postsEnabled: !!process.env.AIRTABLE_CONNECTION_POSTS_TABLE_ID,
+      postsMessage: process.env.AIRTABLE_CONNECTION_POSTS_TABLE_ID 
+        ? 'Posts fetching initiated in background' 
+        : 'Posts fetching disabled (AIRTABLE_CONNECTION_POSTS_TABLE_ID not configured)'
+    };
+
+    return NextResponse.json(response)
 
   } catch (error: any) {
     console.error('Error enriching LinkedIn profile:', {
@@ -212,6 +223,68 @@ export async function POST(request: NextRequest) {
         stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
       }
     }, { status: statusCode })
+  }
+}
+
+// Helper function to fetch and save connection posts
+async function fetchAndSaveConnectionPosts(username: string, connectionId: string): Promise<void> {
+  try {
+    console.log(`📝 Starting posts fetch for username: ${username}, connection: ${connectionId}`);
+    
+    // Check if connection posts table ID is configured
+    if (!process.env.AIRTABLE_CONNECTION_POSTS_TABLE_ID) {
+      console.log(`⚠️ AIRTABLE_CONNECTION_POSTS_TABLE_ID not configured, skipping posts fetch`);
+      return;
+    }
+
+    // Fetch posts from LinkedIn API
+    const posts = await linkedInScraper.getAllPosts(username, 100);
+    console.log(`📊 Fetched ${posts.length} posts for ${username}`);
+
+    if (posts.length === 0) {
+      console.log(`ℹ️ No posts found for ${username}`);
+      return;
+    }
+
+    // Map posts to Airtable format
+    const connectionPosts: Partial<ConnectionPostRecord['fields']>[] = posts.map(post => {
+      const mediaUrls = post.media?.map(media => media.url) || [];
+      const mediaTypes = post.media?.map(media => media.type) || [];
+      
+      return {
+        'Connection': [connectionId], // Link to the connection record
+        'Post ID': post.id,
+        'Content': post.text || '',
+        'Posted At': post.posted_at,
+        'Likes Count': post.likes_count || 0,
+        'Comments Count': post.comments_count || 0,
+        'Shares Count': post.shares_count || 0,
+        'Post URL': post.post_url || '',
+        'Author Name': post.author?.name || '',
+        'Author Username': post.author?.username || username,
+        'Media URLs': mediaUrls.length > 0 ? JSON.stringify(mediaUrls) : '',
+        'Media Types': mediaTypes.length > 0 ? JSON.stringify(mediaTypes) : '',
+        'Scraped At': new Date().toISOString()
+      };
+    });
+
+    console.log(`🗂️ Mapped ${connectionPosts.length} posts for Airtable insertion`);
+
+    // Save posts to Airtable
+    const createdPosts = await createConnectionPosts(connectionPosts);
+    console.log(`✅ Successfully created ${createdPosts.length} connection posts in Airtable`);
+
+  } catch (postsError: any) {
+    // Don't throw - we don't want posts errors to break connection creation
+    console.error(`💥 Failed to fetch/save posts for ${username}:`, {
+      message: postsError.message,
+      stack: postsError.stack,
+      connectionId,
+      hasConnectionPostsTableId: !!process.env.AIRTABLE_CONNECTION_POSTS_TABLE_ID
+    });
+    
+    // Log a user-friendly message but continue
+    console.log(`⚠️ Connection created successfully but posts fetching failed for ${username}`);
   }
 }
 

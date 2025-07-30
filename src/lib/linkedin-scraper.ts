@@ -60,6 +60,34 @@ export interface LinkedInProfile {
   };
 }
 
+export interface LinkedInPost {
+  success: boolean;
+  message: string;
+  data: {
+    posts: Array<{
+      id: string;
+      text: string;
+      posted_at: string;
+      likes_count: number;
+      comments_count: number;
+      shares_count: number;
+      post_url: string;
+      author: {
+        name: string;
+        username: string;
+        profile_url: string;
+      };
+      media?: Array<{
+        type: string;
+        url: string;
+      }>;
+    }>;
+    total_posts: number;
+    page_number: number;
+    has_more: boolean;
+  };
+}
+
 export interface MappedConnectionData {
   'Full Name': string;
   'First Name': string;
@@ -130,6 +158,73 @@ export class LinkedInScraperService {
       return data;
     } catch (error) {
       console.error('Error fetching LinkedIn profile:', error);
+      throw error;
+    }
+  }
+
+  async getPosts(username: string, pageNumber: number = 1): Promise<LinkedInPost> {
+    try {
+      const url = `${this.baseUrl}/profile/posts?username=${encodeURIComponent(username)}&page_number=${pageNumber}`;
+      
+      console.log(`Fetching LinkedIn posts for username: ${username}, page: ${pageNumber}`);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('LinkedIn Posts API error:', response.status, errorText);
+        throw new Error(`LinkedIn Posts API error: ${response.status} ${errorText}`);
+      }
+
+      const data: LinkedInPost = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to fetch LinkedIn posts');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error fetching LinkedIn posts:', error);
+      throw error;
+    }
+  }
+
+  async getAllPosts(username: string, maxPosts: number = 100): Promise<LinkedInPost['data']['posts']> {
+    try {
+      console.log(`Fetching up to ${maxPosts} LinkedIn posts for username: ${username}`);
+      
+      let allPosts: LinkedInPost['data']['posts'] = [];
+      let currentPage = 1;
+      let hasMore = true;
+      
+      while (hasMore && allPosts.length < maxPosts) {
+        const postsResponse = await this.getPosts(username, currentPage);
+        
+        if (postsResponse.data.posts && postsResponse.data.posts.length > 0) {
+          const postsToAdd = postsResponse.data.posts.slice(0, maxPosts - allPosts.length);
+          allPosts = [...allPosts, ...postsToAdd];
+          
+          console.log(`Fetched ${postsToAdd.length} posts from page ${currentPage}, total: ${allPosts.length}`);
+          
+          hasMore = postsResponse.data.has_more && allPosts.length < maxPosts;
+          currentPage++;
+          
+          // Add a small delay between requests to be respectful
+          if (hasMore) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        } else {
+          hasMore = false;
+        }
+      }
+      
+      console.log(`Successfully fetched ${allPosts.length} posts for ${username}`);
+      return allPosts;
+    } catch (error) {
+      console.error('Error fetching all LinkedIn posts:', error);
       throw error;
     }
   }
