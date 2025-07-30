@@ -414,7 +414,7 @@ export function ConnectionPostsTable({ posts, stats, onRefresh, isLoading = fals
 
       {/* Comment Generation Dialog */}
       <Dialog open={commentDialogOpen} onOpenChange={setCommentDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl w-[90vw] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Generated Comments</DialogTitle>
             <DialogDescription>
