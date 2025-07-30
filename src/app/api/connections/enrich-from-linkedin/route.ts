@@ -65,7 +65,14 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Error enriching LinkedIn profile:', error)
+    console.error('Error enriching LinkedIn profile:', {
+      message: error.message,
+      stack: error.stack,
+      username: usernameToUse,
+      hasRapidApiKey: !!process.env.RAPIDAPI_KEY,
+      hasAirtableConfig: !!(process.env.AIRTABLE_API_KEY && process.env.AIRTABLE_BASE_ID),
+      createRecord
+    })
     
     // Provide helpful error messages
     let errorMessage = 'Failed to enrich LinkedIn profile'
@@ -78,13 +85,22 @@ export async function POST(request: NextRequest) {
       errorMessage = 'Rate limit exceeded. Please try again later.'
       statusCode = 429
     } else if (error.message.includes('Missing RAPIDAPI_KEY')) {
-      errorMessage = 'LinkedIn API configuration error'
+      errorMessage = 'LinkedIn API configuration error - RapidAPI key not found'
+      statusCode = 500
+    } else if (error.message.includes('AIRTABLE')) {
+      errorMessage = 'Airtable configuration error'
       statusCode = 500
     }
 
     return NextResponse.json({ 
       error: errorMessage,
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      details: process.env.NODE_ENV === 'development' ? {
+        originalError: error.message,
+        username: usernameToUse,
+        hasRapidApiKey: !!process.env.RAPIDAPI_KEY,
+        rapidApiKeyLength: process.env.RAPIDAPI_KEY?.length,
+        hasAirtableConfig: !!(process.env.AIRTABLE_API_KEY && process.env.AIRTABLE_BASE_ID && process.env.AIRTABLE_CONNECTIONS_TABLE_ID)
+      } : undefined
     }, { status: statusCode })
   }
 }
