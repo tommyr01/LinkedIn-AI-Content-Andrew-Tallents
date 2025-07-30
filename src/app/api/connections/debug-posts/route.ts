@@ -127,7 +127,9 @@ export async function GET(request: NextRequest) {
               'Connection': [connectionId],
               'Post URN': post.id,
               'Full URN': post.id,
-              'Posted Date': post.posted_at?.date || post.posted_at || '',
+              'Posted Date': typeof post.posted_at === 'object' && post.posted_at?.date 
+                ? post.posted_at.date 
+                : (typeof post.posted_at === 'string' ? post.posted_at : ''),
               'Post Type': 'Post',
               'Post Text': post.text || '',
               'Post URL': post.post_url || '',

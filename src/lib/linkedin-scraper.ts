@@ -67,7 +67,11 @@ export interface LinkedInPost {
     posts: Array<{
       id: string;
       text: string;
-      posted_at: string;
+      posted_at: {
+        date: string;
+        relative: string;
+        timestamp: number;
+      } | string; // Can be either object or string depending on API response
       likes_count: number;
       comments_count: number;
       shares_count: number;
