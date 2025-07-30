@@ -12,6 +12,7 @@ import {
   MessageSquare,
   BarChart3,
   Settings,
+  User2,
 } from "lucide-react"
 
 const items = [
@@ -24,6 +25,11 @@ const items = [
     title: "Content",
     href: "/dashboard/content",
     icon: FileText,
+  },
+  {
+    title: "My Posts",
+    href: "/dashboard/my-posts",
+    icon: User2,
   },
   {
     title: "Calendar",

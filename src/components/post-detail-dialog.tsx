@@ -16,7 +16,7 @@ interface PostDetailDialogProps {
   post: ConnectionPost | null
   open: boolean
   onOpenChange: (open: boolean) => void
-  onGenerateComment: (post: ConnectionPost) => void
+  onGenerateComment?: (post: ConnectionPost) => void
   isGenerating: boolean
   selectedPostId?: string
 }
@@ -309,15 +309,17 @@ export function PostDetailDialog({
               <div className="text-sm text-muted-foreground">
                 {formatDate(post.postedAt)}
               </div>
-              <Button
-                onClick={() => onGenerateComment(post)}
-                disabled={isGenerating}
-                className="bg-primary hover:bg-primary/90"
-                size="lg"
-              >
-                <Sparkles className="h-5 w-5 mr-2" />
-                {isGenerating && selectedPostId === post.id ? "Generating Comment..." : "Generate AI Comment"}
-              </Button>
+              {onGenerateComment && (
+                <Button
+                  onClick={() => onGenerateComment(post)}
+                  disabled={isGenerating}
+                  className="bg-primary hover:bg-primary/90"
+                  size="lg"
+                >
+                  <Sparkles className="h-5 w-5 mr-2" />
+                  {isGenerating && selectedPostId === post.id ? "Generating Comment..." : "Generate AI Comment"}
+                </Button>
+              )}
             </div>
           </div>
 
@@ -346,40 +348,44 @@ export function PostDetailDialog({
               </div>
             </div>
 
-            <Separator />
+            {onGenerateComment && (
+              <>
+                <Separator />
 
-            {/* Comment Generation Section */}
-            <div className="space-y-4">
-              <h5 className="font-semibold text-base">AI Comment Generation</h5>
-              
-              <Button 
-                onClick={handleGenerateComment}
-                disabled={isGeneratingComment}
-                className="w-full"
-                size="sm"
-              >
-                <Sparkles className="h-4 w-4 mr-2" />
-                {isGeneratingComment ? "Generating..." : "Generate Comment"}
-              </Button>
-              
-              <Textarea
-                value={generatedComment}
-                onChange={(e) => setGeneratedComment(e.target.value)}
-                placeholder="Generated comment will appear here..."
-                className="min-h-[120px] text-sm"
-                disabled={isGeneratingComment}
-              />
-              
-              <Button 
-                onClick={handlePostComment}
-                disabled={!generatedComment.trim() || isPostingComment}
-                className="w-full"
-                variant="default"
-                size="sm"
-              >
-                {isPostingComment ? "Posting..." : "Post Comment"}
-              </Button>
-            </div>
+                {/* Comment Generation Section */}
+                <div className="space-y-4">
+                  <h5 className="font-semibold text-base">AI Comment Generation</h5>
+                  
+                  <Button 
+                    onClick={handleGenerateComment}
+                    disabled={isGeneratingComment}
+                    className="w-full"
+                    size="sm"
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    {isGeneratingComment ? "Generating..." : "Generate Comment"}
+                  </Button>
+                  
+                  <Textarea
+                    value={generatedComment}
+                    onChange={(e) => setGeneratedComment(e.target.value)}
+                    placeholder="Generated comment will appear here..."
+                    className="min-h-[120px] text-sm"
+                    disabled={isGeneratingComment}
+                  />
+                  
+                  <Button 
+                    onClick={handlePostComment}
+                    disabled={!generatedComment.trim() || isPostingComment}
+                    className="w-full"
+                    variant="default"
+                    size="sm"
+                  >
+                    {isPostingComment ? "Posting..." : "Post Comment"}
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </DialogContent>

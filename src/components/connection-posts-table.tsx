@@ -65,9 +65,10 @@ interface ConnectionPostsTableProps {
   stats: PostStats
   onRefresh?: () => void
   isLoading?: boolean
+  showCommentGeneration?: boolean
 }
 
-export function ConnectionPostsTable({ posts, stats, onRefresh, isLoading = false }: ConnectionPostsTableProps) {
+export function ConnectionPostsTable({ posts, stats, onRefresh, isLoading = false, showCommentGeneration = true }: ConnectionPostsTableProps) {
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState("")
   const [timeFilter, setTimeFilter] = useState<"all" | "1day" | "3day" | "7day" | "1month">("all")
@@ -323,7 +324,7 @@ export function ConnectionPostsTable({ posts, stats, onRefresh, isLoading = fals
             <PostCard
               key={post.id}
               post={post}
-              onGenerateComment={handleGenerateComment}
+              onGenerateComment={showCommentGeneration ? handleGenerateComment : undefined}
               onOpenDetails={handleOpenPostDetail}
               isGenerating={isGenerating}
               selectedPostId={selectedPost?.id}
@@ -477,7 +478,7 @@ export function ConnectionPostsTable({ posts, stats, onRefresh, isLoading = fals
         post={selectedPostForDetail}
         open={postDetailOpen}
         onOpenChange={setPostDetailOpen}
-        onGenerateComment={handleGenerateComment}
+        onGenerateComment={showCommentGeneration ? handleGenerateComment : undefined}
         isGenerating={isGenerating}
         selectedPostId={selectedPost?.id}
       />
