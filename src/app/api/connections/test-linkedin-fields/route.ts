@@ -45,13 +45,14 @@ export async function GET() {
       
       for (const fieldName of fieldsToTest) {
         try {
-          const testRecord = {
+          const mappedDataAny = mappedData as any
+          const testRecord: any = {
             'Full Name': `Test ${fieldName} Field`,
             'Username': `test-${fieldName.toLowerCase().replace(' ', '-')}`,
-            [fieldName]: mappedData[fieldName]
+            [fieldName]: mappedDataAny[fieldName]
           }
           
-          console.log(`Testing field: ${fieldName} = ${mappedData[fieldName]}`)
+          console.log(`Testing field: ${fieldName} = ${mappedDataAny[fieldName]}`)
           const result = await createConnection(testRecord)
           fieldTests[fieldName] = 'SUCCESS'
           console.log(`✅ Field ${fieldName} works`)
