@@ -114,35 +114,33 @@ export async function GET(request: NextRequest) {
           const posts = await linkedInScraper.getAllPosts(username, 2)
           
           const connectionPosts: Partial<ConnectionPostRecord['fields']>[] = posts.map(post => {
-            // Split author name into first and last name
-            const authorName = post.author?.name || '';
-            const nameParts = authorName.split(' ');
-            const firstName = nameParts[0] || '';
-            const lastName = nameParts.slice(1).join(' ') || '';
-            
-            // Handle media
-            const firstMedia = post.media?.[0];
-            
             return {
               'Connection': [connectionId],
-              'Post URN': post.id,
-              'Full URN': post.id,
+              'Post URN': post.urn || '',
+              'Full URN': post.full_urn || '',
               'Posted Date': typeof post.posted_at === 'object' && post.posted_at?.date 
                 ? post.posted_at.date 
                 : (typeof post.posted_at === 'string' ? post.posted_at : ''),
-              'Post Type': 'Post',
+              'Post Type': post.post_type || 'Post',
               'Post Text': post.text || '',
-              'Post URL': post.post_url || '',
-              'Author First Name': firstName,
-              'Author Last Name': lastName,
+              'Post URL': post.url || '',
+              'Author First Name': post.author?.first_name || '',
+              'Author Last Name': post.author?.last_name || '',
+              'Author Headline': post.author?.headline || '',
               'Username': post.author?.username || username,
               'Author LinkedIn URL': post.author?.profile_url || '',
-              'Total Reactions': (post.likes_count || 0) + (post.shares_count || 0),
-              'Likes': post.likes_count || 0,
-              'Comments Count': post.comments_count || 0,
-              'Reposts': post.shares_count || 0,
-              'Media Type': firstMedia?.type || '',
-              'Media URL': firstMedia?.url || ''
+              'Author Profile Picture': post.author?.profile_picture || '',
+              'Total Reactions': post.stats?.total_reactions || 0,
+              'Likes': post.stats?.like || 0,
+              'Support': post.stats?.support || 0,
+              'Love': post.stats?.love || 0,
+              'Insight': post.stats?.insight || 0,
+              'Celebrate': post.stats?.celebrate || 0,
+              'Comments Count': post.stats?.comments || 0,
+              'Reposts': post.stats?.reposts || 0,
+              'Media Type': post.media?.type || '',
+              'Media URL': post.media?.url || '',
+              'Media Thumbnail': post.media?.thumbnail || ''
             }
           })
           

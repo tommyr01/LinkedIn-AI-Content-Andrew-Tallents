@@ -65,26 +65,39 @@ export interface LinkedInPost {
   message: string;
   data: {
     posts: Array<{
-      id: string;
+      urn: string;
+      full_urn: string;
       text: string;
+      url: string;
+      post_type: string;
       posted_at: {
         date: string;
         relative: string;
         timestamp: number;
-      } | string; // Can be either object or string depending on API response
-      likes_count: number;
-      comments_count: number;
-      shares_count: number;
-      post_url: string;
+      } | string;
       author: {
-        name: string;
+        first_name: string;
+        last_name: string;
+        headline: string;
         username: string;
         profile_url: string;
+        profile_picture: string;
       };
-      media?: Array<{
+      stats: {
+        total_reactions: number;
+        like: number;
+        support: number;
+        love: number;
+        insight: number;
+        celebrate: number;
+        comments: number;
+        reposts: number;
+      };
+      media?: {
         type: string;
         url: string;
-      }>;
+        thumbnail: string;
+      };
     }>;
     total_posts: number;
     page_number: number;

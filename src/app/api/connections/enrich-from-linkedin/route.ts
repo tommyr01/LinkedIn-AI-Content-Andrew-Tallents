@@ -284,25 +284,16 @@ async function fetchAndSaveConnectionPosts(username: string, connectionId: strin
       author: firstPost?.author
     });
 
-    // Map posts to Airtable format using correct field names
+    // Map posts to Airtable format using correct field names based on actual API response
     console.log(`🗂️ [POSTS-DEBUG] Mapping ${posts.length} posts to Airtable format...`);
     const connectionPosts: Partial<ConnectionPostRecord['fields']>[] = posts.map((post, index) => {
-      // Split author name into first and last name
-      const authorName = post.author?.name || '';
-      const nameParts = authorName.split(' ');
-      const firstName = nameParts[0] || '';
-      const lastName = nameParts.slice(1).join(' ') || '';
-      
-      // Handle media
-      const firstMedia = post.media?.[0];
-      
       const mappedPost = {
-        // Connection linking - NOTE: You need to add this field to your Airtable table
-        'Connection': [connectionId], // Link to the connection record
+        // Connection linking
+        'Connection': [connectionId],
         
-        // Post identification
-        'Post URN': post.id,
-        'Full URN': post.id, // Using same as Post URN for now
+        // Post identification - using actual API field names
+        'Post URN': post.urn || '',
+        'Full URN': post.full_urn || '',
         
         // Dates - handle both object and string formats from LinkedIn API
         'Posted Date': typeof post.posted_at === 'object' && post.posted_at?.date 
@@ -310,40 +301,40 @@ async function fetchAndSaveConnectionPosts(username: string, connectionId: strin
           : (typeof post.posted_at === 'string' ? post.posted_at : ''),
         'Relative Posted': typeof post.posted_at === 'object' && post.posted_at?.relative 
           ? post.posted_at.relative 
-          : '', // Relative date if available
+          : '',
         
-        // Post details  
-        'Post Type': 'Post', // Default value, LinkedIn API doesn't specify
+        // Post details - using actual API field names
+        'Post Type': post.post_type || 'Post',
         'Post Text': post.text || '',
-        'Post URL': post.post_url || '',
+        'Post URL': post.url || '',
         
-        // Author details
-        'Author First Name': firstName,
-        'Author Last Name': lastName,
-        'Author Headline': '', // Not available in current LinkedIn API response
+        // Author details - now available in API response
+        'Author First Name': post.author?.first_name || '',
+        'Author Last Name': post.author?.last_name || '',
+        'Author Headline': post.author?.headline || '',
         'Username': post.author?.username || username,
         'Author LinkedIn URL': post.author?.profile_url || '',
-        'Author Profile Picture': '', // Not available in current LinkedIn API response
+        'Author Profile Picture': post.author?.profile_picture || '',
         
-        // Engagement metrics
-        'Total Reactions': (post.likes_count || 0) + (post.shares_count || 0), // Approximation
-        'Likes': post.likes_count || 0,
-        'Support': 0, // Not available in LinkedIn API
-        'Love': 0, // Not available in LinkedIn API
-        'Insight': 0, // Not available in LinkedIn API
-        'Celebrate': 0, // Not available in LinkedIn API
-        'Comments Count': post.comments_count || 0,
-        'Reposts': post.shares_count || 0,
+        // Engagement metrics - using actual stats structure
+        'Total Reactions': post.stats?.total_reactions || 0,
+        'Likes': post.stats?.like || 0,
+        'Support': post.stats?.support || 0,
+        'Love': post.stats?.love || 0,
+        'Insight': post.stats?.insight || 0,
+        'Celebrate': post.stats?.celebrate || 0,
+        'Comments Count': post.stats?.comments || 0,
+        'Reposts': post.stats?.reposts || 0,
         
-        // Media
-        'Media Type': firstMedia?.type || '',
-        'Media URL': firstMedia?.url || '',
-        'Media Thumbnail': '' // Not available in current LinkedIn API response
+        // Media - using actual media structure (single object, not array)
+        'Media Type': post.media?.type || '',
+        'Media URL': post.media?.url || '',
+        'Media Thumbnail': post.media?.thumbnail || ''
       };
       
       // Log first mapped post for debugging
       if (index === 0) {
-        console.log(`🔍 [POSTS-DEBUG] First mapped post (with correct field names):`, mappedPost);
+        console.log(`🔍 [POSTS-DEBUG] First mapped post (with actual API structure):`, mappedPost);
       }
       
       return mappedPost;
