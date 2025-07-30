@@ -10,7 +10,7 @@ import { ConnectionPost } from "./connection-posts-table"
 
 interface PostCardProps {
   post: ConnectionPost
-  onGenerateComment: (post: ConnectionPost) => void
+  onGenerateComment?: (post: ConnectionPost) => void
   onOpenDetails: (post: ConnectionPost) => void
   isGenerating: boolean
   selectedPostId?: string
