@@ -65,31 +65,13 @@ export function ContentGenerator({ onContentSaved, onWebhookResponses, onLoading
   
   const sendToWebhook = async () => {
     if (!topic.trim()) {
-      toast.error("Please enter a topic first")
-      return
+      return;
     }
-    
-    setIsSendingWebhook(true)
-    onLoadingChange?.(true)
+    setIsSendingWebhook(true);
+    onLoadingChange?.(true);
     try {
-      // Send data to webhook
-      const webhookUrl = "https://t01rich.app.n8n.cloud/webhook/4da72753-ab1b-4973-917f-23e6bdc97d23"
-      
-      // Format the super prompt template with the user's input
-      const superPromptTemplate = `Act as an informed ${selectedPlatform.charAt(0).toUpperCase() + selectedPlatform.slice(1)} expert specializing in content for **Target Avatar**. You will be provided with specific details about a news topic relevant to this audience. You must only provide the output required. Do not include any other additional information about how or why the response is good. Provide only the output according to the below guidelines.
-
-**Mandatory Tone of Voice:**
-You must consult the tone of voice guidelines in all of the responses you create. The required tone is: **"${voiceGuidelines}"**. You must write by those guidelines. Before you write any text, thoroughly embody this tone.
-
-**Output Format:**
-Please provide your response in **plain text format only**, without any special formatting elements such as hashtags, asterisks, or other markdown syntax in the main body. Use clear and concise language, and structure your response using paragraphs. Emojis may be used appropriately for emphasis and engagement if they fit the specified tone of voice.
-
-**Input Topic Data (Use this information to craft the post):**
-Topic: ${topic}
-Post Type: ${postType}
-Platform: ${selectedPlatform.charAt(0).toUpperCase() + selectedPlatform.slice(1)}`
-      
-      // Data to send to webhook
+      const webhookUrl = "https://t01rich.app.n8n.cloud/webhook/4da72753-ab1b-4973-917f-23e6bdc97d23";
+      const superPromptTemplate = `Act as an informed ${selectedPlatform.charAt(0).toUpperCase() + selectedPlatform.slice(1)} expert specializing in content for **Target Avatar**. You will be provided with specific details about a news topic relevant to this audience. You must only provide the output required. Do not include any other additional information about how or why the response is good. Provide only the output according to the below guidelines.\n\n**Mandatory Tone of Voice:**\nYou must consult the tone of voice guidelines in all of the responses you create. The required tone is: **\"${voiceGuidelines}\"**. You must write by those guidelines. Before you write any text, thoroughly embody this tone.\n\n**Output Format:**\nPlease provide your response in **plain text format only**, without any special formatting elements such as hashtags, asterisks, or other markdown syntax in the main body. Use clear and concise language, and structure your response using paragraphs. Emojis may be used appropriately for emphasis and engagement if they fit the specified tone of voice.\n\n**Input Topic Data (Use this information to craft the post):**\nTopic: ${topic}\nPost Type: ${postType}\nPlatform: ${selectedPlatform.charAt(0).toUpperCase() + selectedPlatform.slice(1)}`;
       const webhookData = {
         topic,
         voiceGuidelines,
@@ -97,74 +79,57 @@ Platform: ${selectedPlatform.charAt(0).toUpperCase() + selectedPlatform.slice(1)
         postType,
         tone,
         superPrompt: superPromptTemplate
-      }
-      
-      toast.loading("Sending data to webhook...")
-      
-      // Send data to webhook and capture the response
+      };
+  
       const webhookResponse = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(webhookData),
-      })
-      
-      if (!webhookResponse.ok) {
-        toast.error("Failed to send data to webhook")
-        console.error('Webhook call failed')
-      } else {
-        // Attempt to parse response
-        let responses: string[] = []
+      });
+      if (webhookResponse.ok) {
+        let responses: string[] = [];
         try {
-          const result = await webhookResponse.json()
+          const result = await webhookResponse.json();
           if (Array.isArray(result)) {
-            // Response is an array – assume each element is a string or object with content
             responses = result.map((r: any) => {
-              if (typeof r === 'string') return r
-              if (r?.content) return r.content
-              if (typeof r === 'object') return JSON.stringify(r, null, 2)
-              return String(r)
-            })
+              if (typeof r === 'string') return r;
+              if (r?.content) return r.content;
+              if (typeof r === 'object') return JSON.stringify(r, null, 2);
+              return String(r);
+            });
           } else if (result.variations && Array.isArray(result.variations)) {
-            // Our own content generation format
-            responses = result.variations.map((v: any) => v.content || JSON.stringify(v))
+            responses = result.variations.map((v: any) => v.content || JSON.stringify(v));
           } else if (typeof result === 'object') {
-            // Check for post_1, post_2, post_3 keys
-            const postKeys = Object.keys(result).filter(k => k.startsWith('post_'))
+            const postKeys = Object.keys(result).filter(k => k.startsWith('post_'));
             if (postKeys.length) {
               responses = postKeys.map(k => {
-                const postObj = (result as any)[k]
-                if (postObj && postObj["LinkedIn Post"]) return postObj["LinkedIn Post"]
-                return JSON.stringify(postObj, null, 2)
-              })
+                const postObj = (result as any)[k];
+                if (postObj && postObj["LinkedIn Post"]) return postObj["LinkedIn Post"];
+                return JSON.stringify(postObj, null, 2);
+              });
             } else {
-              responses = [JSON.stringify(result, null, 2)]
+              responses = [JSON.stringify(result, null, 2)];
             }
           } else {
-            responses = [String(result)]
+            responses = [String(result)];
           }
         } catch (e) {
-          const text = await webhookResponse.text()
-          responses = [text]
+          const text = await webhookResponse.text();
+          responses = [text];
         }
-
-        // Notify parent component
         if(responses.length){
-          onWebhookResponses?.(responses)
+          onWebhookResponses?.(responses);
         }
-
-        toast.success("Webhook responded successfully")
-        console.log('Webhook response:', responses)
       }
     } catch (error) {
-      toast.error("Error sending data to webhook")
-      console.error('Error sending to webhook:', error)
+      // No toast error
     } finally {
-      setIsSendingWebhook(false)
-      onLoadingChange?.(false)
+      setIsSendingWebhook(false);
+      onLoadingChange?.(false);
     }
-  }
+  };
 
   const handleGenerate = async () => {
     if (!topic.trim()) {
@@ -347,267 +312,8 @@ Platform: ${selectedPlatform.charAt(0).toUpperCase() + selectedPlatform.slice(1)
               </Button>
             </div>
           </div>
-          
-          {/* Voice Settings */}
-          <Card className="border-2 border-dashed border-blue-200 bg-blue-50/50">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <User className="h-4 w-4" />
-                Voice & Style Settings
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Use Andrew's Voice</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Generate content using Andrew's authentic coaching voice and style
-                  </p>
-                </div>
-                <Switch
-                  checked={useAndrewVoice}
-                  onCheckedChange={setUseAndrewVoice}
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="postType">Post Type</Label>
-                  <Select value={postType} onValueChange={setPostType}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Thought Leadership">Thought Leadership</SelectItem>
-                      <SelectItem value="Tips">Tips & Insights</SelectItem>
-                      <SelectItem value="Story">Personal Story</SelectItem>
-                      <SelectItem value="Question">Engaging Question</SelectItem>
-                      <SelectItem value="Announcement">Announcement</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="tone">Tone</Label>
-                  <Select value={tone} onValueChange={setTone}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="professional">Professional</SelectItem>
-                      <SelectItem value="conversational">Conversational</SelectItem>
-                      <SelectItem value="inspiring">Inspiring</SelectItem>
-                      <SelectItem value="educational">Educational</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="length">Target Length</Label>
-                  <Select value={targetLength} onValueChange={setTargetLength}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="short">Short (50-100 words)</SelectItem>
-                      <SelectItem value="medium">Medium (100-200 words)</SelectItem>
-                      <SelectItem value="long">Long (200-300 words)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="hashtags"
-                      checked={includeHashtags}
-                      onCheckedChange={setIncludeHashtags}
-                    />
-                    <Label htmlFor="hashtags" className="text-sm">Include Hashtags</Label>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="cta"
-                      checked={includeCTA}
-                      onCheckedChange={setIncludeCTA}
-                    />
-                    <Label htmlFor="cta" className="text-sm">Include Call-to-Action</Label>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Button 
-            onClick={handleGenerate}
-            disabled={isGenerating || !topic.trim()}
-            className="w-full"
-            size="lg"
-          >
-            {isGenerating ? (
-              <>
-                <Sparkles className="h-4 w-4 mr-2 animate-spin" />
-                Generating Content...
-              </>
-            ) : (
-              <>
-                <Zap className="h-4 w-4 mr-2" />
-                Generate {useAndrewVoice ? "with Andrew's Voice" : "Professional Content"}
-                {selectedPlatform && ` for ${selectedPlatform.charAt(0).toUpperCase() + selectedPlatform.slice(1)}`}
-              </>
-            )}
-          </Button>
         </CardContent>
       </Card>
-
-      {/* Generated Content */}
-      {variations.length > 0 && (
-        <div className="space-y-6">
-          <div className="text-center">
-            <h3 className="text-2xl font-bold tracking-tight mb-2">Generated Content</h3>
-            <p className="text-muted-foreground">
-              {useAndrewVoice ? "Content generated with Andrew's authentic voice" : "Professional LinkedIn content"}
-            </p>
-          </div>
-          
-          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-1">
-            {variations.map((variation, index) => (
-              <Card key={index} className="border-2 hover:border-primary/20 transition-colors">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold">
-                        {index + 1}
-                      </div>
-                      <div className="space-y-1">
-                        <CardTitle className="text-lg">Variation {index + 1}</CardTitle>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-xs">
-                            {variation.approach}
-                          </Badge>
-                          <Badge variant="outline" className="text-xs">
-                            {variation.wordCount} words
-                          </Badge>
-                          {useAndrewVoice && (
-                            <Badge 
-                              variant="outline" 
-                              className={`text-xs ${getVoiceScoreBg(variation.estimated_voice_score)} ${getVoiceScoreColor(variation.estimated_voice_score)}`}
-                            >
-                              <TrendingUp className="h-3 w-3 mr-1" />
-                              Voice: {variation.estimated_voice_score}%
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleCopyToClipboard(variation.content)}
-                      >
-                        <Copy className="h-4 w-4 mr-1" />
-                        Copy Post
-                      </Button>
-                      {includeHashtags && variation.hashtags.length > 0 && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleCopyWithHashtags(variation.content, variation.hashtags)}
-                        >
-                          <Copy className="h-4 w-4 mr-1" />
-                          Copy + Tags
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Voice Score Progress Bar */}
-                  {useAndrewVoice && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Voice Match Score</span>
-                        <span className={getVoiceScoreColor(variation.estimated_voice_score)}>
-                          {variation.estimated_voice_score}%
-                        </span>
-                      </div>
-                      <Progress 
-                        value={variation.estimated_voice_score} 
-                        className="h-2"
-                      />
-                    </div>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {/* Content */}
-                    <div className="bg-muted/20 border rounded-lg p-6">
-                      <div className="prose prose-sm max-w-none">
-                        <p className="leading-relaxed whitespace-pre-wrap text-foreground">
-                          {variation.content}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    {/* Hashtags */}
-                    {variation.hashtags.length > 0 && includeHashtags && (
-                      <div className="space-y-3">
-                        <Label className="text-sm font-medium">Suggested Hashtags:</Label>
-                        <div className="flex flex-wrap gap-2">
-                          {variation.hashtags.map((hashtag, i) => (
-                            <Badge
-                              key={i}
-                              variant="secondary"
-                              className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
-                              onClick={() => {
-                                navigator.clipboard.writeText(hashtag)
-                                toast.success(`Copied ${hashtag}`)
-                              }}
-                            >
-                              {hashtag}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Additional Metadata */}
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground pt-2 border-t">
-                      <span>Style: {variation.tone}</span>
-                      <span>•</span>
-                      <span>Length: {targetLength}</span>
-                      {useAndrewVoice && (
-                        <>
-                          <span>•</span>
-                          <span className={getVoiceScoreColor(variation.estimated_voice_score)}>
-                            {variation.estimated_voice_score >= 85 ? "Excellent voice match" :
-                             variation.estimated_voice_score >= 70 ? "Good voice match" :
-                             variation.estimated_voice_score >= 50 ? "Fair voice match" : "Needs refinement"}
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          
-          <div className="text-center space-y-2">
-            <p className="text-sm text-muted-foreground">
-              💡 Click any hashtag to copy it individually, or use the copy buttons for full content
-            </p>
-            {useAndrewVoice && (
-              <p className="text-xs text-muted-foreground">
-                Voice scores above 70% indicate strong alignment with Andrew's authentic style
-              </p>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
