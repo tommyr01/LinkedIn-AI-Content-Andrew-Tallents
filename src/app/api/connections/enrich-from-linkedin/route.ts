@@ -67,8 +67,12 @@ export async function POST(request: NextRequest) {
           continue
         }
         
-        // Validate field types
-        if (key.includes('Count') && typeof value !== 'number') {
+        // Validate field types and handle problematic fields
+        if (key === 'Show Follower Count') {
+          // Skip this field temporarily - it's causing the error
+          console.log(`⚠️ Skipping problematic field: ${key} (value: ${value})`)
+          continue
+        } else if (key.includes('Count') && !key.includes('Show') && typeof value !== 'number') {
           cleanedFields[key] = Number(value) || 0
         } else if (key.startsWith('Is ') && typeof value !== 'boolean') {
           cleanedFields[key] = Boolean(value)
