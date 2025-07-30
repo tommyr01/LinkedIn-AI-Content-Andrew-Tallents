@@ -57,25 +57,36 @@ export async function POST(request: NextRequest) {
     let airtableRecord = null;
     
     if (createRecord) {
-      // SIMPLIFIED APPROACH: Use only essential fields that we know work
-      console.log(`🎯 Using MINIMAL field set to get basic save working...`)
+      // GRADUALLY ADDING MORE FIELDS: Starting with essential + safe text fields
+      console.log(`🎯 Using expanded but safe field set...`)
       
-      const essentialFields = {
+      const safeFields = {
+        // Essential fields (these work)
         'Full Name': mappedData['Full Name'] || 'Unknown',
         'Username': mappedData['Username'] || '',
         'Current Company': mappedData['Current Company'] || '',
-        'Title': mappedData['Title'] || ''
+        'Title': mappedData['Title'] || '',
+        
+        // Additional safe text fields
+        'First Name': mappedData['First Name'] || '',
+        'Last Name': mappedData['Last Name'] || '',
+        'Headline': mappedData['Headline'] || '',
+        'Full Location': mappedData['Full Location'] || '',
+        
+        // Numbers (converted to ensure they're numbers)
+        'Follower Count': Number(mappedData['Follower Count']) || 0,
+        'Connection Count': Number(mappedData['Connection Count']) || 0
       }
       
       // Only include fields that have actual values
       const fieldsToCreate: any = {}
-      for (const [key, value] of Object.entries(essentialFields)) {
-        if (value && value !== '') {
+      for (const [key, value] of Object.entries(safeFields)) {
+        if (value !== null && value !== undefined && value !== '') {
           fieldsToCreate[key] = value
         }
       }
       
-      console.log(`📝 Creating Airtable record with MINIMAL ${Object.keys(fieldsToCreate).length} essential fields:`, fieldsToCreate)
+      console.log(`📝 Creating Airtable record with ${Object.keys(fieldsToCreate).length} safe fields:`, fieldsToCreate)
 
       try {
         airtableRecord = await createConnection(fieldsToCreate)
