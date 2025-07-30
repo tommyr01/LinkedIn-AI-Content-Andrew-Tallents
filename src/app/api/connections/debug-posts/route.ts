@@ -146,10 +146,7 @@ export async function GET(request: NextRequest) {
             if (post.author?.profile_picture && post.author.profile_picture !== '') {
               mappedPost['Author Profile Picture'] = [{
                 url: post.author.profile_picture,
-                filename: 'author-profile-picture.jpg',
-                id: '',
-                type: 'image/jpeg',
-                size: 0
+                filename: 'author-profile-picture.jpg'
               }];
             }
             
