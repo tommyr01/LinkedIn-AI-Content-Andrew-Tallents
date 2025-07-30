@@ -15,6 +15,7 @@ interface Connection {
   role: string
   company: string
   linkedinUrl: string
+  profilePictureUrl?: string
   lastEngagement: string
   engagementScore: number
   tags: string[]
@@ -146,7 +147,17 @@ export default function ConnectionsPage() {
           <div className="space-y-4">
             {filteredConnections.map(connection => (
               <div key={connection.id} className="flex items-start space-x-4 p-4 border rounded-lg hover:bg-gray-50">
-                <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center">
+                <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                  {connection.profilePictureUrl ? (
+                    <img 
+                      src={connection.profilePictureUrl} 
+                      alt={connection.name}
+                      className="h-12 w-12 rounded-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  ) : null}
                   <User className="h-6 w-6 text-gray-600" />
                 </div>
                 <div className="flex-1 space-y-2">
