@@ -4,12 +4,9 @@ import { createAirtableClient } from '@/lib/airtable'
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { name, linkedinUrl, role, company, priorityRank } = body as {
+    const { name, linkedinUrl } = body as {
       name?: string
       linkedinUrl?: string
-      role?: string
-      company?: string
-      priorityRank?: number
     }
 
     if (!name || !linkedinUrl) {
@@ -19,13 +16,9 @@ export async function POST(req: NextRequest) {
     const airtable = createAirtableClient()
 
     const record = await airtable.createInfluencer({
-      'Name': name,
-      'Profile URL': linkedinUrl,
-      'Role': role,
-      'Company': company,
-      'Priority Rank': priorityRank,
-      'Status': 'Active',
-      'Created': new Date().toISOString(),
+      'Full Name': name,
+      'Username': linkedinUrl,
+            'Created': new Date().toISOString(),
     })
 
     return NextResponse.json(record, { status: 201 })
