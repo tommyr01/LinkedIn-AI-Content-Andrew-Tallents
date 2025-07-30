@@ -314,7 +314,6 @@ async function fetchAndSaveConnectionPosts(username: string, connectionId: strin
         'Author Headline': post.author?.headline || '',
         'Username': post.author?.username || username,
         'Author LinkedIn URL': post.author?.profile_url || '',
-        'Author Profile Picture': post.author?.profile_picture || '',
         
         // Engagement metrics - using actual stats structure
         'Total Reactions': post.stats?.total_reactions || 0,
@@ -331,6 +330,14 @@ async function fetchAndSaveConnectionPosts(username: string, connectionId: strin
         'Media URL': post.media?.url || '',
         'Media Thumbnail': post.media?.thumbnail || ''
       };
+      
+      // Handle Author Profile Picture as attachment
+      if (post.author?.profile_picture && post.author.profile_picture !== '') {
+        mappedPost['Author Profile Picture'] = [{
+          url: post.author.profile_picture,
+          filename: 'author-profile-picture.jpg'
+        }] as any;
+      }
       
       // Log first mapped post for debugging
       if (index === 0) {

@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
           const posts = await linkedInScraper.getAllPosts(username, 2)
           
           const connectionPosts: Partial<ConnectionPostRecord['fields']>[] = posts.map(post => {
-            return {
+            const mappedPost: any = {
               'Connection': [connectionId],
               'Post URN': post.urn || '',
               'Full URN': post.full_urn || '',
@@ -129,7 +129,6 @@ export async function GET(request: NextRequest) {
               'Author Headline': post.author?.headline || '',
               'Username': post.author?.username || username,
               'Author LinkedIn URL': post.author?.profile_url || '',
-              'Author Profile Picture': post.author?.profile_picture || '',
               'Total Reactions': post.stats?.total_reactions || 0,
               'Likes': post.stats?.like || 0,
               'Support': post.stats?.support || 0,
@@ -141,7 +140,17 @@ export async function GET(request: NextRequest) {
               'Media Type': post.media?.type || '',
               'Media URL': post.media?.url || '',
               'Media Thumbnail': post.media?.thumbnail || ''
+            };
+            
+            // Handle Author Profile Picture as attachment
+            if (post.author?.profile_picture && post.author.profile_picture !== '') {
+              mappedPost['Author Profile Picture'] = [{
+                url: post.author.profile_picture,
+                filename: 'author-profile-picture.jpg'
+              }];
             }
+            
+            return mappedPost;
           })
           
           const fullResults = await createConnectionPosts(connectionPosts)
