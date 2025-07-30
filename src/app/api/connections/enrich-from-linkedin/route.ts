@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
         'Company LinkedIn URL': mappedData['Company LinkedIn URL'] || '',
         // 'Background Picture URL' is handled separately as an attachment field
         'URN': mappedData['URN'] || '',
-        'Current Company URN': mappedData['Current Company URN'] || ''
+        'Current Company URN': mappedData['Current Company URN'] || '',
         
         // GROUP B: Boolean fields
         'Is Creator': Boolean(mappedData['Is Creator']),
