@@ -75,7 +75,30 @@ export async function POST(request: NextRequest) {
         
         // Numbers (converted to ensure they're numbers)
         'Follower Count': Number(mappedData['Follower Count']) || 0,
-        'Connection Count': Number(mappedData['Connection Count']) || 0
+        'Connection Count': Number(mappedData['Connection Count']) || 0,
+        
+        // Date field - ensure proper format
+        'Start Date': mappedData['Start Date'] || '',
+        
+        // Boolean fields - these need to be actual booleans for Airtable
+        'Is Creator': Boolean(mappedData['Is Creator']),
+        'Is Influencer': Boolean(mappedData['Is Influencer']), 
+        'Is Premium': Boolean(mappedData['Is Premium']),
+        'Is Current': Boolean(mappedData['Is Current']),
+        
+        // Additional fields
+        'Company LinkedIn URL': mappedData['Company LinkedIn URL'] || '',
+        'Background Picture URL': mappedData['Background Picture URL'] || '',
+        'URN': mappedData['URN'] || '',
+        'Current Company URN': mappedData['Current Company URN'] || '',
+        
+        // Long text field - truncate if needed
+        'About': mappedData['About'] ? String(mappedData['About']).substring(0, 10000) : '',
+        
+        // Hashtags as comma-separated string
+        'Hashtags': mappedData['Hashtags'] || ''
+        
+        // Still skipping: 'Show Follower Count' (known problematic field)
       }
       
       // Only include fields that have actual values
