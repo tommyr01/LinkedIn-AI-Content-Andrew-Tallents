@@ -22,13 +22,17 @@ export async function POST(req: NextRequest) {
       username = match[1]
     }
 
+    console.log(`Creating connection: Name="${name}", Username="${username}", LinkedIn URL="${linkedinUrl}"`)
+
     const record = await createConnection({
       'Full Name': name,
       'Username': username,
-      'Profile Picture URL': linkedinUrl, // Fixed: was 'Profile Picture About'
+      // Don't set Profile Picture URL here - that should be the actual image URL, not LinkedIn profile URL
       'Is Current': true,
       'Start Date': new Date().toISOString(),
     })
+
+    console.log('Connection created successfully:', record.id)
 
     return NextResponse.json(record, { status: 201 })
   } catch (error: any) {
