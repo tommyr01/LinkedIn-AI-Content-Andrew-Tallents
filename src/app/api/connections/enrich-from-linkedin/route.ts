@@ -49,10 +49,9 @@ export async function POST(request: NextRequest) {
       'Start Date': mappedData['Start Date']
     })
 
-    // Handle profile picture separately if needed
-    // Temporarily disable profile picture to isolate field errors
-    const profilePictureAttachment = null // await linkedInScraper.getProfilePictureAsAttachment(profile.data.basic_info.profile_picture_url)
-    console.log(`📸 Profile picture attachment: Temporarily disabled for debugging`)
+    // Handle profile picture as attachment
+    const profilePictureUrl = profile.data.basic_info.profile_picture_url
+    console.log(`📸 Profile picture URL: ${profilePictureUrl ? 'Found' : 'Not found'}`)
 
     let airtableRecord = null;
     
@@ -84,15 +83,15 @@ export async function POST(request: NextRequest) {
         'URN': mappedData['URN'] || '',
         'Current Company URN': mappedData['Current Company URN'] || ''
         
-        // GROUP B: Boolean fields (temporarily disabled for testing)
-        // 'Is Creator': Boolean(mappedData['Is Creator']),
-        // 'Is Influencer': Boolean(mappedData['Is Influencer']), 
-        // 'Is Premium': Boolean(mappedData['Is Premium']),
-        // 'Is Current': Boolean(mappedData['Is Current']),
+        // GROUP B: Boolean fields
+        'Is Creator': Boolean(mappedData['Is Creator']),
+        'Is Influencer': Boolean(mappedData['Is Influencer']), 
+        'Is Premium': Boolean(mappedData['Is Premium']),
+        'Is Current': Boolean(mappedData['Is Current']),
         
-        // GROUP C: Long text fields (temporarily disabled for testing)
-        // 'About': mappedData['About'] ? String(mappedData['About']).substring(0, 10000) : '',
-        // 'Hashtags': mappedData['Hashtags'] || ''
+        // GROUP C: Long text fields
+        'About': mappedData['About'] ? String(mappedData['About']).substring(0, 10000) : '',
+        'Hashtags': mappedData['Hashtags'] || ''
       }
       
       // Only include fields that have actual values
@@ -103,13 +102,22 @@ export async function POST(request: NextRequest) {
         }
       }
       
-      // Handle Background Picture URL as attachment if present
+      // Handle attachment fields
       const backgroundPictureUrl = mappedData['Background Picture URL']
       if (backgroundPictureUrl && backgroundPictureUrl !== '') {
-        console.log(`📸 Adding Background Picture URL as attachment: ${backgroundPictureUrl}`)
+        console.log(`📸 Adding Background Picture URL as attachment`)
         fieldsToCreate['Background Picture URL'] = [{
           url: backgroundPictureUrl,
           filename: 'background-picture.jpg'
+        }]
+      }
+      
+      // Handle Profile Picture URL as attachment
+      if (profilePictureUrl && profilePictureUrl !== '') {
+        console.log(`📸 Adding Profile Picture URL as attachment`)
+        fieldsToCreate['Profile Picture URL'] = [{
+          url: profilePictureUrl,
+          filename: 'profile-picture.jpg'
         }]
       }
       
