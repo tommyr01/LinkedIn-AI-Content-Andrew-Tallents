@@ -77,12 +77,14 @@ export async function POST(request: NextRequest) {
         'Follower Count': Number(mappedData['Follower Count']) || 0,
         'Connection Count': Number(mappedData['Connection Count']) || 0,
         
-        // GROUP A TEST: Date + URLs (testing these first)
-        'Start Date': mappedData['Start Date'] || '',
-        'Company LinkedIn URL': mappedData['Company LinkedIn URL'] || '',
-        'Background Picture URL': mappedData['Background Picture URL'] || '',
-        'URN': mappedData['URN'] || '',
-        'Current Company URN': mappedData['Current Company URN'] || ''
+        // GROUP A1 TEST: Just the date field
+        'Start Date': mappedData['Start Date'] || ''
+        
+        // GROUP A2: URLs (temporarily disabled to test date alone)
+        // 'Company LinkedIn URL': mappedData['Company LinkedIn URL'] || '',
+        // 'Background Picture URL': mappedData['Background Picture URL'] || '',
+        // 'URN': mappedData['URN'] || '',
+        // 'Current Company URN': mappedData['Current Company URN'] || ''
         
         // GROUP B: Boolean fields (temporarily disabled for testing)
         // 'Is Creator': Boolean(mappedData['Is Creator']),
