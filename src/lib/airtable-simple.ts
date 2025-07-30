@@ -57,7 +57,10 @@ export async function getConnections(maxRecords = 200) {
       })
       .all();
     
-    return records as ConnectionRecord[];
+    return records.map(record => ({
+      id: record.id,
+      fields: record.fields
+    })) as ConnectionRecord[];
   } catch (error) {
     console.error('Error fetching connections:', error);
     throw error;
@@ -68,7 +71,10 @@ export async function getConnections(maxRecords = 200) {
 export async function createConnection(fields: Partial<ConnectionRecord['fields']>) {
   try {
     const record = await base(tables.connections).create(fields);
-    return record as ConnectionRecord;
+    return {
+      id: record.id,
+      fields: record.fields
+    } as ConnectionRecord;
   } catch (error) {
     console.error('Error creating connection:', error);
     throw error;
@@ -79,7 +85,10 @@ export async function createConnection(fields: Partial<ConnectionRecord['fields'
 export async function updateConnection(id: string, fields: Partial<ConnectionRecord['fields']>) {
   try {
     const record = await base(tables.connections).update(id, fields);
-    return record as ConnectionRecord;
+    return {
+      id: record.id,
+      fields: record.fields
+    } as ConnectionRecord;
   } catch (error) {
     console.error('Error updating connection:', error);
     throw error;
