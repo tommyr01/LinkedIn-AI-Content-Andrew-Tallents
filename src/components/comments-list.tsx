@@ -8,7 +8,9 @@ import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import { Comment } from "./comment"
+import { ProspectResearchCard } from "./prospect-research-card"
 import { LinkedInComment } from "@/lib/linkedin-scraper"
+import { ProspectProfile } from "@/lib/icp-scorer"
 
 interface CommentsListProps {
   postUrl: string
@@ -41,6 +43,10 @@ export function CommentsList({ postUrl, initialCommentsCount = 0 }: CommentsList
   const [isExpanded, setIsExpanded] = useState(false)
   const [totalComments, setTotalComments] = useState(initialCommentsCount)
   const [hasLoaded, setHasLoaded] = useState(false)
+  
+  // Research states
+  const [researchedProspect, setResearchedProspect] = useState<ProspectProfile | null>(null)
+  const [researchCardOpen, setResearchCardOpen] = useState(false)
 
   const fetchComments = async (showToast = true) => {
     if (!postUrl) {
@@ -101,6 +107,31 @@ export function CommentsList({ postUrl, initialCommentsCount = 0 }: CommentsList
 
   const handleRefreshComments = () => {
     fetchComments()
+  }
+
+  const handleResearchCommenter = (prospect: ProspectProfile) => {
+    setResearchedProspect(prospect)
+    setResearchCardOpen(true)
+  }
+
+  const handleAddToConnections = async (prospect: ProspectProfile) => {
+    // TODO: Integrate with existing connections management
+    // For now, just show success message
+    toast.success(`${prospect.name} would be added to connections`)
+    
+    // This would typically call an API to add to Airtable connections table
+    // await fetch('/api/connections/add', {
+    //   method: 'POST',
+    //   body: JSON.stringify({
+    //     name: prospect.name,
+    //     role: prospect.role,
+    //     company: prospect.company,
+    //     linkedinUrl: prospect.profileUrl,
+    //     icpScore: prospect.icpScore.totalScore,
+    //     category: prospect.icpScore.category,
+    //     tags: prospect.icpScore.tags
+    //   })
+    // })
   }
 
   const getTotalReplies = (comments: LinkedInComment[]): number => {
@@ -223,6 +254,7 @@ export function CommentsList({ postUrl, initialCommentsCount = 0 }: CommentsList
                   <Comment
                     key={comment.comment_id}
                     comment={comment}
+                    onResearchCommenter={handleResearchCommenter}
                   />
                 ))}
               </div>
@@ -230,6 +262,14 @@ export function CommentsList({ postUrl, initialCommentsCount = 0 }: CommentsList
           )}
         </div>
       )}
+
+      {/* Prospect Research Card */}
+      <ProspectResearchCard
+        prospect={researchedProspect}
+        open={researchCardOpen}
+        onOpenChange={setResearchCardOpen}
+        onAddToConnections={handleAddToConnections}
+      />
     </div>
   )
 }

@@ -2,16 +2,19 @@
 
 import { useState } from "react"
 import { format } from "date-fns"
-import { ThumbsUp, Heart, Lightbulb, Trophy, Users, MessageSquare, User, ChevronDown, ChevronUp } from "lucide-react"
+import { ThumbsUp, Heart, Lightbulb, Trophy, Users, MessageSquare, User, ChevronDown, ChevronUp, Search, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { LinkedInComment } from "@/lib/linkedin-scraper"
+import { ProspectProfile } from "@/lib/icp-scorer"
+import { toast } from "sonner"
 
 interface CommentProps {
   comment: LinkedInComment
   isReply?: boolean
+  onResearchCommenter?: (prospect: ProspectProfile) => void
 }
 
 const REACTION_ICONS = {
@@ -30,9 +33,10 @@ const REACTION_COLORS = {
   praise: "text-green-500",
 }
 
-export function Comment({ comment, isReply = false }: CommentProps) {
+export function Comment({ comment, isReply = false, onResearchCommenter }: CommentProps) {
   const [showReplies, setShowReplies] = useState(false)
   const [imageError, setImageError] = useState(false)
+  const [isResearching, setIsResearching] = useState(false)
 
   const formatDate = (timestamp: number) => {
     try {
@@ -40,6 +44,50 @@ export function Comment({ comment, isReply = false }: CommentProps) {
       return format(date, "MMM d, yyyy 'at' h:mm a")
     } catch {
       return comment.posted_at.date
+    }
+  }
+
+  const handleResearch = async () => {
+    if (!onResearchCommenter || !comment.author.profile_url) {
+      toast.error('Research not available for this comment')
+      return
+    }
+
+    setIsResearching(true)
+    try {
+      console.log('🔍 Researching commenter:', comment.author.name)
+      
+      const response = await fetch('/api/research/commenter', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          profileUrl: comment.author.profile_url,
+          name: comment.author.name,
+          headline: comment.author.headline
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `HTTP ${response.status}`)
+      }
+
+      const data = await response.json()
+      
+      if (data.success) {
+        onResearchCommenter(data.prospect)
+        toast.success(`Research completed for ${comment.author.name}`)
+      } else {
+        throw new Error(data.error || 'Failed to research commenter')
+      }
+
+    } catch (error: any) {
+      console.error('Error researching commenter:', error)
+      toast.error(`Research failed: ${error.message}`)
+    } finally {
+      setIsResearching(false)
     }
   }
 
@@ -91,19 +139,40 @@ export function Comment({ comment, isReply = false }: CommentProps) {
             </div>
 
             <div className="flex-1 min-w-0">
-              <div className="flex items-center space-x-2 mb-1">
-                <h4 className="font-semibold text-sm truncate">
-                  {comment.author.name}
-                </h4>
-                {comment.is_pinned && (
-                  <Badge variant="secondary" className="text-xs">
-                    Pinned
-                  </Badge>
-                )}
-                {comment.is_edited && (
-                  <span className="text-xs text-muted-foreground">
-                    (edited)
-                  </span>
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center space-x-2">
+                  <h4 className="font-semibold text-sm truncate">
+                    {comment.author.name}
+                  </h4>
+                  {comment.is_pinned && (
+                    <Badge variant="secondary" className="text-xs">
+                      Pinned
+                    </Badge>
+                  )}
+                  {comment.is_edited && (
+                    <span className="text-xs text-muted-foreground">
+                      (edited)
+                    </span>
+                  )}
+                </div>
+                
+                {onResearchCommenter && comment.author.profile_url && !isReply && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleResearch}
+                    disabled={isResearching}
+                    className="h-6 px-2 text-xs"
+                  >
+                    {isResearching ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Search className="h-3 w-3" />
+                    )}
+                    <span className="ml-1">
+                      {isResearching ? 'Researching...' : 'Research'}
+                    </span>
+                  </Button>
                 )}
               </div>
               
@@ -170,6 +239,7 @@ export function Comment({ comment, isReply = false }: CommentProps) {
                   key={reply.comment_id}
                   comment={reply}
                   isReply={true}
+                  onResearchCommenter={onResearchCommenter}
                 />
               ))}
             </div>
