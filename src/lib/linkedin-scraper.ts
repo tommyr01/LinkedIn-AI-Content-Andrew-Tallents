@@ -105,6 +105,52 @@ export interface LinkedInPost {
   };
 }
 
+export interface LinkedInPostComments {
+  success: boolean;
+  message: string;
+  data: {
+    post: {
+      id: string;
+      url: string;
+    };
+    comments: LinkedInComment[];
+    total: number;
+  };
+}
+
+export interface LinkedInComment {
+  comment_id: string;
+  text: string;
+  posted_at: {
+    timestamp: number;
+    date: string;
+    relative: string;
+  };
+  is_edited: boolean;
+  is_pinned: boolean;
+  comment_url: string;
+  author: LinkedInCommentAuthor;
+  stats: {
+    total_reactions: number;
+    reactions: {
+      like: number;
+      appreciation: number;
+      empathy: number;
+      interest: number;
+      praise: number;
+    };
+    comments: number;
+  };
+  replies?: LinkedInComment[];
+}
+
+export interface LinkedInCommentAuthor {
+  name: string;
+  headline: string;
+  profile_url: string;
+  profile_picture: string | null;
+}
+
 export interface MappedConnectionData {
   'Full Name': string;
   'First Name': string;
@@ -242,6 +288,38 @@ export class LinkedInScraperService {
       return allPosts;
     } catch (error) {
       console.error('Error fetching all LinkedIn posts:', error);
+      throw error;
+    }
+  }
+
+  async getPostComments(postUrl: string, pageNumber: number = 1, sortOrder: string = 'Most relevant'): Promise<LinkedInPostComments> {
+    try {
+      const encodedPostUrl = encodeURIComponent(postUrl);
+      const encodedSortOrder = encodeURIComponent(sortOrder);
+      const url = `${this.baseUrl}/post/comments?post_url=${encodedPostUrl}&page_number=${pageNumber}&sort_order=${encodedSortOrder}`;
+      
+      console.log(`Fetching LinkedIn post comments for URL: ${postUrl}, page: ${pageNumber}`);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('LinkedIn Comments API error:', response.status, errorText);
+        throw new Error(`LinkedIn Comments API error: ${response.status} ${errorText}`);
+      }
+
+      const data: LinkedInPostComments = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to fetch LinkedIn post comments');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error fetching LinkedIn post comments:', error);
       throw error;
     }
   }
