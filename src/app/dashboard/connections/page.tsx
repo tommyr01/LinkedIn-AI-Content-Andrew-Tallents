@@ -33,6 +33,11 @@ export default function ConnectionsPage() {
       const res = await fetch('/api/connections/list', { cache: 'no-store' })
       if (!res.ok) throw new Error('Failed')
       const data: Connection[] = await res.json()
+      
+      // Debug: Log the first connection to see if profilePictureUrl is present
+      console.log('First connection data:', data[0])
+      console.log('Profile picture URLs:', data.map(c => ({ name: c.name, profilePictureUrl: c.profilePictureUrl })))
+      
       setConnections(data)
     } catch (e) {
       console.error(e)
@@ -148,23 +153,31 @@ export default function ConnectionsPage() {
             {filteredConnections.map(connection => (
               <div key={connection.id} className="flex items-start space-x-4 p-4 border rounded-lg hover:bg-gray-50">
                 <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                  {connection.profilePictureUrl ? (
-                    <img 
-                      src={connection.profilePictureUrl} 
-                      alt={connection.name}
-                      className="h-12 w-12 rounded-full object-cover"
-                      onError={(e) => {
-                        // Fallback to icon if image fails to load
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                        const parent = target.parentElement;
-                        if (parent) {
-                          parent.innerHTML = '<svg class="h-6 w-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>';
-                        }
-                      }}
-                    />
+                  {connection.profilePictureUrl && connection.profilePictureUrl.trim() !== '' ? (
+                    <>
+                      {console.log(`Rendering image for ${connection.name}: ${connection.profilePictureUrl}`)}
+                      <img 
+                        src={connection.profilePictureUrl} 
+                        alt={connection.name}
+                        className="h-12 w-12 rounded-full object-cover"
+                        onLoad={() => console.log(`Image loaded successfully for ${connection.name}`)}
+                        onError={(e) => {
+                          console.log(`Image failed to load for ${connection.name}: ${connection.profilePictureUrl}`);
+                          // Fallback to icon if image fails to load
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          const parent = target.parentElement;
+                          if (parent) {
+                            parent.innerHTML = '<svg class="h-6 w-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>';
+                          }
+                        }}
+                      />
+                    </>
                   ) : (
-                    <User className="h-6 w-6 text-gray-600" />
+                    <>
+                      {console.log(`No profile picture URL for ${connection.name}: '${connection.profilePictureUrl}'`)}
+                      <User className="h-6 w-6 text-gray-600" />
+                    </>
                   )}
                 </div>
                 <div className="flex-1 space-y-2">
