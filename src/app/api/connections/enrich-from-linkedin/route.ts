@@ -183,13 +183,15 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ 
       error: errorMessage,
-      details: process.env.NODE_ENV === 'development' ? {
-        originalError: error.message,
+      originalError: error.message, // Always include original error for debugging
+      details: {
         username: usernameToUse,
         hasRapidApiKey: !!process.env.RAPIDAPI_KEY,
         rapidApiKeyLength: process.env.RAPIDAPI_KEY?.length,
-        hasAirtableConfig: !!(process.env.AIRTABLE_API_KEY && process.env.AIRTABLE_BASE_ID && process.env.AIRTABLE_CONNECTIONS_TABLE_ID)
-      } : undefined
+        hasAirtableConfig: !!(process.env.AIRTABLE_API_KEY && process.env.AIRTABLE_BASE_ID && process.env.AIRTABLE_CONNECTIONS_TABLE_ID),
+        createRecord,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      }
     }, { status: statusCode })
   }
 }
