@@ -287,7 +287,7 @@ async function fetchAndSaveConnectionPosts(username: string, connectionId: strin
     // Map posts to Airtable format using correct field names based on actual API response
     console.log(`🗂️ [POSTS-DEBUG] Mapping ${posts.length} posts to Airtable format...`);
     const connectionPosts: Partial<ConnectionPostRecord['fields']>[] = posts.map((post, index) => {
-      const mappedPost = {
+      const mappedPost: Partial<ConnectionPostRecord['fields']> = {
         // Connection linking
         'Connection': [connectionId],
         
@@ -335,8 +335,11 @@ async function fetchAndSaveConnectionPosts(username: string, connectionId: strin
       if (post.author?.profile_picture && post.author.profile_picture !== '') {
         mappedPost['Author Profile Picture'] = [{
           url: post.author.profile_picture,
-          filename: 'author-profile-picture.jpg'
-        }] as any;
+          filename: 'author-profile-picture.jpg',
+          id: '',
+          type: 'image/jpeg',
+          size: 0
+        }];
       }
       
       // Log first mapped post for debugging

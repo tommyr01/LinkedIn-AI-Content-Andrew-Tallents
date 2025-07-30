@@ -65,7 +65,7 @@ export interface ConnectionPostRecord {
     'Author Headline'?: string;
     'Username'?: string;
     'Author LinkedIn URL'?: string;
-    'Author Profile Picture'?: string;
+    'Author Profile Picture'?: AirtableAttachment[] | string; // Can be attachment array or string
     
     // Engagement metrics
     'Total Reactions'?: number;
