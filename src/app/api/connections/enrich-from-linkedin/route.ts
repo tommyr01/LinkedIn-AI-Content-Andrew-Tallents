@@ -79,7 +79,8 @@ export async function POST(request: NextRequest) {
         airtableRecord = await createConnection(fieldsToCreate)
         console.log(`🎉 Airtable record created successfully:`, {
           id: airtableRecord.id,
-          createdTime: airtableRecord.createdTime
+          hasFields: !!airtableRecord.fields,
+          fieldCount: Object.keys(airtableRecord.fields || {}).length
         })
       } catch (airtableError: any) {
         console.error(`💥 Airtable creation failed:`, {

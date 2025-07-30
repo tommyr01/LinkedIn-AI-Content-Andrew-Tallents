@@ -36,14 +36,14 @@ export async function GET() {
     
     console.log('✅ Test record created successfully:', {
       id: result.id,
-      createdTime: result.createdTime
+      hasFields: !!result.fields,
+      fieldCount: Object.keys(result.fields || {}).length
     })
     
     return NextResponse.json({
       success: true,
       message: 'Airtable write test successful',
       recordId: result.id,
-      createdTime: result.createdTime,
       fieldsCreated: Object.keys(testRecord).length,
       testRecord: {
         name: testRecord['Full Name'],
