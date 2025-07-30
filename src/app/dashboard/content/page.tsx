@@ -1,14 +1,15 @@
 "use client"
 
 import { ContentGenerator } from "@/components/content-generator"
-import { AirtableStats } from "@/components/airtable-stats"
+import { LoadingCard } from "@/components/loading-card"
 import { useState } from "react"
 
 // New component to display webhook responses
-function WebhookResponses({ responses }: { responses: string[] }) {
+function WebhookResponses({ loading, responses }: { loading: boolean; responses: string[] }) {
   return (
     <div className="space-y-4">
-      {responses.map((response: string, index: number) => (
+      {loading && <LoadingCard />}
+      {!loading && responses.map((response: string, index: number) => (
         <div key={index} className="p-4 border rounded-md">
           <h3 className="text-xl font-semibold">Response {index + 1}</h3>
           <pre className="whitespace-pre-wrap font-sans text-sm">{response}</pre>
@@ -19,12 +20,10 @@ function WebhookResponses({ responses }: { responses: string[] }) {
 }
 
 export default function ContentPage() {
-  const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const [isLoading, setIsLoading] = useState(false)
   const [webhookResponses, setWebhookResponses] = useState<string[]>([])
 
-  const handleContentSaved = () => {
-    setRefreshTrigger(prev => prev + 1)
-  }
+  const handleContentSaved = () => {}
 
   // No polling here—responses come via callback from ContentGenerator
 
@@ -36,12 +35,15 @@ export default function ContentPage() {
       
       <div className="grid gap-8 lg:grid-cols-2">
         <div>
-          <ContentGenerator onContentSaved={handleContentSaved} onWebhookResponses={setWebhookResponses} />
+          <ContentGenerator
+            onContentSaved={handleContentSaved}
+            onWebhookResponses={setWebhookResponses}
+            onLoadingChange={setIsLoading}
+          />
         </div>
-        
+
         <div>
-          <AirtableStats refreshTrigger={refreshTrigger} />
-          <WebhookResponses responses={webhookResponses} />
+          <WebhookResponses loading={isLoading} responses={webhookResponses} />
         </div>
       </div>
     </div>

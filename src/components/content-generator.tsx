@@ -25,9 +25,10 @@ interface ContentVariation {
 interface ContentGeneratorProps {
   onContentSaved?: (content: string) => void
   onWebhookResponses?: (responses: string[]) => void
+  onLoadingChange?: (loading: boolean) => void
 }
 
-export function ContentGenerator({ onContentSaved, onWebhookResponses }: ContentGeneratorProps) {
+export function ContentGenerator({ onContentSaved, onWebhookResponses, onLoadingChange }: ContentGeneratorProps) {
   const [topic, setTopic] = useState("")
   const [postType, setPostType] = useState("Thought Leadership")
   const [tone, setTone] = useState("professional")
@@ -69,6 +70,7 @@ export function ContentGenerator({ onContentSaved, onWebhookResponses }: Content
     }
     
     setIsSendingWebhook(true)
+    onLoadingChange?.(true)
     try {
       // Send data to webhook
       const webhookUrl = "https://t01rich.app.n8n.cloud/webhook/4da72753-ab1b-4973-917f-23e6bdc97d23"
@@ -160,6 +162,7 @@ Platform: ${selectedPlatform.charAt(0).toUpperCase() + selectedPlatform.slice(1)
       console.error('Error sending to webhook:', error)
     } finally {
       setIsSendingWebhook(false)
+      onLoadingChange?.(false)
     }
   }
 
