@@ -43,19 +43,45 @@ export interface ConnectionRecord {
 export interface ConnectionPostRecord {
   id: string;
   fields: {
-    'Connection'?: string[]; // Link to Connections table
-    'Post ID'?: string;
-    'Content'?: string;
-    'Posted At'?: string;
-    'Likes Count'?: number;
-    'Comments Count'?: number;
-    'Shares Count'?: number;
+    // Connection linking (need to add this field to Airtable)
+    'Connection'?: string[]; // Link to Connections table - ADD THIS FIELD TO AIRTABLE
+    
+    // Post identification
+    'Post URN'?: string;
+    'Full URN'?: string;
+    
+    // Dates
+    'Posted Date'?: string;
+    'Relative Posted'?: string;
+    
+    // Post details
+    'Post Type'?: string;
+    'Post Text'?: string;
     'Post URL'?: string;
-    'Author Name'?: string;
-    'Author Username'?: string;
-    'Media URLs'?: string; // JSON string of media URLs
-    'Media Types'?: string; // JSON string of media types
-    'Scraped At'?: string;
+    
+    // Author details
+    'Author First Name'?: string;
+    'Author Last Name'?: string;
+    'Author Headline'?: string;
+    'Username'?: string;
+    'Author LinkedIn URL'?: string;
+    'Author Profile Picture'?: string;
+    
+    // Engagement metrics
+    'Total Reactions'?: number;
+    'Likes'?: number;
+    'Support'?: number;
+    'Love'?: number;
+    'Insight'?: number;
+    'Celebrate'?: number;
+    'Comments Count'?: number;
+    'Reposts'?: number;
+    
+    // Media
+    'Media Type'?: string;
+    'Media URL'?: string;
+    'Media Thumbnail'?: string;
+    
     [key: string]: any;
   };
 }

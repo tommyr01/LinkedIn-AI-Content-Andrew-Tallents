@@ -131,9 +131,21 @@ export async function POST(request: NextRequest) {
           fieldCount: Object.keys(airtableRecord.fields || {}).length
         })
 
+        // DEBUG: Check if we should trigger posts
+        console.log(`🔍 [CONNECTION-DEBUG] Checking posts trigger conditions:`, {
+          hasAirtableRecord: !!airtableRecord,
+          airtableRecordId: airtableRecord?.id,
+          username: usernameToUse,
+          shouldTriggerPosts: !!(airtableRecord?.id)
+        })
+
         // After successful connection creation, fetch and save posts
         if (airtableRecord?.id) {
+          console.log(`🚀 [CONNECTION-DEBUG] Triggering posts fetch for connection: ${airtableRecord.id}`)
           await fetchAndSaveConnectionPosts(usernameToUse, airtableRecord.id)
+          console.log(`✅ [CONNECTION-DEBUG] Posts fetch completed (check above for results)`)
+        } else {
+          console.log(`⚠️ [CONNECTION-DEBUG] Posts fetch skipped - no airtable record ID`)
         }
       } catch (airtableError: any) {
         console.error(`💥 Airtable creation failed:`, {
@@ -226,65 +238,150 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Helper function to fetch and save connection posts
+// Helper function to fetch and save connection posts  
 async function fetchAndSaveConnectionPosts(username: string, connectionId: string): Promise<void> {
+  console.log(`🟢 [POSTS-ENTRY] Posts function called! Parameters:`, { username, connectionId });
+  console.log(`🚀 [POSTS-DEBUG] Starting posts fetch for username: ${username}, connection: ${connectionId}`);
+  
   try {
-    console.log(`📝 Starting posts fetch for username: ${username}, connection: ${connectionId}`);
+    // Enhanced configuration logging
+    console.log(`🔧 [POSTS-DEBUG] Configuration check:`, {
+      hasConnectionPostsTableId: !!process.env.AIRTABLE_CONNECTION_POSTS_TABLE_ID,
+      connectionPostsTableId: process.env.AIRTABLE_CONNECTION_POSTS_TABLE_ID,
+      hasRapidApiKey: !!process.env.RAPIDAPI_KEY,
+      hasAirtableConfig: !!(process.env.AIRTABLE_API_KEY && process.env.AIRTABLE_BASE_ID),
+      username,
+      connectionId
+    });
     
     // Check if connection posts table ID is configured
     if (!process.env.AIRTABLE_CONNECTION_POSTS_TABLE_ID) {
-      console.log(`⚠️ AIRTABLE_CONNECTION_POSTS_TABLE_ID not configured, skipping posts fetch`);
+      console.log(`⚠️ [POSTS-DEBUG] AIRTABLE_CONNECTION_POSTS_TABLE_ID not configured, skipping posts fetch`);
       return;
     }
 
+    console.log(`📡 [POSTS-DEBUG] Fetching posts from LinkedIn API...`);
     // Fetch posts from LinkedIn API
     const posts = await linkedInScraper.getAllPosts(username, 100);
-    console.log(`📊 Fetched ${posts.length} posts for ${username}`);
+    console.log(`📊 [POSTS-DEBUG] LinkedIn API response: ${posts.length} posts fetched for ${username}`);
 
     if (posts.length === 0) {
-      console.log(`ℹ️ No posts found for ${username}`);
+      console.log(`ℹ️ [POSTS-DEBUG] No posts found for ${username} - this might indicate an API issue`);
       return;
     }
 
-    // Map posts to Airtable format
-    const connectionPosts: Partial<ConnectionPostRecord['fields']>[] = posts.map(post => {
-      const mediaUrls = post.media?.map(media => media.url) || [];
-      const mediaTypes = post.media?.map(media => media.type) || [];
-      
-      return {
-        'Connection': [connectionId], // Link to the connection record
-        'Post ID': post.id,
-        'Content': post.text || '',
-        'Posted At': post.posted_at,
-        'Likes Count': post.likes_count || 0,
-        'Comments Count': post.comments_count || 0,
-        'Shares Count': post.shares_count || 0,
-        'Post URL': post.post_url || '',
-        'Author Name': post.author?.name || '',
-        'Author Username': post.author?.username || username,
-        'Media URLs': mediaUrls.length > 0 ? JSON.stringify(mediaUrls) : '',
-        'Media Types': mediaTypes.length > 0 ? JSON.stringify(mediaTypes) : '',
-        'Scraped At': new Date().toISOString()
-      };
+    // Log first post details for debugging
+    const firstPost = posts[0];
+    console.log(`🔍 [POSTS-DEBUG] First post sample:`, {
+      id: firstPost?.id,
+      textPreview: firstPost?.text?.substring(0, 100),
+      posted_at: firstPost?.posted_at,
+      engagement: {
+        likes: firstPost?.likes_count,
+        comments: firstPost?.comments_count,
+        shares: firstPost?.shares_count
+      },
+      author: firstPost?.author
     });
 
-    console.log(`🗂️ Mapped ${connectionPosts.length} posts for Airtable insertion`);
+    // Map posts to Airtable format using correct field names
+    console.log(`🗂️ [POSTS-DEBUG] Mapping ${posts.length} posts to Airtable format...`);
+    const connectionPosts: Partial<ConnectionPostRecord['fields']>[] = posts.map((post, index) => {
+      // Split author name into first and last name
+      const authorName = post.author?.name || '';
+      const nameParts = authorName.split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+      
+      // Handle media
+      const firstMedia = post.media?.[0];
+      
+      const mappedPost = {
+        // Connection linking - NOTE: You need to add this field to your Airtable table
+        'Connection': [connectionId], // Link to the connection record
+        
+        // Post identification
+        'Post URN': post.id,
+        'Full URN': post.id, // Using same as Post URN for now
+        
+        // Dates
+        'Posted Date': post.posted_at,
+        'Relative Posted': '', // LinkedIn API doesn't provide this
+        
+        // Post details  
+        'Post Type': 'Post', // Default value, LinkedIn API doesn't specify
+        'Post Text': post.text || '',
+        'Post URL': post.post_url || '',
+        
+        // Author details
+        'Author First Name': firstName,
+        'Author Last Name': lastName,
+        'Author Headline': '', // Not available in current LinkedIn API response
+        'Username': post.author?.username || username,
+        'Author LinkedIn URL': post.author?.profile_url || '',
+        'Author Profile Picture': '', // Not available in current LinkedIn API response
+        
+        // Engagement metrics
+        'Total Reactions': (post.likes_count || 0) + (post.shares_count || 0), // Approximation
+        'Likes': post.likes_count || 0,
+        'Support': 0, // Not available in LinkedIn API
+        'Love': 0, // Not available in LinkedIn API
+        'Insight': 0, // Not available in LinkedIn API
+        'Celebrate': 0, // Not available in LinkedIn API
+        'Comments Count': post.comments_count || 0,
+        'Reposts': post.shares_count || 0,
+        
+        // Media
+        'Media Type': firstMedia?.type || '',
+        'Media URL': firstMedia?.url || '',
+        'Media Thumbnail': '' // Not available in current LinkedIn API response
+      };
+      
+      // Log first mapped post for debugging
+      if (index === 0) {
+        console.log(`🔍 [POSTS-DEBUG] First mapped post (with correct field names):`, mappedPost);
+      }
+      
+      return mappedPost;
+    });
 
+    console.log(`📝 [POSTS-DEBUG] Attempting to save ${connectionPosts.length} posts to Airtable...`);
+    
     // Save posts to Airtable
     const createdPosts = await createConnectionPosts(connectionPosts);
-    console.log(`✅ Successfully created ${createdPosts.length} connection posts in Airtable`);
+    console.log(`✅ [POSTS-DEBUG] SUCCESS! Created ${createdPosts.length} connection posts in Airtable`);
+    
+    // Log some record IDs for verification
+    const recordIds = createdPosts.slice(0, 3).map(p => p.id);
+    console.log(`🆔 [POSTS-DEBUG] Sample record IDs created:`, recordIds);
 
   } catch (postsError: any) {
-    // Don't throw - we don't want posts errors to break connection creation
-    console.error(`💥 Failed to fetch/save posts for ${username}:`, {
-      message: postsError.message,
-      stack: postsError.stack,
+    // Enhanced error logging
+    console.error(`💥 [POSTS-DEBUG] FAILED to fetch/save posts for ${username}:`, {
+      errorMessage: postsError.message,
+      errorName: postsError.name,
+      statusCode: postsError.statusCode,
       connectionId,
-      hasConnectionPostsTableId: !!process.env.AIRTABLE_CONNECTION_POSTS_TABLE_ID
+      username,
+      hasConnectionPostsTableId: !!process.env.AIRTABLE_CONNECTION_POSTS_TABLE_ID,
+      connectionPostsTableId: process.env.AIRTABLE_CONNECTION_POSTS_TABLE_ID,
+      stack: postsError.stack?.split('\n').slice(0, 5) // First 5 lines of stack
     });
     
-    // Log a user-friendly message but continue
-    console.log(`⚠️ Connection created successfully but posts fetching failed for ${username}`);
+    // Try to identify specific error types
+    let errorType = 'Unknown error';
+    if (postsError.message.includes('LinkedIn API error')) {
+      errorType = 'LinkedIn API Error';
+    } else if (postsError.message.includes('Airtable')) {
+      errorType = 'Airtable API Error';
+    } else if (postsError.message.includes('RAPIDAPI_KEY')) {
+      errorType = 'Missing RapidAPI Key';
+    } else if (postsError.message.includes('AIRTABLE_CONNECTION_POSTS_TABLE_ID')) {
+      errorType = 'Missing Airtable Posts Table ID';
+    }
+    
+    console.log(`🏷️ [POSTS-DEBUG] Error type identified: ${errorType}`);
+    console.log(`⚠️ [POSTS-DEBUG] Connection created successfully but posts fetching failed for ${username}`);
   }
 }
 
