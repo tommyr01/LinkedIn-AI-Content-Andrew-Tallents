@@ -17,6 +17,8 @@ interface AsyncContentGeneratorProps {
 
 interface JobStatus {
   id: string
+  queueJobId?: string
+  databaseJobId?: string
   status: 'pending' | 'processing' | 'completed' | 'failed'
   progress: number
   topic: string
@@ -34,6 +36,7 @@ export function AsyncContentGenerator({ onContentGenerated }: AsyncContentGenera
   const [currentJob, setCurrentJob] = useState<JobStatus | null>(null)
   const [jobDrafts, setJobDrafts] = useState<ContentDraft[]>([])
   const [subscription, setSubscription] = useState<any>(null)
+  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null)
 
   // Load saved voice guidelines
   useEffect(() => {
@@ -43,13 +46,18 @@ export function AsyncContentGenerator({ onContentGenerated }: AsyncContentGenera
     }
   }, [])
 
-  // Setup real-time subscription for job updates
+  // Setup real-time subscription and polling for job updates
   useEffect(() => {
     if (currentJob?.id) {
+      console.log('Setting up subscriptions for job ID:', currentJob.id)
+      
+      // Setup real-time subscriptions
       const jobSubscription = SupabaseService.subscribeToJobUpdates(
         currentJob.id,
         (updatedJob: ContentJob) => {
-          setCurrentJob({
+          console.log('Real-time job update:', updatedJob)
+          setCurrentJob(prev => ({
+            ...prev!,
             id: updatedJob.id,
             status: updatedJob.status,
             progress: updatedJob.progress,
@@ -58,7 +66,7 @@ export function AsyncContentGenerator({ onContentGenerated }: AsyncContentGenera
             error: updatedJob.error,
             created_at: updatedJob.created_at,
             updated_at: updatedJob.updated_at
-          })
+          }))
 
           // If job completed, fetch drafts
           if (updatedJob.status === 'completed') {
@@ -74,15 +82,58 @@ export function AsyncContentGenerator({ onContentGenerated }: AsyncContentGenera
       const draftsSubscription = SupabaseService.subscribeToJobDrafts(
         currentJob.id,
         (draft: ContentDraft) => {
+          console.log('Real-time draft update:', draft)
           setJobDrafts(prev => [...prev, draft])
         }
       )
 
       setSubscription({ job: jobSubscription, drafts: draftsSubscription })
 
+      // Also setup polling fallback
+      const pollJob = async () => {
+        try {
+          // Use queue job ID for API polling if available, otherwise database job ID
+          const jobIdForPolling = currentJob.queueJobId || currentJob.id
+          console.log('Polling job status for:', jobIdForPolling)
+          
+          const response = await fetch(`/api/content/job/${jobIdForPolling}`)
+          if (response.ok) {
+            const result = await response.json()
+            console.log('Polling result:', result)
+            
+            if (result.success && result.job) {
+              setCurrentJob(prev => ({
+                ...prev!,
+                status: result.job.status,
+                progress: result.job.progress,
+                error: result.job.error
+              }))
+
+              // If job completed, fetch drafts
+              if (result.job.status === 'completed' && result.drafts?.length > 0) {
+                setJobDrafts(result.drafts)
+                onContentGenerated?.(result.drafts)
+                setIsGenerating(false)
+                toast.success(`Generated ${result.drafts.length} content variations!`)
+              } else if (result.job.status === 'failed') {
+                setIsGenerating(false)
+                toast.error(result.job.error || 'Content generation failed')
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error polling job status:', error)
+        }
+      }
+
+      // Poll every 5 seconds
+      const interval = setInterval(pollJob, 5000)
+      setPollingInterval(interval)
+
       return () => {
         jobSubscription.unsubscribe()
         draftsSubscription.unsubscribe()
+        if (interval) clearInterval(interval)
       }
     }
   }, [currentJob?.id])
@@ -109,6 +160,12 @@ export function AsyncContentGenerator({ onContentGenerated }: AsyncContentGenera
     setIsGenerating(true)
     setCurrentJob(null)
     setJobDrafts([])
+    
+    // Clear any existing polling
+    if (pollingInterval) {
+      clearInterval(pollingInterval)
+      setPollingInterval(null)
+    }
 
     try {
       const response = await fetch('/api/content/generate-async', {
@@ -131,11 +188,17 @@ export function AsyncContentGenerator({ onContentGenerated }: AsyncContentGenera
       }
 
       const result = await response.json()
+      console.log('Job creation result:', result)
       
       if (result.success && result.jobId) {
-        // Set initial job status
+        // Set initial job status - use database job ID for subscriptions if available
+        const jobIdForSubscription = result.databaseJobId || result.jobId
+        console.log('Using job ID for subscription:', jobIdForSubscription, 'Database ID:', result.databaseJobId, 'Queue ID:', result.queueJobId)
+        
         setCurrentJob({
-          id: result.jobId,
+          id: jobIdForSubscription, // Use database job ID for subscriptions
+          queueJobId: result.queueJobId,
+          databaseJobId: result.databaseJobId,
           status: 'pending',
           progress: 0,
           topic,

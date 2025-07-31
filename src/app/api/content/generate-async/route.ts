@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { QueueService } from '../../../../lib/queue'
+import { SupabaseService } from '../../../../lib/supabase'
 
 export const dynamic = 'force-dynamic'
 
@@ -59,12 +60,25 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Job added to queue successfully:', result.jobId)
 
+    // Wait a moment for the worker to create the database job
+    // This is a temporary solution to get the database job ID
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    
+    // Try to get the database job that was created by the worker
+    const { job: dbJob } = await SupabaseService.getJobWithDrafts(result.jobId!)
+    
     return NextResponse.json({
       success: true,
-      jobId: result.jobId,
+      queueJobId: result.jobId,
+      jobId: dbJob?.id || result.jobId, // Use database job ID if available, fallback to queue ID
+      databaseJobId: dbJob?.id,
       status: 'pending',
       message: 'Content generation job created successfully',
-      estimatedTimeMs: 60000 // 60 seconds estimated
+      estimatedTimeMs: 60000, // 60 seconds estimated
+      debug: {
+        foundDatabaseJob: !!dbJob,
+        databaseJobStatus: dbJob?.status
+      }
     })
 
   } catch (error) {
