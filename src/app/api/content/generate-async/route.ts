@@ -60,12 +60,33 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Job added to queue successfully:', result.jobId)
 
-    // Wait a moment for the worker to create the database job
-    // This is a temporary solution to get the database job ID
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    // Try to get the database job that was created by the worker with retry logic
+    let dbJob = null
+    let attempts = 0
+    const maxAttempts = 3
     
-    // Try to get the database job that was created by the worker
-    const { job: dbJob } = await SupabaseService.getJobWithDrafts(result.jobId!)
+    while (!dbJob && attempts < maxAttempts) {
+      attempts++
+      console.log(`Attempt ${attempts}/${maxAttempts}: Looking for database job...`)
+      
+      // Wait before each attempt (longer for later attempts)
+      await new Promise(resolve => setTimeout(resolve, attempts * 2000))
+      
+      try {
+        const jobData = await SupabaseService.getJobWithDrafts(result.jobId!)
+        if (jobData.job) {
+          dbJob = jobData.job
+          console.log(`✅ Found database job on attempt ${attempts}:`, dbJob.id)
+          break
+        }
+      } catch (error) {
+        console.log(`❌ Attempt ${attempts} failed:`, error)
+      }
+    }
+    
+    if (!dbJob) {
+      console.log('⚠️ Could not find database job after all attempts, using queue job ID only')
+    }
     
     return NextResponse.json({
       success: true,
@@ -77,7 +98,9 @@ export async function POST(request: NextRequest) {
       estimatedTimeMs: 60000, // 60 seconds estimated
       debug: {
         foundDatabaseJob: !!dbJob,
-        databaseJobStatus: dbJob?.status
+        databaseJobStatus: dbJob?.status,
+        attemptsUsed: attempts,
+        timing: `Waited ${attempts * 2} seconds total`
       }
     })
 

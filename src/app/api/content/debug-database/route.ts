@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { SupabaseService } from '../../../../lib/supabase'
+import { SupabaseService, supabaseAdmin } from '../../../../lib/supabase'
 import { supabase } from '../../../../lib/supabase'
 
 export const dynamic = 'force-dynamic'
@@ -12,8 +12,9 @@ export async function GET(request: NextRequest) {
     const recentJobs = await SupabaseService.getRecentJobs(10)
     console.log('Recent jobs:', recentJobs.length)
 
-    // Try to get drafts directly from content_drafts table
-    const { data: allDrafts, error: draftsError } = await supabase
+    // Try to get drafts directly from content_drafts table using admin client
+    const client = supabaseAdmin || supabase
+    const { data: allDrafts, error: draftsError } = await client
       .from('content_drafts')
       .select('*')
       .order('created_at', { ascending: false })
@@ -22,7 +23,7 @@ export async function GET(request: NextRequest) {
     console.log('Direct drafts query result:', allDrafts?.length, 'Error:', draftsError)
 
     // Check if queue_job_id column exists by trying to select it
-    const { data: jobsWithQueueId, error: queueIdError } = await supabase
+    const { data: jobsWithQueueId, error: queueIdError } = await client
       .from('content_jobs')
       .select('id, topic, status, queue_job_id, created_at')
       .order('created_at', { ascending: false })

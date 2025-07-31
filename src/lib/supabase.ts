@@ -2,7 +2,9 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://alfsmmquyaygykvfcxbb.supabase.co'
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFsZnNtbXF1eWF5Z3lrdmZjeGJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM5NTIzMzcsImV4cCI6MjA2OTUyODMzN30.0t4rWhtVHOdypKnYMo4f-0XMl6nq7LZlABLPYLmWmlo'
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
+// Client for frontend (with RLS)
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
@@ -14,6 +16,14 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     }
   }
 })
+
+// Admin client for server-side operations (bypasses RLS)
+export const supabaseAdmin = supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  }
+}) : null
 
 export interface ContentJob {
   id: string
@@ -55,7 +65,9 @@ export interface ContentDraft {
 export class SupabaseService {
   static async getJob(jobId: string): Promise<ContentJob | null> {
     try {
-      const { data, error } = await supabase
+      // Use admin client for server-side operations to bypass RLS
+      const client = supabaseAdmin || supabase
+      const { data, error } = await client
         .from('content_jobs')
         .select('*')
         .eq('id', jobId)
@@ -78,8 +90,11 @@ export class SupabaseService {
     drafts: ContentDraft[]
   }> {
     try {
+      // Use admin client for server-side operations to bypass RLS
+      const client = supabaseAdmin || supabase
+      
       // First try to find by queue_job_id, then by regular id
-      let { data: job } = await supabase
+      let { data: job } = await client
         .from('content_jobs')
         .select('*')
         .eq('queue_job_id', jobId)
@@ -87,7 +102,7 @@ export class SupabaseService {
 
       // If not found by queue_job_id, try by regular id
       if (!job) {
-        const result = await supabase
+        const result = await client
           .from('content_jobs')
           .select('*')
           .eq('id', jobId)
@@ -102,7 +117,7 @@ export class SupabaseService {
         }
       }
 
-      const { data: drafts } = await supabase
+      const { data: drafts } = await client
         .from('content_drafts')
         .select('*')
         .eq('job_id', job.id) // Use the database job ID for drafts
@@ -123,7 +138,9 @@ export class SupabaseService {
 
   static async getRecentJobs(limit: number = 10): Promise<ContentJob[]> {
     try {
-      const { data, error } = await supabase
+      // Use admin client for server-side operations to bypass RLS
+      const client = supabaseAdmin || supabase
+      const { data, error } = await client
         .from('content_jobs')
         .select('*')
         .order('created_at', { ascending: false })
