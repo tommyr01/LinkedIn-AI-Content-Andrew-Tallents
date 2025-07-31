@@ -45,6 +45,8 @@ export async function POST(request: NextRequest) {
       console.log(`📡 Fetching posts page ${currentPage} for ${username}...`)
       
       const rapidApiUrl = `https://${process.env.RAPIDAPI_HOST}/profile/posts?username=${username}&page_number=${currentPage}`
+      console.log(`🔗 Request URL: ${rapidApiUrl}`)
+      console.log(`🔑 Using host: ${process.env.RAPIDAPI_HOST}`)
       
       const response = await fetch(rapidApiUrl, {
         method: 'GET',
@@ -57,16 +59,24 @@ export async function POST(request: NextRequest) {
 
       if (!response.ok) {
         const errorText = await response.text()
-        console.error('RapidAPI error:', response.status, errorText)
+        console.error(`RapidAPI error on page ${currentPage}:`, response.status, errorText)
         
         if (response.status === 429) {
-          return NextResponse.json({ 
-            error: 'Rate limit exceeded. Please try again later.',
-            details: errorText
-          }, { status: 429 })
+          console.log(`⏸️ Rate limited on page ${currentPage}, stopping pagination but keeping existing posts`)
+          hasMorePages = false
+          break
         }
         
-        throw new Error(`RapidAPI request failed: ${response.status} - ${errorText}`)
+        if (response.status === 502 || response.status === 503) {
+          console.log(`⚠️ API temporarily unavailable on page ${currentPage} (${response.status}), stopping pagination but keeping existing posts`)
+          hasMorePages = false
+          break
+        }
+        
+        // For other errors, stop pagination but don't fail the entire sync
+        console.log(`❌ Failed to fetch page ${currentPage}, stopping pagination but keeping existing posts`)
+        hasMorePages = false
+        break
       }
 
       const data: RapidAPIResponse = await response.json()
@@ -92,13 +102,19 @@ export async function POST(request: NextRequest) {
         hasMorePages = false
       }
 
-      // Add delay between requests to be respectful to API
+      // Add longer delay between requests to be respectful to API
       if (hasMorePages && processedPages < maxPages) {
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        console.log(`⏳ Waiting 3 seconds before fetching page ${currentPage + 1}...`)
+        await new Promise(resolve => setTimeout(resolve, 3000))
       }
     }
 
-    console.log(`📊 Total posts fetched: ${allPosts.length}`)
+    console.log(`📊 Total posts fetched: ${allPosts.length} from ${processedPages} pages`)
+    
+    // If we have no posts at all, that's a real error
+    if (allPosts.length === 0) {
+      throw new Error('No posts were fetched from any page. Please check API credentials and try again.')
+    }
 
     // Process and save posts to Supabase
     const results = []
