@@ -171,7 +171,9 @@ export class SupabaseLinkedInService {
   }
 
   async getPostsByUsername(username: string, limit: number = 50): Promise<DBLinkedInPost[]> {
-    const { data, error } = await supabase
+    this.checkSupabaseConnection()
+    
+    const { data, error } = await supabase!
       .from('linkedin_posts')
       .select('*')
       .eq('author_username', username)
@@ -187,7 +189,9 @@ export class SupabaseLinkedInService {
   }
 
   async getPostByUrn(urn: string): Promise<DBLinkedInPost | null> {
-    const { data, error } = await supabase
+    this.checkSupabaseConnection()
+    
+    const { data, error } = await supabase!
       .from('linkedin_posts')
       .select('*')
       .eq('urn', urn)
@@ -203,9 +207,11 @@ export class SupabaseLinkedInService {
 
   // Comments Operations
   async upsertComment(comment: LinkedInComment, postUrn: string): Promise<DBLinkedInComment> {
+    this.checkSupabaseConnection()
+    
     const dbComment = this.transformCommentToDB(comment, postUrn)
     
-    const { data, error } = await supabase
+    const { data, error } = await supabase!
       .from('linkedin_comments')
       .upsert(dbComment, { 
         onConflict: 'comment_id',
@@ -223,7 +229,9 @@ export class SupabaseLinkedInService {
   }
 
   async getCommentsByPostUrn(postUrn: string): Promise<DBLinkedInComment[]> {
-    const { data, error } = await supabase
+    this.checkSupabaseConnection()
+    
+    const { data, error } = await supabase!
       .from('linkedin_comments')
       .select('*')
       .eq('post_urn', postUrn)
@@ -293,7 +301,9 @@ export class SupabaseLinkedInService {
   }
 
   async upsertProfile(profileData: any): Promise<void> {
-    const { error } = await supabase
+    this.checkSupabaseConnection()
+    
+    const { error } = await supabase!
       .from('linkedin_profiles')
       .upsert({
         ...profileData,
@@ -311,7 +321,9 @@ export class SupabaseLinkedInService {
   }
 
   async getProfileByUrl(profileUrl: string): Promise<any> {
-    const { data, error } = await supabase
+    this.checkSupabaseConnection()
+    
+    const { data, error } = await supabase!
       .from('linkedin_profiles')
       .select('*')
       .eq('profile_url', profileUrl)
@@ -327,7 +339,9 @@ export class SupabaseLinkedInService {
 
   // Engagement History
   async recordEngagementHistory(postUrn: string, stats: any): Promise<void> {
-    const { error } = await supabase
+    this.checkSupabaseConnection()
+    
+    const { error } = await supabase!
       .from('post_engagement_history')
       .insert({
         post_urn: postUrn,
@@ -350,7 +364,9 @@ export class SupabaseLinkedInService {
 
   // Analytics
   async getHighValueProspects(minScore: number = 60): Promise<any[]> {
-    const { data, error } = await supabase
+    this.checkSupabaseConnection()
+    
+    const { data, error } = await supabase!
       .from('high_value_prospects')
       .select('*')
       .gte('icp_score', minScore)
@@ -365,7 +381,9 @@ export class SupabaseLinkedInService {
   }
 
   async getPostsWithStats(): Promise<any[]> {
-    const { data, error } = await supabase
+    this.checkSupabaseConnection()
+    
+    const { data, error } = await supabase!
       .from('posts_with_latest_stats')
       .select('*')
       .order('posted_at', { ascending: false })
