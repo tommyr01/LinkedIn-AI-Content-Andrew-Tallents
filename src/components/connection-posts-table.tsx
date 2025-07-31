@@ -39,6 +39,8 @@ export type ConnectionPost = {
   mediaThumbnail?: string
   createdTime: string
   hasMedia?: boolean
+  documentTitle?: string
+  documentPageCount?: number
 }
 
 export type PostStats = {
