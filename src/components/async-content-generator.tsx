@@ -37,6 +37,7 @@ export function AsyncContentGenerator({ onContentGenerated }: AsyncContentGenera
   const [jobDrafts, setJobDrafts] = useState<ContentDraft[]>([])
   const [subscription, setSubscription] = useState<any>(null)
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null)
+  const [isSavingVoice, setIsSavingVoice] = useState(false)
 
   // Load saved voice guidelines
   useEffect(() => {
@@ -45,6 +46,18 @@ export function AsyncContentGenerator({ onContentGenerated }: AsyncContentGenera
       setVoiceGuidelines(saved)
     }
   }, [])
+
+  const handleSaveVoiceGuidelines = () => {
+    setIsSavingVoice(true)
+    try {
+      localStorage.setItem('voiceGuidelines', voiceGuidelines)
+      toast.success("Voice guidelines saved successfully")
+    } catch (error) {
+      toast.error("Failed to save voice guidelines")
+    } finally {
+      setIsSavingVoice(false)
+    }
+  }
 
   // Setup real-time subscription and polling for job updates
   useEffect(() => {
@@ -308,7 +321,17 @@ export function AsyncContentGenerator({ onContentGenerated }: AsyncContentGenera
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="voiceGuidelines">Voice Guidelines</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="voiceGuidelines">Voice Guidelines</Label>
+              <Button 
+                onClick={handleSaveVoiceGuidelines} 
+                variant="outline" 
+                size="sm"
+                disabled={isSavingVoice || isGenerating}
+              >
+                {isSavingVoice ? 'Saving...' : 'Save'}
+              </Button>
+            </div>
             <Textarea
               id="voiceGuidelines"
               value={voiceGuidelines}
