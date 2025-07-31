@@ -82,10 +82,6 @@ export const contentGenerationQueue = new Queue(
       },
       removeOnComplete: 10, // Reduced for serverless
       removeOnFail: 5, // Reduced for serverless
-    },
-    settings: {
-      stalledInterval: 30000,
-      maxStalledCount: 1
     }
   }
 )
