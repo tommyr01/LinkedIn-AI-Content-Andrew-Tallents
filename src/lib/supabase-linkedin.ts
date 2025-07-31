@@ -2,10 +2,13 @@ import { createClient } from '@supabase/supabase-js'
 import { icpScorer, ProspectProfile } from './icp-scorer'
 import { enhancedICPScorer, type LinkedInCommentAuthor, type EnhancedProspectProfile } from './enhanced-icp-scorer'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
+// Handle missing environment variables gracefully during build
+const supabase = supabaseUrl && supabaseServiceKey 
+  ? createClient(supabaseUrl, supabaseServiceKey)
+  : null
 
 // LinkedIn API Response Types
 export interface LinkedInPost {
@@ -135,11 +138,19 @@ export interface DBLinkedInComment {
 
 export class SupabaseLinkedInService {
   
+  private checkSupabaseConnection() {
+    if (!supabase) {
+      throw new Error('Supabase connection not available. Please check NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables.')
+    }
+  }
+  
   // Posts Operations
   async upsertPost(linkedInPost: LinkedInPost): Promise<DBLinkedInPost> {
+    this.checkSupabaseConnection()
+    
     const dbPost = this.transformPostToDB(linkedInPost)
     
-    const { data, error } = await supabase
+    const { data, error } = await supabase!
       .from('linkedin_posts')
       .upsert(dbPost, { 
         onConflict: 'urn',
@@ -513,4 +524,7 @@ export class SupabaseLinkedInService {
   }
 }
 
-export const supabaseLinkedIn = new SupabaseLinkedInService()
+// Create service instance only if Supabase is available
+export const supabaseLinkedIn = supabaseUrl && supabaseServiceKey 
+  ? new SupabaseLinkedInService()
+  : null

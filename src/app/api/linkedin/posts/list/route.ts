@@ -8,6 +8,13 @@ export async function GET(request: NextRequest) {
   try {
     console.log('🔍 Fetching LinkedIn posts from Supabase...')
 
+    if (!supabaseLinkedIn) {
+      return NextResponse.json({ 
+        success: false,
+        error: 'Supabase LinkedIn service not available. Please check environment variables.' 
+      }, { status: 500 })
+    }
+
     const searchParams = request.nextUrl.searchParams
     const username = searchParams.get('username') || 'andrewtallents'
     const maxRecords = parseInt(searchParams.get('maxRecords') || '50')
@@ -127,6 +134,13 @@ export async function GET(request: NextRequest) {
 // POST endpoint for triggering data sync
 export async function POST(request: NextRequest) {
   try {
+    if (!supabaseLinkedIn) {
+      return NextResponse.json({ 
+        success: false,
+        error: 'Supabase LinkedIn service not available. Please check environment variables.' 
+      }, { status: 500 })
+    }
+
     const body = await request.json().catch(() => ({}))
     const username = body.username || 'andrewtallents'
     

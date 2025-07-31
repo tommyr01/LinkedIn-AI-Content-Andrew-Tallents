@@ -17,17 +17,24 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🔄 Starting LinkedIn posts sync...')
 
-    // Get request parameters
-    const body = await request.json().catch(() => ({}))
-    const username = body.username || 'andrewtallents'
-    const pageNumber = body.pageNumber || 1
-    const maxPages = body.maxPages || 3 // Limit to prevent API overuse
-
+    // Check environment variables
     if (!process.env.RAPIDAPI_KEY || !process.env.RAPIDAPI_HOST) {
       return NextResponse.json({ 
         error: 'Missing RapidAPI configuration' 
       }, { status: 500 })
     }
+
+    if (!supabaseLinkedIn) {
+      return NextResponse.json({ 
+        error: 'Supabase LinkedIn service not available. Please check environment variables.' 
+      }, { status: 500 })
+    }
+
+    // Get request parameters
+    const body = await request.json().catch(() => ({}))
+    const username = body.username || 'andrewtallents'
+    const pageNumber = body.pageNumber || 1
+    const maxPages = body.maxPages || 3 // Limit to prevent API overuse
 
     let allPosts: LinkedInPost[] = []
     let currentPage = pageNumber
@@ -174,6 +181,12 @@ export async function POST(request: NextRequest) {
 // GET endpoint for checking sync status
 export async function GET(request: NextRequest) {
   try {
+    if (!supabaseLinkedIn) {
+      return NextResponse.json({ 
+        error: 'Supabase LinkedIn service not available' 
+      }, { status: 500 })
+    }
+
     const username = request.nextUrl.searchParams.get('username') || 'andrewtallents'
     
     // Get latest posts from database

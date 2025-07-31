@@ -36,6 +36,12 @@ export async function POST(
       }, { status: 500 })
     }
 
+    if (!supabaseLinkedIn) {
+      return NextResponse.json({ 
+        error: 'Supabase LinkedIn service not available. Please check environment variables.' 
+      }, { status: 500 })
+    }
+
     // Get the post to extract LinkedIn URL
     const post = await supabaseLinkedIn.getPostByUrn(postUrn)
     if (!post) {
@@ -201,6 +207,12 @@ export async function GET(
   { params }: { params: { post_urn: string } }
 ) {
   try {
+    if (!supabaseLinkedIn) {
+      return NextResponse.json({ 
+        error: 'Supabase LinkedIn service not available' 
+      }, { status: 500 })
+    }
+
     const postUrn = params.post_urn
     
     // Get comments from database
