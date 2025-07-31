@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
-import { ProspectProfile } from "@/lib/icp-scorer"
+import { ProspectProfile } from "../lib/icp-scorer"
 
 interface ProspectResearchCardProps {
   prospect: ProspectProfile | null

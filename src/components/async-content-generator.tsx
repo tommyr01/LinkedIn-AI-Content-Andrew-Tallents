@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Progress } from "@/components/ui/progress"
 import { toast } from "sonner"
 import { Sparkles, Copy, Clock, CheckCircle, XCircle, RefreshCw } from "lucide-react"
-import { SupabaseService, ContentJob, ContentDraft } from "@/lib/supabase"
+import { SupabaseService, ContentJob, ContentDraft } from "../lib/supabase"
 
 interface AsyncContentGeneratorProps {
   onContentGenerated?: (drafts: ContentDraft[]) => void

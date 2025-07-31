@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { QueueService } from '@/lib/queue'
-import { SupabaseService } from '@/lib/supabase'
+import { QueueService } from '../../../../lib/queue'
+import { SupabaseService } from '../../../../lib/supabase'
 
 export const dynamic = 'force-dynamic'
 

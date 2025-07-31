@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { linkedInScraper, extractUsernameFromLinkedInUrl } from '@/lib/linkedin-scraper'
-import { icpScorer, ProspectProfile } from '@/lib/icp-scorer'
+import { linkedInScraper, extractUsernameFromLinkedInUrl } from '../../../../lib/linkedin-scraper'
+import { icpScorer, ProspectProfile } from '../../../../lib/icp-scorer'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'

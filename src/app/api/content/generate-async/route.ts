@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { QueueService } from '@/lib/queue'
+import { QueueService } from '../../../../lib/queue'
 
 export const dynamic = 'force-dynamic'
 

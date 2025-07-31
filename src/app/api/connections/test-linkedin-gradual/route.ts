@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
-import { linkedInScraper } from '@/lib/linkedin-scraper'
-import { createConnection } from '@/lib/airtable-http'
+import { linkedInScraper } from '../../../../lib/linkedin-scraper'
+import { createConnection } from '../../../../lib/airtable-http'
 
+export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export async function GET() {

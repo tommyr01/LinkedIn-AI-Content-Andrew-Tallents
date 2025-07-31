@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { linkedInScraper, extractUsernameFromLinkedInUrl } from '@/lib/linkedin-scraper'
-import { createConnection, createConnectionPosts, ConnectionPostRecord } from '@/lib/airtable-http'
+import { linkedInScraper, extractUsernameFromLinkedInUrl } from '../../../../lib/linkedin-scraper'
+import { createConnection, createConnectionPosts, ConnectionPostRecord } from '../../../../lib/airtable-http'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'

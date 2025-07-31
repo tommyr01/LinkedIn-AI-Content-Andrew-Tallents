@@ -9,8 +9,8 @@ import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import { Comment } from "./comment"
 import { ProspectResearchCard } from "./prospect-research-card"
-import { LinkedInComment } from "@/lib/linkedin-scraper"
-import { ProspectProfile } from "@/lib/icp-scorer"
+import { LinkedInComment } from "../lib/linkedin-scraper"
+import { ProspectProfile } from "../lib/icp-scorer"
 
 interface CommentsListProps {
   postUrl: string

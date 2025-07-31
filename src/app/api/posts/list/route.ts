@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { ConnectionPostRecord } from '@/lib/airtable-http'
+import { ConnectionPostRecord } from '../../../../lib/airtable-http'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
