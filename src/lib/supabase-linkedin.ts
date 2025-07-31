@@ -398,10 +398,24 @@ export class SupabaseLinkedInService {
 
   // Transform functions
   private transformPostToDB(post: LinkedInPost): Partial<DBLinkedInPost> {
+    // Handle different timestamp formats from LinkedIn API
+    let postedAt: string | null = null
+    if (post.posted_at) {
+      if (typeof post.posted_at === 'string') {
+        postedAt = post.posted_at
+      } else if (typeof post.posted_at === 'object' && post.posted_at.date) {
+        // Handle new format: {"date":"2025-07-31 13:46:46","relative":"...","timestamp":...}
+        postedAt = new Date(post.posted_at.date).toISOString()
+      } else if (typeof post.posted_at === 'object' && post.posted_at.timestamp) {
+        // Fallback to timestamp if date not available
+        postedAt = new Date(post.posted_at.timestamp).toISOString()
+      }
+    }
+
     return {
       urn: post.urn,
       full_urn: post.full_urn,
-      posted_at: post.posted_at,
+      posted_at: postedAt,
       text: post.text,
       url: post.url,
       post_type: post.post_type,

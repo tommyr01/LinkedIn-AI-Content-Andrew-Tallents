@@ -84,7 +84,7 @@ export default function MyPostsPage() {
         },
         body: JSON.stringify({ 
           username: 'andrewtallents',
-          maxPages: 2 // Fetch recent posts from 2 pages
+          maxPages: 1 // Fetch only page 1 as requested
         })
       })
 
