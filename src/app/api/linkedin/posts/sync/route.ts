@@ -79,16 +79,35 @@ export async function POST(request: NextRequest) {
         break
       }
 
-      const data: RapidAPIResponse = await response.json()
+      let data: RapidAPIResponse
+      try {
+        data = await response.json()
+      } catch (parseError) {
+        console.error(`❌ Failed to parse JSON response on page ${currentPage}:`, parseError)
+        hasMorePages = false
+        break
+      }
       
-      if (!data.success) {
-        throw new Error(`RapidAPI returned error: ${data.message}`)
+      // Handle different response structures like the working standalone script
+      const posts = data.data?.posts || data.posts || (Array.isArray(data) ? data : [])
+      
+      // More flexible success checking
+      if (data.success === false) {
+        console.log(`⚠️ API returned success=false on page ${currentPage}: ${data.message || 'Unknown error'}`)
+        hasMorePages = false
+        break
+      }
+      console.log(`✅ Fetched ${posts.length} posts from page ${currentPage}`)
+      
+      // Validate that posts is actually an array
+      if (!Array.isArray(posts)) {
+        console.warn(`⚠️ Posts data is not an array on page ${currentPage}:`, typeof posts)
+        hasMorePages = false
+        break
       }
 
-      const posts = data.data.posts || []
-      console.log(`✅ Fetched ${posts.length} posts from page ${currentPage}`)
-
       if (posts.length === 0) {
+        console.log(`ℹ️ No posts found on page ${currentPage}, stopping pagination`)
         hasMorePages = false
         break
       }
@@ -97,8 +116,10 @@ export async function POST(request: NextRequest) {
       currentPage++
       processedPages++
 
-      // Check if we have pagination token for more pages
-      if (!data.data.pagination_token && processedPages >= 1) {
+      // Check pagination - simpler logic like the working script
+      // If we got fewer posts than expected or no pagination token, likely last page
+      if (posts.length < 10 || (!data.data?.pagination_token && processedPages >= 1)) {
+        console.log(`📄 Reached end of available posts (got ${posts.length} posts, no pagination token)`)
         hasMorePages = false
       }
 
