@@ -18,41 +18,73 @@ function parseRedisUrl(url: string) {
   }
 }
 
-// Create Redis connection optimized for Upstash
+// Detect deployment environment
+const isRailway = process.env.RAILWAY_ENVIRONMENT_NAME || process.env.RAILWAY_PROJECT_NAME
+const isProduction = appConfig.environment === 'production'
+
+// Create Redis connection optimized for deployment environment
 function createRedisConnection() {
   const parsed = parseRedisUrl(appConfig.redis.url)
+  
+  // Base configuration for Upstash Redis
+  const baseConfig = {
+    tls: {}, // Enable TLS for Upstash
+    enableReadyCheck: false,
+    lazyConnect: true,
+    maxRetriesPerRequest: null, // Required by BullMQ
+    keyPrefix: '',
+    db: 0
+  }
+  
+  // Environment-specific optimizations
+  const envConfig = isRailway ? {
+    // Railway-specific optimizations for their network
+    connectTimeout: 45000, // Longer timeout for Railway
+    commandTimeout: 90000, // Very long timeout for Railway network conditions
+    retryStrategy: (times: number) => {
+      if (times > 6) return null // More retries for Railway
+      return Math.min(times * 3000, 15000) // Progressive delays
+    },
+    keepAlive: 60000, // Longer keepalive
+    family: 4, // Force IPv4
+    maxMemoryPolicy: 'allkeys-lru',
+    enableOfflineQueue: false,
+    retryDelayOnFailover: 3000,
+    // Additional Railway stability settings
+    autoResubscribe: true,
+    autoResendUnfulfilledCommands: true
+  } : {
+    // Default/Vercel optimizations
+    connectTimeout: 15000,
+    commandTimeout: 30000,
+    retryStrategy: (times: number) => {
+      if (times > 3) return null
+      return Math.min(times * 1000, 3000)
+    },
+    keepAlive: 30000,
+    family: 4
+  }
+  
+  const finalConfig = { ...baseConfig, ...envConfig }
+  
+  // Log environment-specific configuration
+  logger.info({
+    environment: isRailway ? 'Railway' : 'Default',
+    commandTimeout: finalConfig.commandTimeout,
+    connectTimeout: finalConfig.connectTimeout
+  }, 'Redis connection configuration')
   
   if (parsed) {
     return new Redis({
       host: parsed.host,
       port: parsed.port,
       password: parsed.password,
-      tls: {}, // Enable TLS for Upstash
-      enableReadyCheck: false,
-      lazyConnect: true,
-      connectTimeout: 10000,
-      commandTimeout: 10000,
-      maxRetriesPerRequest: null, // Required by BullMQ
-      retryStrategy: (times: number) => {
-        if (times > 3) return null
-        return Math.min(times * 1000, 3000)
-      }
+      ...finalConfig
     })
   }
   
   // Fallback to URL format
-  return new Redis(appConfig.redis.url, {
-    tls: {},
-    enableReadyCheck: false,
-    lazyConnect: true,
-    connectTimeout: 10000,
-    commandTimeout: 10000,
-    maxRetriesPerRequest: null,
-    retryStrategy: (times: number) => {
-      if (times > 3) return null
-      return Math.min(times * 1000, 3000)
-    }
-  })
+  return new Redis(appConfig.redis.url, finalConfig)
 }
 
 export const redis = createRedisConnection()
@@ -138,13 +170,35 @@ export const closeQueue = async () => {
   }
 }
 
-// Initialize queue on module load
+// Initialize queue on module load with enhanced error handling
 redis.on('connect', () => {
   logger.info('Redis connected successfully')
 })
 
+redis.on('ready', () => {
+  logger.info('Redis connection ready for commands')
+})
+
 redis.on('error', (error) => {
   logger.error({ error }, 'Redis connection error')
+})
+
+redis.on('reconnecting', (delay) => {
+  logger.warn({ delay }, 'Redis reconnecting after delay')
+})
+
+redis.on('end', () => {
+  logger.warn('Redis connection ended')
+})
+
+// Add connection timeout monitoring
+redis.on('connecting', () => {
+  logger.info('Redis connecting...')
+})
+
+// Monitor for specific timeout errors
+redis.on('node error', (error, node) => {
+  logger.error({ error, node }, 'Redis node error')
 })
 
 export default {
