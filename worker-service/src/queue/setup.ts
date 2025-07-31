@@ -30,7 +30,7 @@ function createRedisConnection() {
   const baseConfig = {
     tls: {}, // Enable TLS for Upstash
     enableReadyCheck: false,
-    lazyConnect: true,
+    lazyConnect: false, // Connect immediately for health checks
     maxRetriesPerRequest: null, // Required by BullMQ
     keyPrefix: '',
     db: 0
@@ -68,23 +68,63 @@ function createRedisConnection() {
   const finalConfig = { ...baseConfig, ...envConfig }
   
   // Log environment-specific configuration
+  const sanitizedUrl = appConfig.redis.url.replace(/:\/\/.*@/, '://***:***@')
   logger.info({
     environment: isRailway ? 'Railway' : 'Default',
+    url: sanitizedUrl,
+    host: parsed?.host,
+    port: parsed?.port,
+    hasPassword: !!parsed?.password,
     commandTimeout: finalConfig.commandTimeout,
-    connectTimeout: finalConfig.connectTimeout
+    connectTimeout: finalConfig.connectTimeout,
+    lazyConnect: finalConfig.lazyConnect,
+    tls: !!finalConfig.tls
   }, 'Redis connection configuration')
   
+  let redisInstance: Redis
+  
   if (parsed) {
-    return new Redis({
+    redisInstance = new Redis({
       host: parsed.host,
       port: parsed.port,
       password: parsed.password,
       ...finalConfig
     })
+  } else {
+    // Fallback to URL format
+    redisInstance = new Redis(appConfig.redis.url, finalConfig)
   }
   
-  // Fallback to URL format
-  return new Redis(appConfig.redis.url, finalConfig)
+  // Add detailed connection event logging
+  redisInstance.on('connect', () => {
+    logger.info('Redis connecting...')
+  })
+  
+  redisInstance.on('ready', () => {
+    logger.info('Redis connection ready')
+  })
+  
+  redisInstance.on('error', (error) => {
+    logger.error({ 
+      error: error.message, 
+      code: (error as any).code,
+      errno: (error as any).errno 
+    }, 'Redis connection error')
+  })
+  
+  redisInstance.on('close', () => {
+    logger.warn('Redis connection closed')
+  })
+  
+  redisInstance.on('reconnecting', (delay: number) => {
+    logger.warn({ delay }, 'Redis reconnecting after delay')
+  })
+  
+  redisInstance.on('end', () => {
+    logger.warn('Redis connection ended')
+  })
+  
+  return redisInstance
 }
 
 export const redis = createRedisConnection()
@@ -130,31 +170,61 @@ queueEvents.on('progress', ({ jobId, data }) => {
 })
 
 // Health check function
-export const checkQueueHealth = async () => {
-  try {
-    await redis.ping()
-    const waiting = await contentGenerationQueue.getWaiting()
-    const active = await contentGenerationQueue.getActive()
-    const completed = await contentGenerationQueue.getCompleted()
-    const failed = await contentGenerationQueue.getFailed()
-    
-    return {
-      redis: 'connected',
-      queues: {
-        [QUEUE_NAMES.CONTENT_GENERATION]: {
-          waiting: waiting.length,
-          active: active.length,
-          completed: completed.length,
-          failed: failed.length
+export const checkQueueHealth = async (retries = 3) => {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      // Wait for Redis connection to be ready
+      if (redis.status !== 'ready') {
+        logger.info({ status: redis.status, attempt }, 'Waiting for Redis connection...')
+        await new Promise(resolve => setTimeout(resolve, 2000 * attempt))
+      }
+      
+      // Test Redis connection
+      const pingResult = await redis.ping()
+      logger.info({ pingResult, attempt }, 'Redis ping successful')
+      
+      // Test queue operations
+      const waiting = await contentGenerationQueue.getWaiting()
+      const active = await contentGenerationQueue.getActive()
+      const completed = await contentGenerationQueue.getCompleted()
+      const failed = await contentGenerationQueue.getFailed()
+      
+      return {
+        redis: 'connected',
+        queues: {
+          [QUEUE_NAMES.CONTENT_GENERATION]: {
+            waiting: waiting.length,
+            active: active.length,
+            completed: completed.length,
+            failed: failed.length
+          }
         }
       }
+    } catch (error) {
+      logger.warn({ 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        attempt,
+        maxRetries: retries,
+        redisStatus: redis.status 
+      }, `Queue health check failed (attempt ${attempt}/${retries})`)
+      
+      // If this is the last attempt, return the error
+      if (attempt === retries) {
+        return {
+          redis: 'disconnected',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }
+      }
+      
+      // Wait before retrying
+      await new Promise(resolve => setTimeout(resolve, 3000 * attempt))
     }
-  } catch (error) {
-    logger.error({ error }, 'Queue health check failed')
-    return {
-      redis: 'disconnected',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    }
+  }
+  
+  // This should never be reached, but just in case
+  return {
+    redis: 'disconnected',
+    error: 'Max retries exceeded'
   }
 }
 
