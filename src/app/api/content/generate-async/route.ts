@@ -63,29 +63,40 @@ export async function POST(request: NextRequest) {
     // Try to get the database job that was created by the worker with retry logic
     let dbJob = null
     let attempts = 0
-    const maxAttempts = 3
+    const maxAttempts = 5 // Increased attempts
+    
+    // Give the worker more time to create the database job
+    console.log('⏳ Giving worker time to create database job...')
+    await new Promise(resolve => setTimeout(resolve, 3000))
     
     while (!dbJob && attempts < maxAttempts) {
       attempts++
-      console.log(`Attempt ${attempts}/${maxAttempts}: Looking for database job...`)
-      
-      // Wait before each attempt (longer for later attempts)
-      await new Promise(resolve => setTimeout(resolve, attempts * 2000))
+      console.log(`Attempt ${attempts}/${maxAttempts}: Looking for database job with queue_job_id=${result.jobId}`)
       
       try {
         const jobData = await SupabaseService.getJobWithDrafts(result.jobId!)
         if (jobData.job) {
           dbJob = jobData.job
-          console.log(`✅ Found database job on attempt ${attempts}:`, dbJob.id)
+          console.log(`✅ Found database job on attempt ${attempts}:`, dbJob.id, 'queue_job_id:', (dbJob as any).queue_job_id)
           break
+        } else {
+          console.log(`❌ No database job found on attempt ${attempts}`)
         }
       } catch (error) {
         console.log(`❌ Attempt ${attempts} failed:`, error)
+      }
+      
+      // Wait before next attempt (longer for later attempts)
+      if (attempts < maxAttempts) {
+        const waitTime = attempts * 3000 // 3s, 6s, 9s, 12s
+        console.log(`⏳ Waiting ${waitTime}ms before next attempt...`)
+        await new Promise(resolve => setTimeout(resolve, waitTime))
       }
     }
     
     if (!dbJob) {
       console.log('⚠️ Could not find database job after all attempts, using queue job ID only')
+      console.log('💡 The job will still process, but frontend will rely on API polling to get results')
     }
     
     return NextResponse.json({

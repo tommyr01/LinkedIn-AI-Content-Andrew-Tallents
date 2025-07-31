@@ -51,43 +51,9 @@ export function AsyncContentGenerator({ onContentGenerated }: AsyncContentGenera
     if (currentJob?.id) {
       console.log('Setting up subscriptions for job ID:', currentJob.id)
       
-      // Setup real-time subscriptions
-      const jobSubscription = SupabaseService.subscribeToJobUpdates(
-        currentJob.id,
-        (updatedJob: ContentJob) => {
-          console.log('Real-time job update:', updatedJob)
-          setCurrentJob(prev => ({
-            ...prev!,
-            id: updatedJob.id,
-            status: updatedJob.status,
-            progress: updatedJob.progress,
-            topic: updatedJob.topic,
-            platform: updatedJob.platform,
-            error: updatedJob.error,
-            created_at: updatedJob.created_at,
-            updated_at: updatedJob.updated_at
-          }))
-
-          // If job completed, fetch drafts
-          if (updatedJob.status === 'completed') {
-            fetchJobResults(updatedJob.id)
-            setIsGenerating(false)
-          } else if (updatedJob.status === 'failed') {
-            setIsGenerating(false)
-            toast.error(updatedJob.error || 'Content generation failed')
-          }
-        }
-      )
-
-      const draftsSubscription = SupabaseService.subscribeToJobDrafts(
-        currentJob.id,
-        (draft: ContentDraft) => {
-          console.log('Real-time draft update:', draft)
-          setJobDrafts(prev => [...prev, draft])
-        }
-      )
-
-      setSubscription({ job: jobSubscription, drafts: draftsSubscription })
+      // Temporarily disable real-time subscriptions to avoid RLS issues
+      // The polling mechanism below will handle updates instead
+      console.log('Real-time subscriptions disabled - using polling fallback')
 
       // Also setup polling fallback
       const pollJob = async () => {
@@ -154,8 +120,7 @@ export function AsyncContentGenerator({ onContentGenerated }: AsyncContentGenera
       setPollingInterval(interval)
 
       return () => {
-        jobSubscription.unsubscribe()
-        draftsSubscription.unsubscribe()
+        // Clean up polling interval
         if (interval) clearInterval(interval)
       }
     }
@@ -163,11 +128,15 @@ export function AsyncContentGenerator({ onContentGenerated }: AsyncContentGenera
 
   const fetchJobResults = async (jobId: string) => {
     try {
-      const { job, drafts } = await SupabaseService.getJobWithDrafts(jobId)
-      if (drafts.length > 0) {
-        setJobDrafts(drafts)
-        onContentGenerated?.(drafts)
-        toast.success(`Generated ${drafts.length} content variations!`)
+      // Use API endpoint instead of direct Supabase call to avoid RLS issues
+      const response = await fetch(`/api/content/job/${jobId}`)
+      if (response.ok) {
+        const result = await response.json()
+        if (result.success && result.drafts?.length > 0) {
+          setJobDrafts(result.drafts)
+          onContentGenerated?.(result.drafts)
+          toast.success(`Generated ${result.drafts.length} content variations!`)
+        }
       }
     } catch (error) {
       console.error('Error fetching job results:', error)
@@ -178,44 +147,32 @@ export function AsyncContentGenerator({ onContentGenerated }: AsyncContentGenera
     console.log('Attempting fallback fetch with job:', job)
     
     try {
-      // Try 1: Direct Supabase query with database job ID
-      if (job.databaseJobId) {
-        console.log('Trying database job ID:', job.databaseJobId)
-        const { job: dbJob, drafts } = await SupabaseService.getJobWithDrafts(job.databaseJobId)
-        if (drafts.length > 0) {
-          console.log('Found drafts with database job ID:', drafts.length)
-          setJobDrafts(drafts)
-          onContentGenerated?.(drafts)
-          toast.success(`Found ${drafts.length} content variations!`)
-          return
-        }
-      }
+      // Try API calls with different job IDs (avoid direct Supabase calls to prevent RLS issues)
+      const jobIdsToTry = [
+        job.databaseJobId,
+        job.queueJobId, 
+        job.id
+      ].filter(Boolean) // Remove undefined values
 
-      // Try 2: API call with queue job ID
-      if (job.queueJobId) {
-        console.log('Trying queue job ID via API:', job.queueJobId)
-        const response = await fetch(`/api/content/job/${job.queueJobId}`)
-        if (response.ok) {
-          const result = await response.json()
-          if (result.success && result.drafts?.length > 0) {
-            console.log('Found drafts via API:', result.drafts.length)
-            setJobDrafts(result.drafts)
-            onContentGenerated?.(result.drafts)
-            toast.success(`Found ${result.drafts.length} content variations!`)
-            return
+      for (const jobId of jobIdsToTry) {
+        console.log('Trying job ID via API:', jobId)
+        try {
+          const response = await fetch(`/api/content/job/${jobId}`)
+          if (response.ok) {
+            const result = await response.json()
+            if (result.success && result.drafts?.length > 0) {
+              console.log('Found drafts via API:', result.drafts.length, 'for job ID:', jobId)
+              setJobDrafts(result.drafts)
+              onContentGenerated?.(result.drafts)
+              toast.success(`Found ${result.drafts.length} content variations!`)
+              return
+            }
+          } else {
+            console.log('API call failed for job ID:', jobId, 'Status:', response.status)
           }
+        } catch (apiError) {
+          console.log('API error for job ID:', jobId, apiError)
         }
-      }
-
-      // Try 3: Direct Supabase query with current job ID
-      console.log('Trying current job ID:', job.id)
-      const { job: dbJob, drafts } = await SupabaseService.getJobWithDrafts(job.id)
-      if (drafts.length > 0) {
-        console.log('Found drafts with current job ID:', drafts.length)
-        setJobDrafts(drafts)
-        onContentGenerated?.(drafts)
-        toast.success(`Found ${drafts.length} content variations!`)
-        return
       }
 
       // If all attempts fail
