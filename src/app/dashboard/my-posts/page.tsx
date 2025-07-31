@@ -20,11 +20,11 @@ export default function MyPostsPage() {
     averageEngagement: 0
   })
 
-  // Fetch Andrew's posts from Supabase (via LinkedIn API)
+  // Fetch Andrew's posts from Supabase database
   const fetchPosts = async () => {
     setIsLoading(true)
     try {
-      console.log('🔍 Fetching LinkedIn posts from Supabase...')
+      console.log('🔍 Loading Andrew\'s posts from database...')
       
       const response = await fetch('/api/linkedin/posts/list?maxRecords=100&sortField=posted_at&sortDirection=desc&username=andrewtallents', {
         method: 'GET',
@@ -44,8 +44,8 @@ export default function MyPostsPage() {
         setPosts(data.posts)
         setStats(data.stats)
         
-        console.log(`✅ Loaded ${data.posts.length} LinkedIn posts`)
-        toast.success(`Loaded ${data.posts.length} LinkedIn posts${data.meta.lastSync ? ` (Last sync: ${new Date(data.meta.lastSync).toLocaleString()})` : ''}`)
+        console.log(`✅ Loaded ${data.posts.length} posts from database`)
+        toast.success(`Loaded ${data.posts.length} posts${data.meta.lastSync ? ` (Last sync: ${new Date(data.meta.lastSync).toLocaleString()})` : ' (No recent sync - click "Refresh from LinkedIn" to get latest)'}`)
       } else {
         throw new Error(data.error || 'Failed to fetch posts')
       }
@@ -109,10 +109,48 @@ export default function MyPostsPage() {
     }
   }
 
-  // Refresh posts data
+  // Refresh posts data - this will sync Andrew's posts from LinkedIn
   const refreshPosts = async () => {
-    toast.info('Refreshing posts...')
-    await fetchPosts()
+    setIsLoading(true)
+    try {
+      console.log('🔄 Refreshing Andrew\'s posts from LinkedIn...')
+      toast.info('Fetching latest posts from LinkedIn...')
+      
+      // Call the sync API to fetch Andrew's posts from RapidAPI
+      const syncResponse = await fetch('/api/linkedin/posts/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          username: 'andrewtallents',
+          maxPages: 2 // Fetch recent posts from 2 pages
+        })
+      })
+
+      if (!syncResponse.ok) {
+        const errorData = await syncResponse.json().catch(() => ({}))
+        throw new Error(errorData.error || `Sync failed: HTTP ${syncResponse.status}`)
+      }
+
+      const syncData = await syncResponse.json()
+      
+      if (syncData.success) {
+        const summary = syncData.data.summary
+        toast.success(`Sync completed! ${summary.newPosts} new posts, ${summary.updatedPosts} updated posts`)
+        
+        // Now fetch the updated data from Supabase
+        await fetchPosts()
+      } else {
+        throw new Error(syncData.error || 'Sync operation failed')
+      }
+
+    } catch (error: any) {
+      console.error('Error refreshing posts from LinkedIn:', error)
+      toast.error(`Failed to refresh posts: ${error.message}`)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   // Load posts on component mount
@@ -142,9 +180,13 @@ export default function MyPostsPage() {
             <RotateCcw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
             {isSyncing ? 'Syncing...' : 'Sync LinkedIn'}
           </Button>
-          <Button variant="outline" onClick={refreshPosts}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh Data
+          <Button 
+            variant="outline" 
+            onClick={refreshPosts}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            {isLoading ? 'Fetching Posts...' : 'Refresh from LinkedIn'}
           </Button>
           <Button variant="outline" onClick={() => window.open('/dashboard/content', '_self')}>
             <Plus className="mr-2 h-4 w-4" />
