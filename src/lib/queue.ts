@@ -1,14 +1,72 @@
 import { Queue } from 'bullmq'
 import Redis from 'ioredis'
 
-// Create Redis connection optimized for serverless/Vercel
-const redis = new Redis(process.env.REDIS_URL || process.env.UPSTASH_REDIS_URL || `redis://default:${process.env.UPSTASH_REDIS_REST_TOKEN}@solid-bobcat-5524.upstash.io:6379`, {
-  enableReadyCheck: false,
-  lazyConnect: true,
-  connectTimeout: 5000,
-  commandTimeout: 5000,
-  family: 4, // Force IPv4
-  maxRetriesPerRequest: null, // Required by BullMQ
+// Parse Redis URL to extract components
+function parseRedisUrl(url: string) {
+  try {
+    const parsed = new URL(url)
+    return {
+      host: parsed.hostname,
+      port: parseInt(parsed.port) || 6379,
+      password: parsed.password || parsed.username,
+    }
+  } catch {
+    return null
+  }
+}
+
+// Create Redis connection optimized for Upstash/serverless
+function createRedisConnection() {
+  const redisUrl = process.env.REDIS_URL || process.env.UPSTASH_REDIS_URL
+  
+  if (redisUrl) {
+    const parsed = parseRedisUrl(redisUrl)
+    if (parsed) {
+      return new Redis({
+        host: parsed.host,
+        port: parsed.port,
+        password: parsed.password,
+        tls: {}, // Enable TLS for Upstash
+        enableReadyCheck: false,
+        lazyConnect: true,
+        connectTimeout: 10000,
+        commandTimeout: 10000,
+        maxRetriesPerRequest: null, // Required by BullMQ
+        retryStrategy: (times: number) => {
+          if (times > 3) return null
+          return Math.min(times * 1000, 3000)
+        }
+      })
+    }
+  }
+  
+  // Fallback for legacy format
+  return new Redis({
+    host: 'solid-bobcat-5524.upstash.io',
+    port: 6379,
+    password: process.env.UPSTASH_REDIS_REST_TOKEN,
+    tls: {}, // Enable TLS for Upstash
+    enableReadyCheck: false,
+    lazyConnect: true,
+    connectTimeout: 10000,
+    commandTimeout: 10000,
+    maxRetriesPerRequest: null,
+    retryStrategy: (times: number) => {
+      if (times > 3) return null
+      return Math.min(times * 1000, 3000)
+    }
+  })
+}
+
+const redis = createRedisConnection()
+
+// Handle connection errors
+redis.on('error', (err) => {
+  console.error('Redis connection error:', err)
+})
+
+redis.on('connect', () => {
+  console.log('Redis connected successfully')
 })
 
 // Content generation queue optimized for serverless
@@ -24,6 +82,10 @@ export const contentGenerationQueue = new Queue(
       },
       removeOnComplete: 10, // Reduced for serverless
       removeOnFail: 5, // Reduced for serverless
+    },
+    settings: {
+      stalledInterval: 30000,
+      maxStalledCount: 1
     }
   }
 )
