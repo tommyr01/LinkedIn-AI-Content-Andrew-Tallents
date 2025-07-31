@@ -5,12 +5,14 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 interface RapidAPIResponse {
-  success: boolean
-  message: string
-  data: {
-    posts: LinkedInPost[]
+  success?: boolean
+  message?: string
+  data?: {
+    posts?: LinkedInPost[]
     pagination_token?: string
   }
+  posts?: LinkedInPost[] // Allow posts at root level
+  [key: string]: any // Allow any additional properties for flexibility
 }
 
 export async function POST(request: NextRequest) {
