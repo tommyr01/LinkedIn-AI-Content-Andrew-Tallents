@@ -183,7 +183,7 @@ redis.on('error', (error) => {
   logger.error({ error }, 'Redis connection error')
 })
 
-redis.on('reconnecting', (delay) => {
+redis.on('reconnecting', (delay: number) => {
   logger.warn({ delay }, 'Redis reconnecting after delay')
 })
 

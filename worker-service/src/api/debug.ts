@@ -67,7 +67,7 @@ export const testJobHandler = async (req: Request, res: Response) => {
       topic: 'Test topic from debug endpoint',
       platform: 'linkedin',
       postType: 'Test',
-      hasVoiceGuidelines: false
+      voiceGuidelines: undefined
     })
 
     logger.info({ jobId: testJob.id }, 'Test job added to queue')

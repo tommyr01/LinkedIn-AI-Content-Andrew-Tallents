@@ -25,22 +25,14 @@ export class ContentGenerationWorker {
         // Railway-specific optimizations
         maxStalledCount: isRailway ? 2 : 1, // More tolerance for stalled jobs on Railway
         stalledInterval: isRailway ? 60000 : 30000, // Longer stalled check interval for Railway
-        settings: {
-          // Reduce polling frequency for Railway network conditions
-          stalledInterval: isRailway ? 60000 : 30000,
-          maxStalledCount: isRailway ? 2 : 1,
-          // Reduce Redis polling to minimize timeouts
-          ...(isRailway && {
-            attempts: 5,
-            backoffStrategy: 'exponential',
-            backoffSettings: {
-              delay: 5000,
-              settings: {
-                jitter: true
-              }
-            }
-          })
-        }
+        ...(isRailway && {
+          // Reduce Redis polling to minimize timeouts on Railway
+          attempts: 5,
+          backoff: {
+            type: 'exponential',
+            delay: 5000,
+          }
+        })
       }
     )
 
