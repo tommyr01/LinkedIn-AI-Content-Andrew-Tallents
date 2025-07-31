@@ -14,7 +14,11 @@ const supabase = supabaseUrl && supabaseServiceKey
 export interface LinkedInPost {
   urn: string
   full_urn: string
-  posted_at: string
+  posted_at: string | {
+    date: string
+    relative: string
+    timestamp: number
+  }
   text: string
   url: string
   post_type: string
