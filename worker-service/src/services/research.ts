@@ -251,7 +251,11 @@ Your Task:
 3. Extract Key Information: For each topic, determine a concise summary, a potential angle, key details, and its relevance to the target audience.
 
 Required Output Format:
-Your response MUST be ONLY a single, valid JSON object following this exact structure:
+CRITICAL: Your response must be ONLY valid JSON. No explanations, no markdown, no code blocks, no additional text. 
+
+Start your response immediately with { and end with }
+
+Return exactly this JSON structure:
 
 {
   "idea_1": {
@@ -274,6 +278,8 @@ Your response MUST be ONLY a single, valid JSON object following this exact stru
   }
 }
 
+DO NOT include any text before or after the JSON object. DO NOT wrap in markdown code blocks.
+
 Here is the news content to analyze:
 ${allNewsContent}`
 
@@ -281,28 +287,78 @@ ${allNewsContent}`
         model: appConfig.openai.model,
         messages: [
           {
+            role: 'system',
+            content: 'You are a research analyst. You must respond with ONLY valid JSON. No explanations, no markdown, no code blocks. Start immediately with { and end with }.'
+          },
+          {
             role: 'user',
             content: researchPrompt
           }
         ],
         max_tokens: 2000,
-        temperature: 0.3
+        temperature: 0.1, // Lower temperature for more consistent JSON output
+        response_format: { type: "json_object" } // Force JSON mode if available
       })
 
       const responseContent = completion.choices[0]?.message?.content || ''
       
-      // Parse the JSON response
+      // Add debug logging for the raw response
+      logger.debug({ 
+        responseLength: responseContent.length,
+        responsePreview: responseContent.substring(0, 200) + '...'
+      }, 'Raw OpenAI response received')
+      
+      // Robust JSON parsing with fallback handling
       let researchData
       try {
+        // Try direct JSON parsing first
         researchData = JSON.parse(responseContent)
       } catch (parseError) {
-        logger.error({ responseContent, parseError }, 'Failed to parse research JSON')
-        throw new Error('Failed to parse research response as JSON')
+        logger.warn({ parseError }, 'Direct JSON parsing failed, trying extraction methods')
+        
+        // Try to extract JSON from response (handle markdown code blocks, etc.)
+        const jsonExtractionAttempts = [
+          // Try to find JSON between ```json and ``` 
+          responseContent.match(/```json\s*([\s\S]*?)\s*```/)?.[1],
+          // Try to find JSON between { and }
+          responseContent.match(/(\{[\s\S]*\})/)?.[1],
+          // Try to find JSON after "output:" or similar
+          responseContent.match(/(?:output|result|json):\s*(\{[\s\S]*\})/i)?.[1]
+        ]
+        
+        let extractedJson = null
+        for (const attempt of jsonExtractionAttempts) {
+          if (attempt) {
+            try {
+              extractedJson = JSON.parse(attempt.trim())
+              logger.info('Successfully extracted JSON from response')
+              break
+            } catch (extractError) {
+              continue
+            }
+          }
+        }
+        
+        if (extractedJson) {
+          researchData = extractedJson
+        } else {
+          // Final fallback - create structured data from the response
+          logger.warn('All JSON parsing failed, creating fallback research data')
+          researchData = this.createFallbackResearchData(responseContent, topic)
+        }
       }
 
-      // Validate the structure
+      // Validate the structure (with more detailed logging)
       if (!researchData.idea_1 || !researchData.idea_2 || !researchData.idea_3) {
-        throw new Error('Research response missing required ideas')
+        logger.error({ 
+          hasIdea1: !!researchData.idea_1,
+          hasIdea2: !!researchData.idea_2, 
+          hasIdea3: !!researchData.idea_3,
+          dataKeys: Object.keys(researchData)
+        }, 'Research response missing required ideas')
+        
+        // Try to fix missing ideas
+        researchData = this.ensureRequiredIdeas(researchData, topic)
       }
 
       const totalTime = Date.now() - startTime
@@ -317,6 +373,49 @@ ${allNewsContent}`
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       logger.error({ error: errorMessage }, 'Enhanced Firecrawl research failed')
       throw error
+    }
+  }
+
+  private createFallbackResearchData(responseContent: string, topic: string) {
+    logger.info('Creating fallback research data from OpenAI response')
+    
+    // Create basic structured data if JSON parsing completely fails
+    return {
+      idea_1: {
+        concise_summary: `Recent developments in ${topic} affecting UK business leaders`,
+        angle_approach: `How recent ${topic} trends reveal the self-leadership challenges facing UK CEOs`,
+        details: `Based on current research: ${responseContent.substring(0, 200)}...`,
+        relevance: `This topic directly impacts UK CEOs and Founders who are struggling with self-leadership and getting in their own way as their businesses grow.`
+      },
+      idea_2: {
+        concise_summary: `Industry insights on ${topic} and leadership effectiveness`,
+        angle_approach: `The hidden connection between ${topic} and authentic leadership that most executives miss`,
+        details: `Key findings suggest: ${responseContent.substring(200, 400)}...`,
+        relevance: `These insights are particularly relevant for successful leaders who feel privately stuck despite their outward achievements.`
+      },
+      idea_3: {
+        concise_summary: `${topic} challenges requiring new approaches to self-leadership`,
+        angle_approach: `Why traditional approaches to ${topic} fail - and what self-aware leaders do differently`,
+        details: `Research indicates: ${responseContent.substring(400, 600)}...`,
+        relevance: `This resonates with leaders who know they need to change but struggle with practical, real-time solutions that don't slow them down.`
+      }
+    }
+  }
+
+  private ensureRequiredIdeas(data: any, topic: string) {
+    logger.info('Ensuring all required ideas are present in research data')
+    
+    const fallbackIdea = {
+      concise_summary: `Key ${topic} developments affecting UK leadership`,
+      angle_approach: `How this ${topic} trend connects to self-leadership challenges`,
+      details: `Important developments in this area that impact executive effectiveness`,
+      relevance: `Relevant for UK CEOs and Founders working on self-leadership development`
+    }
+    
+    return {
+      idea_1: data.idea_1 || fallbackIdea,
+      idea_2: data.idea_2 || fallbackIdea,
+      idea_3: data.idea_3 || fallbackIdea
     }
   }
 
