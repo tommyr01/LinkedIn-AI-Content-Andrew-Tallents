@@ -1,5 +1,6 @@
 export interface ContentJob {
   id: string
+  queue_job_id?: string
   status: 'pending' | 'processing' | 'completed' | 'failed'
   topic: string
   platform: 'linkedin' | 'twitter' | 'facebook' | 'instagram'

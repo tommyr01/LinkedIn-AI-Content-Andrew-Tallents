@@ -91,11 +91,12 @@ export class ContentGenerationWorker {
     }, 'Starting content generation job')
 
     try {
-      // Step 1: Create job in database
+      // Step 1: Create job in database with queue job ID
       const dbJob = await supabaseService.createJob({
         topic,
         platform,
-        voice_guide_id: userId
+        voice_guide_id: userId,
+        queue_job_id: job.id // Store the queue job ID in the database
       })
 
       if (!dbJob) {

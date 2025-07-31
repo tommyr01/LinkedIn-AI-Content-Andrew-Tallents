@@ -17,6 +17,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 
 export interface ContentJob {
   id: string
+  queue_job_id?: string
   status: 'pending' | 'processing' | 'completed' | 'failed'
   topic: string
   platform: 'linkedin' | 'twitter' | 'facebook' | 'instagram'
@@ -77,16 +78,34 @@ export class SupabaseService {
     drafts: ContentDraft[]
   }> {
     try {
-      const { data: job } = await supabase
+      // First try to find by queue_job_id, then by regular id
+      let { data: job } = await supabase
         .from('content_jobs')
         .select('*')
-        .eq('id', jobId)
+        .eq('queue_job_id', jobId)
         .single()
+
+      // If not found by queue_job_id, try by regular id
+      if (!job) {
+        const result = await supabase
+          .from('content_jobs')
+          .select('*')
+          .eq('id', jobId)
+          .single()
+        job = result.data
+      }
+
+      if (!job) {
+        return {
+          job: null,
+          drafts: []
+        }
+      }
 
       const { data: drafts } = await supabase
         .from('content_drafts')
         .select('*')
-        .eq('job_id', jobId)
+        .eq('job_id', job.id) // Use the database job ID for drafts
         .order('variant_number')
 
       return {

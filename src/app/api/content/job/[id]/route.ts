@@ -22,9 +22,11 @@ export async function GET(
 
     // Get queue job status
     const queueStatus = await QueueService.getJobStatus(jobId)
+    console.log('Queue status:', queueStatus ? 'found' : 'not found', queueStatus?.state)
     
-    // Get database job with drafts
+    // Get database job with drafts (now searches by queue_job_id first)
     const { job: dbJob, drafts } = await SupabaseService.getJobWithDrafts(jobId)
+    console.log('Database job:', dbJob ? 'found' : 'not found', dbJob?.status, 'drafts:', drafts.length)
 
     // If job exists in database, use that as primary source
     if (dbJob) {

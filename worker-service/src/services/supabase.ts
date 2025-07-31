@@ -24,6 +24,7 @@ export class SupabaseService {
     topic: string
     platform: string
     voice_guide_id?: string
+    queue_job_id?: string
   }): Promise<ContentJob | null> {
     try {
       const { data: job, error } = await this.client
@@ -32,6 +33,7 @@ export class SupabaseService {
           topic: data.topic,
           platform: data.platform,
           voice_guide_id: data.voice_guide_id,
+          queue_job_id: data.queue_job_id,
           status: 'pending',
           progress: 0
         })
