@@ -26,6 +26,13 @@ export async function POST(request: NextRequest) {
     }
 
     const queueJobId = result.jobId
+    if (!queueJobId) {
+      return NextResponse.json({
+        success: false,
+        error: 'No job ID returned from queue service'
+      }, { status: 500 })
+    }
+
     console.log('✅ Queue job created:', queueJobId)
 
     // Step 2: Wait a moment for the worker to potentially pick it up
