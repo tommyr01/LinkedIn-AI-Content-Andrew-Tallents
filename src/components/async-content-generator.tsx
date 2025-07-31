@@ -109,15 +109,38 @@ export function AsyncContentGenerator({ onContentGenerated }: AsyncContentGenera
                 error: result.job.error
               }))
 
-              // If job completed, fetch drafts
-              if (result.job.status === 'completed' && result.drafts?.length > 0) {
-                setJobDrafts(result.drafts)
-                onContentGenerated?.(result.drafts)
+              // If job completed, fetch drafts and stop polling
+              if (result.job.status === 'completed') {
                 setIsGenerating(false)
-                toast.success(`Generated ${result.drafts.length} content variations!`)
+                
+                if (result.drafts?.length > 0) {
+                  setJobDrafts(result.drafts)
+                  onContentGenerated?.(result.drafts)
+                  toast.success(`Generated ${result.drafts.length} content variations!`)
+                } else {
+                  // Job completed but no drafts found - this is our current issue
+                  console.warn('Job completed but no drafts found. Attempting manual fetch...')
+                  toast.warning('Job completed but results not found. Trying to fetch results...')
+                  
+                  // Try to fetch drafts directly using different job IDs
+                  await fetchJobResultsWithFallback(currentJob)
+                }
+                
+                // Stop polling since job is complete
+                if (interval) {
+                  clearInterval(interval)
+                  setPollingInterval(null)
+                  console.log('Polling stopped - job completed')
+                }
               } else if (result.job.status === 'failed') {
                 setIsGenerating(false)
                 toast.error(result.job.error || 'Content generation failed')
+                
+                // Stop polling on failure too
+                if (interval) {
+                  clearInterval(interval)
+                  setPollingInterval(null)
+                }
               }
             }
           }
@@ -148,6 +171,60 @@ export function AsyncContentGenerator({ onContentGenerated }: AsyncContentGenera
       }
     } catch (error) {
       console.error('Error fetching job results:', error)
+    }
+  }
+
+  const fetchJobResultsWithFallback = async (job: JobStatus) => {
+    console.log('Attempting fallback fetch with job:', job)
+    
+    try {
+      // Try 1: Direct Supabase query with database job ID
+      if (job.databaseJobId) {
+        console.log('Trying database job ID:', job.databaseJobId)
+        const { job: dbJob, drafts } = await SupabaseService.getJobWithDrafts(job.databaseJobId)
+        if (drafts.length > 0) {
+          console.log('Found drafts with database job ID:', drafts.length)
+          setJobDrafts(drafts)
+          onContentGenerated?.(drafts)
+          toast.success(`Found ${drafts.length} content variations!`)
+          return
+        }
+      }
+
+      // Try 2: API call with queue job ID
+      if (job.queueJobId) {
+        console.log('Trying queue job ID via API:', job.queueJobId)
+        const response = await fetch(`/api/content/job/${job.queueJobId}`)
+        if (response.ok) {
+          const result = await response.json()
+          if (result.success && result.drafts?.length > 0) {
+            console.log('Found drafts via API:', result.drafts.length)
+            setJobDrafts(result.drafts)
+            onContentGenerated?.(result.drafts)
+            toast.success(`Found ${result.drafts.length} content variations!`)
+            return
+          }
+        }
+      }
+
+      // Try 3: Direct Supabase query with current job ID
+      console.log('Trying current job ID:', job.id)
+      const { job: dbJob, drafts } = await SupabaseService.getJobWithDrafts(job.id)
+      if (drafts.length > 0) {
+        console.log('Found drafts with current job ID:', drafts.length)
+        setJobDrafts(drafts)
+        onContentGenerated?.(drafts)
+        toast.success(`Found ${drafts.length} content variations!`)
+        return
+      }
+
+      // If all attempts fail
+      console.error('No drafts found with any job ID')
+      toast.error('Job completed but could not retrieve results. Please check the debug endpoint.')
+      
+    } catch (error) {
+      console.error('Error in fallback fetch:', error)
+      toast.error('Error retrieving job results')
     }
   }
 

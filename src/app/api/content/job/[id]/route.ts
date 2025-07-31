@@ -26,7 +26,30 @@ export async function GET(
     
     // Get database job with drafts (now searches by queue_job_id first)
     const { job: dbJob, drafts } = await SupabaseService.getJobWithDrafts(jobId)
-    console.log('Database job:', dbJob ? 'found' : 'not found', dbJob?.status, 'drafts:', drafts.length)
+    console.log('Database job search result:')
+    console.log('- Job found:', !!dbJob)
+    console.log('- Job status:', dbJob?.status)
+    console.log('- Job ID:', dbJob?.id)
+    console.log('- Queue Job ID:', (dbJob as any)?.queue_job_id)
+    console.log('- Drafts count:', drafts.length)
+    
+    if (drafts.length > 0) {
+      console.log('- Sample draft:', {
+        id: drafts[0].id,
+        job_id: drafts[0].job_id,
+        agent_name: drafts[0].agent_name,
+        variant_number: drafts[0].variant_number
+      })
+    } else {
+      console.log('- No drafts found. Investigating...')
+      
+      // Additional debugging: try to find recent jobs to see what's in the database
+      const recentJobs = await SupabaseService.getRecentJobs(5)
+      console.log('- Recent jobs in database:', recentJobs.length)
+      recentJobs.forEach((job, index) => {
+        console.log(`  ${index + 1}. Job ${job.id}: ${job.status} - ${job.topic} (queue_id: ${(job as any).queue_job_id})`)
+      })
+    }
 
     // If job exists in database, use that as primary source
     if (dbJob) {
