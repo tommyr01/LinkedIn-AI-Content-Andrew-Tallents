@@ -8,7 +8,7 @@ config()
 const configSchema = z.object({
   REDIS_URL: z.string().url('REDIS_URL must be a valid URL'),
   SUPABASE_URL: z.string().url('SUPABASE_URL must be a valid URL'),
-  SUPABASE_SERVICE_KEY: z.string().min(1, 'SUPABASE_SERVICE_KEY is required'),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1, 'SUPABASE_SERVICE_ROLE_KEY is required'),
   OPENAI_API_KEY: z.string().min(1, 'OPENAI_API_KEY is required'),
   FIRECRAWL_API_KEY: z.string().min(1, 'FIRECRAWL_API_KEY is required'),
   PERPLEXITY_API_KEY: z.string().min(1, 'PERPLEXITY_API_KEY is required'),
@@ -24,7 +24,7 @@ const parseConfig = () => {
     const rawConfig = {
       REDIS_URL: process.env.REDIS_URL,
       SUPABASE_URL: process.env.SUPABASE_URL,
-      SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
+      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
       OPENAI_API_KEY: process.env.OPENAI_API_KEY,
       FIRECRAWL_API_KEY: process.env.FIRECRAWL_API_KEY,
       PERPLEXITY_API_KEY: process.env.PERPLEXITY_API_KEY,
@@ -43,7 +43,7 @@ const parseConfig = () => {
       },
       supabase: {
         url: validatedConfig.SUPABASE_URL,
-        serviceKey: validatedConfig.SUPABASE_SERVICE_KEY
+        serviceKey: validatedConfig.SUPABASE_SERVICE_ROLE_KEY
       },
       openai: {
         apiKey: validatedConfig.OPENAI_API_KEY,
