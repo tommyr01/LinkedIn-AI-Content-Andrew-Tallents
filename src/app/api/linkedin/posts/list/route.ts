@@ -47,7 +47,9 @@ export async function GET(request: NextRequest) {
       authorLinkedInUrl: post.author_profile_url,
       authorProfilePicture: post.author_profile_picture,
       postType: post.post_type || 'regular',
-      mediaType: post.document_title ? 'document' : '',
+      mediaType: post.document_title ? 
+        (post.document_title.toLowerCase().includes('.pdf') ? 'document' : 
+         post.document_thumbnail ? 'image' : 'document') : '',
       mediaUrl: post.document_url || '',
       mediaThumbnail: post.document_thumbnail || '',
       createdTime: post.created_at,

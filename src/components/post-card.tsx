@@ -38,8 +38,20 @@ export function PostCard({
   const getMediaPreview = () => {
     if (!post.hasMedia || !post.mediaUrl) return null
 
-    const isVideo = post.mediaType?.toLowerCase().includes('video')
-    const isImage = post.mediaType?.toLowerCase().includes('image') || post.mediaType?.toLowerCase().includes('photo')
+    // Enhanced media type detection for LinkedIn documents
+    const mediaUrl = post.mediaUrl.toLowerCase()
+    const isVideo = post.mediaType?.toLowerCase().includes('video') || 
+                   mediaUrl.includes('.mp4') || mediaUrl.includes('.mov') || mediaUrl.includes('.avi')
+    
+    const isImage = post.mediaType?.toLowerCase().includes('image') || 
+                   post.mediaType?.toLowerCase().includes('photo') ||
+                   mediaUrl.includes('.jpg') || mediaUrl.includes('.jpeg') || 
+                   mediaUrl.includes('.png') || mediaUrl.includes('.gif') ||
+                   post.mediaThumbnail // If there's a thumbnail, it's likely visual content
+    
+    const isDocument = post.mediaType?.toLowerCase().includes('document') ||
+                      mediaUrl.includes('.pdf') || mediaUrl.includes('.doc') || 
+                      mediaUrl.includes('.ppt') || mediaUrl.includes('.xls')
     
     if (isVideo) {
       return (
@@ -85,6 +97,50 @@ export function PostCard({
           )}
           <Badge variant="secondary" className="absolute top-2 left-2 text-xs">
             Image
+          </Badge>
+        </div>
+      )
+    }
+
+    if (isDocument) {
+      return (
+        <div className="relative w-full bg-muted rounded-md overflow-hidden cursor-pointer border">
+          {post.mediaThumbnail && !imageError ? (
+            <div className="flex">
+              <img
+                src={post.mediaThumbnail}
+                alt="Document preview"
+                className="w-20 h-20 object-cover"
+                onError={() => setImageError(true)}
+              />
+              <div className="flex-1 p-3 flex flex-col justify-center">
+                <div className="text-sm font-medium truncate">
+                  {post.documentTitle || 'Document'}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {post.documentPageCount ? `${post.documentPageCount} pages` : 'PDF Document'}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="p-4 flex items-center space-x-3">
+              <div className="w-12 h-12 bg-blue-100 rounded flex items-center justify-center">
+                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <div className="text-sm font-medium truncate">
+                  {post.documentTitle || 'Document'}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {post.documentPageCount ? `${post.documentPageCount} pages` : 'PDF Document'}
+                </div>
+              </div>
+            </div>
+          )}
+          <Badge variant="secondary" className="absolute top-2 right-2 text-xs">
+            Document
           </Badge>
         </div>
       )
