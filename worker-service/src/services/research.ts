@@ -172,6 +172,154 @@ export class ResearchService {
     }
   }
 
+  async enhancedFirecrawlResearch(topic: string): Promise<{
+    idea_1: {
+      concise_summary: string
+      angle_approach: string
+      details: string
+      relevance: string
+    }
+    idea_2: {
+      concise_summary: string
+      angle_approach: string
+      details: string
+      relevance: string
+    }
+    idea_3: {
+      concise_summary: string
+      angle_approach: string
+      details: string
+      relevance: string
+    }
+  }> {
+    const startTime = Date.now()
+    logger.info({ topic }, 'Starting enhanced Firecrawl research')
+
+    try {
+      // Calculate 7-day date range
+      const now = new Date()
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+      
+      // Search for recent UK business news related to CEOs and leadership
+      const searchQueries = [
+        'UK CEO leadership challenges 2024',
+        'UK business founders burnout stress',
+        'UK tech startup leadership self-leadership',
+        'UK executive coaching leadership development'
+      ]
+
+      // Get news from multiple searches
+      let allNewsContent = ''
+      for (const query of searchQueries) {
+        try {
+          const searchResults = await this.searchWithFirecrawl(query)
+          const recentResults = searchResults.slice(0, 3) // Top 3 results per query
+          
+          for (const result of recentResults) {
+            allNewsContent += `\n\n=== ${result.title} ===\n${result.content}\nSource: ${result.url}\n`
+          }
+        } catch (error) {
+          logger.warn({ query, error }, 'Failed to search with query')
+        }
+      }
+
+      if (!allNewsContent.trim()) {
+        throw new Error('No research content found')
+      }
+
+      // Use OpenAI to analyze the news with the user's research prompt
+      const { OpenAI } = await import('openai')
+      const openai = new OpenAI({ apiKey: appConfig.openai.apiKey })
+
+      const researchPrompt = `You are a helpful assistant
+
+Role: You are a specialized Research Analyst. Your sole purpose is to identify and research recent news topics relevant to a specific professional audience and compile the findings into a structured JSON output. You do not create the final content, only provide the research material.
+
+Context: You will receive details about the target audience (Avatar), the service provided to them (Problem We Solve), their location (Country), and the current timestamp. You will analyze the provided news content to identify relevant topics.
+
+Inputs Provided:
+Problem We Solve: Most CEOs and Founders are world-class at building businesses but terrible at leading themselves. They've achieved everything they thought they wanted - growing companies, hitting targets, industry respect - but privately they're stuck, burned out, and feeling empty. They react instead of respond, control instead of trust, and have become the bottleneck in their own success. The real problem isn't strategy or skills - it's that they're getting in their own way. I help successful leaders develop self-leadership so they can get out of their own way, lead authentically, and build lives that feel as successful privately as they look publicly. Because the greatest competitive advantage isn't strategy - it's self-awareness.
+
+Target Country: UK 
+Current Timestamp: ${now.toISOString()}
+
+Target Avatar - CEOs and Founders of established businesses (typically $5M-$100M+ revenue) who are outwardly successful but privately struggling. They're 35-55 years old, have built something significant, and are recognized in their industry - but they feel trapped by their own success. They're working 60+ hour weeks, have difficulty delegating, and despite achieving their professional goals, they feel disconnected from their original purpose and personal relationships. They've tried traditional leadership development but it hasn't stuck because it doesn't address the real issue: they've become the bottleneck in their own business and life. They're smart enough to know something needs to change but don't have time for lengthy coaching programs. They want practical, real-time solutions that help them lead more effectively while reclaiming their personal fulfillment - without having to slow down or step back from their responsibilities.
+
+Your Task:
+1. Analyze the provided news content covering the immediately preceding 7 days from ${now.toISOString()}.
+2. Identify exactly three (3) distinct news topics that are highly relevant to CEOs and Founders operating in the UK. Focus on topics impacting their industry, business operations, challenges, or opportunities, particularly relating to the self-leadership problems I solve.
+3. Extract Key Information: For each topic, determine a concise summary, a potential angle, key details, and its relevance to the target audience.
+
+Required Output Format:
+Your response MUST be ONLY a single, valid JSON object following this exact structure:
+
+{
+  "idea_1": {
+    "concise_summary": "A brief (1-2 sentence) overview identifying the core news topic or idea found.",
+    "angle_approach": "Suggest a specific angle or hook (1-2 sentences) for framing this topic in a LinkedIn post for the Target Avatar. Consider how it relates to self-leadership challenges.",
+    "details": "List key details extracted from the research (2-4 bullet points or sentences). Include specific statistics, names, key findings, data points, source names, or update summaries mentioned in the source articles.",
+    "relevance": "Explain clearly (2-3 sentences) WHY this topic and its details are relevant and insightful for the Target Avatar, considering their business challenges and self-leadership development opportunities in the UK."
+  },
+  "idea_2": {
+    "concise_summary": "A brief (1-2 sentence) overview identifying the core news topic or idea found.",
+    "angle_approach": "Suggest a specific angle or hook (1-2 sentences) for framing this topic in a LinkedIn post for the Target Avatar. Consider how it relates to self-leadership challenges.",
+    "details": "List key details extracted from the research (2-4 bullet points or sentences). Include specific statistics, names, key findings, data points, source names, or update summaries mentioned in the source articles.",
+    "relevance": "Explain clearly (2-3 sentences) WHY this topic and its details are relevant and insightful for the Target Avatar, considering their business challenges and self-leadership development opportunities in the UK."
+  },
+  "idea_3": {
+    "concise_summary": "A brief (1-2 sentence) overview identifying the core news topic or idea found.",
+    "angle_approach": "Suggest a specific angle or hook (1-2 sentences) for framing this topic in a LinkedIn post for the Target Avatar. Consider how it relates to self-leadership challenges.",
+    "details": "List key details extracted from the research (2-4 bullet points or sentences). Include specific statistics, names, key findings, data points, source names, or update summaries mentioned in the source articles.",
+    "relevance": "Explain clearly (2-3 sentences) WHY this topic and its details are relevant and insightful for the Target Avatar, considering their business challenges and self-leadership development opportunities in the UK."
+  }
+}
+
+Here is the news content to analyze:
+${allNewsContent}`
+
+      const completion = await openai.chat.completions.create({
+        model: appConfig.openai.model,
+        messages: [
+          {
+            role: 'user',
+            content: researchPrompt
+          }
+        ],
+        max_tokens: 2000,
+        temperature: 0.3
+      })
+
+      const responseContent = completion.choices[0]?.message?.content || ''
+      
+      // Parse the JSON response
+      let researchData
+      try {
+        researchData = JSON.parse(responseContent)
+      } catch (parseError) {
+        logger.error({ responseContent, parseError }, 'Failed to parse research JSON')
+        throw new Error('Failed to parse research response as JSON')
+      }
+
+      // Validate the structure
+      if (!researchData.idea_1 || !researchData.idea_2 || !researchData.idea_3) {
+        throw new Error('Research response missing required ideas')
+      }
+
+      const totalTime = Date.now() - startTime
+      logger.info({ 
+        totalTimeMs: totalTime,
+        ideasFound: 3 
+      }, 'Enhanced Firecrawl research completed')
+
+      return researchData
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      logger.error({ error: errorMessage }, 'Enhanced Firecrawl research failed')
+      throw error
+    }
+  }
+
   async comprehensiveResearch(topic: string, platform: string = 'linkedin'): Promise<{
     results: ResearchResult[]
     summary: string
@@ -189,11 +337,12 @@ export class ResearchService {
         `${topic} industry insights`
       ]
 
-      // Run searches in parallel
+      // Run searches with Firecrawl only (Perplexity disabled)
       const searchPromises = queries.map(async (query) => {
-        const [firecrawlResults, perplexityResults] = await Promise.allSettled([
-          this.searchWithFirecrawl(query),
-          this.searchWithPerplexity(query)
+        const [firecrawlResults] = await Promise.allSettled([
+          this.searchWithFirecrawl(query)
+          // Perplexity disabled for enhanced research approach
+          // this.searchWithPerplexity(query)
         ])
 
         const results: ResearchResult[] = []
@@ -202,9 +351,10 @@ export class ResearchService {
           results.push(...firecrawlResults.value)
         }
         
-        if (perplexityResults.status === 'fulfilled') {
-          results.push(...perplexityResults.value)
-        }
+        // Perplexity results disabled
+        // if (perplexityResults.status === 'fulfilled') {
+        //   results.push(...perplexityResults.value)
+        // }
 
         return results
       })

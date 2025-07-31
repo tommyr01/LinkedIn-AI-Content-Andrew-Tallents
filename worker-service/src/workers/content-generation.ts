@@ -99,19 +99,17 @@ export class ContentGenerationWorker {
       await job.updateProgress(10)
       await supabaseService.updateJobProgress(dbJob.id, 10, 'processing')
 
-      // Step 2: Research phase
-      logger.info({ jobId: job.id, topic }, 'Starting research phase')
+      // Step 2: Enhanced Research phase
+      logger.info({ jobId: job.id, topic }, 'Starting enhanced research phase')
       await job.updateProgress(15)
       await supabaseService.updateJobProgress(dbJob.id, 15)
 
-      const research = await researchService.comprehensiveResearch(topic, platform)
+      const research = await researchService.enhancedFirecrawlResearch(topic)
       
       const researchData = {
-        results: research.results,
-        summary: research.summary,
-        keyInsights: research.keyInsights,
+        research_ideas: research,
         timestamp: new Date().toISOString(),
-        sources: research.results.map(r => r.source)
+        method: 'enhanced_firecrawl'
       }
 
       await supabaseService.updateJobResearchData(dbJob.id, researchData)
@@ -120,12 +118,11 @@ export class ContentGenerationWorker {
 
       logger.info({ 
         jobId: job.id, 
-        researchResults: research.results.length,
-        keyInsights: research.keyInsights.length 
-      }, 'Research phase completed')
+        ideasFound: 3
+      }, 'Enhanced research phase completed')
 
       // Step 3: AI Agents phase
-      logger.info({ jobId: job.id }, 'Starting AI content generation with 3 agents')
+      logger.info({ jobId: job.id }, 'Starting Andrew Tallents content generation with 3 agents')
       
       const agentResults = await aiAgentsService.generateAllVariations(
         topic,
@@ -159,7 +156,7 @@ export class ContentGenerationWorker {
         jobId: job.id, 
         totalTimeMs: totalTime,
         draftCount: agentResults.length,
-        researchSources: researchData.sources.length 
+        researchMethod: researchData.method 
       }, 'Content generation completed successfully')
 
       return {
@@ -167,7 +164,7 @@ export class ContentGenerationWorker {
         jobId: dbJob.id,
         draftsCount: agentResults.length,
         totalTimeMs: totalTime,
-        researchSources: researchData.sources.length
+        researchMethod: researchData.method
       }
 
     } catch (error) {

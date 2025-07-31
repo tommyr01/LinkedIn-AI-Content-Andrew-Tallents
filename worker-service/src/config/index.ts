@@ -11,7 +11,7 @@ const configSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1, 'SUPABASE_SERVICE_ROLE_KEY is required'),
   OPENAI_API_KEY: z.string().min(1, 'OPENAI_API_KEY is required'),
   FIRECRAWL_API_KEY: z.string().min(1, 'FIRECRAWL_API_KEY is required'),
-  PERPLEXITY_API_KEY: z.string().min(1, 'PERPLEXITY_API_KEY is required'),
+  PERPLEXITY_API_KEY: z.string().optional(), // Optional since Perplexity is disabled
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   WORKER_CONCURRENCY: z.string().transform(Number).pipe(z.number().min(1).max(10)).default('3'),

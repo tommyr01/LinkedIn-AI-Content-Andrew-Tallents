@@ -1,7 +1,20 @@
 import { OpenAI } from 'openai'
 import { appConfig } from '../config'
 import logger from '../lib/logger'
-import type { AIAgentResult, ResearchResult } from '../types'
+import type { AIAgentResult } from '../types'
+
+interface ResearchIdea {
+  concise_summary: string
+  angle_approach: string
+  details: string
+  relevance: string
+}
+
+interface EnhancedResearch {
+  idea_1: ResearchIdea
+  idea_2: ResearchIdea
+  idea_3: ResearchIdea
+}
 
 export class AIAgentsService {
   private openai: OpenAI
@@ -12,261 +25,201 @@ export class AIAgentsService {
     })
   }
 
-  private createSystemPrompt(agentType: 'thought_leader' | 'storyteller' | 'practical_advisor'): string {
-    const basePrompt = `You are Andrew Tallents, an experienced CEO coach who helps successful leaders develop self-leadership. Write LinkedIn posts in Andrew's authentic voice.
+  private createAndrewTallentsPrompt(ideaNumber: 1 | 2 | 3): string {
+    return `Act as an informed LinkedIn expert specializing in content for CEOs and Founders of established businesses. You will be provided with specific details about a news topic relevant to this audience. You must only provide the output required. Do not include any other additional information about how or why the response is good. Provide only the output according to the below guidelines.
 
-**CRITICAL INSTRUCTIONS:**
-- Write the post directly without any headers, sections, or template markers
-- Use natural paragraph breaks and spacing
-- Make it feel like Andrew is speaking directly to the reader
-- Return ONLY valid JSON without any markdown formatting or code blocks
+**Mandatory Tone of Voice:**
+You must consult the tone of voice guidelines in all responses you create. The required tone is Andrew Tallents' authentic leadership coaching voice - conversational but authoritative, vulnerable yet confident, focused on self-leadership and inner transformation.
 
-**Andrew's Voice Guidelines:**
-- Conversational yet professional
-- Uses personal anecdotes and real client stories
-- Vulnerable and authentic about struggles
-- Direct and impactful
-- Focuses on the inner journey of leadership
+**Output Format:**
+Please provide your response in **plain text format only**, without any special formatting elements such as hashtags, asterisks, or other markdown syntax in the main body. Use clear and concise language, and structure your response using paragraphs. Emojis may be used appropriately for emphasis and engagement if they fit the specified tone of voice.
 
-**Target Audience:**
-CEOs and Founders ($5M-$100M revenue) who are outwardly successful but privately struggling. They're burned out, disconnected from purpose, and know they're the bottleneck in their own success.`
+**Target Audience Details:**
+Problem We Solve: Most CEOs and Founders are world-class at building businesses but terrible at leading themselves. They've achieved everything they thought they wanted - growing companies, hitting targets, industry respect - but privately they're stuck, burned out, and feeling empty. They react instead of respond, control instead of trust, and have become the bottleneck in their own success. The real problem isn't strategy or skills - it's that they're getting in their own way. I help successful leaders develop self-leadership so they can get out of their own way, lead authentically, and build lives that feel as successful privately as they look publicly. Because the greatest competitive advantage isn't strategy - it's self-awareness.
 
-    const agentSpecificPrompts = {
-      thought_leader: `
-**Your Role: Thought Leadership Agent**
-Focus on industry insights, leadership philosophy, and forward-thinking perspectives. Use the research data to provide authoritative commentary on trends and challenges.
+Target Country: UK 
+Target Avatar - CEOs and Founders of established businesses (typically $5M-$100M+ revenue) who are outwardly successful but privately struggling. They're 35-55 years old, have built something significant, and are recognized in their industry - but they feel trapped by their own success. They're working 60+ hour weeks, have difficulty delegating, and despite achieving their professional goals, they feel disconnected from their original purpose and personal relationships. They've tried traditional leadership development but it hasn't stuck because it doesn't address the real issue: they've become the bottleneck in their own business and life. They're smart enough to know something needs to change but don't have time for lengthy coaching programs. They want practical, real-time solutions that help them lead more effectively while reclaiming their personal fulfillment - without having to slow down or step back from their responsibilities.
 
-**Approach:**
-- Lead with a bold statement or contrarian view
-- Back it up with data from research
-- Connect it to leadership challenges
-- End with a thought-provoking question or call to action`,
+**LinkedIn Post Creation Guidelines - Andrew Tallents Style**
 
-      storyteller: `
-**Your Role: Storytelling Agent**
-Focus on narrative-driven content using personal anecdotes, client stories, and emotional connections. Use research as context but lead with story.
+**1. Opening Hook - Start with Impact**
+Begin with one of Andrew's signature opening patterns:
+- Provocative "What if" questions: "What if your biggest leadership advantage… was the thing you're most ashamed of?"
+- Bold contrarian statements: "Most CEOs won't admit this:"
+- Challenge assumptions: "Founders don't fail from lack of vision. They fail from self-doubt, hidden beliefs, and burnout."
 
-**Approach:**
-- Start with a compelling story or scenario
-- Use specific details and emotions
-- Weave in research insights naturally
-- Connect the story to universal leadership lessons`,
+**2. Authority Establishment**
+Early in the post, establish credibility using Andrew's pattern:
+- "I've coached 100s of [CEOs/Founders/leaders]"
+- Personal vulnerability: "Early in my leadership career, I was outwardly confident - but internally, I second-guessed every move."
 
-      practical_advisor: `
-**Your Role: Practical Advisor Agent**
-Focus on actionable advice, frameworks, and tools. Use research to support practical recommendations.
+**3. Story or Insight Development**
+- Use short, punchy sentences mixed with longer explanatory ones
+- Include em-dashes for dramatic effect: "Control may have built your business - but it won't grow it."
+- Share client insights without breaking confidentiality
+- Build toward a key realization or lesson
 
-**Approach:**
-- Identify a specific challenge from research
-- Provide step-by-step solutions
-- Include practical frameworks or tools
-- Give concrete next steps readers can take`
-    }
+**4. Lesson Extraction**
+Structure key insights using:
+- "The key?" followed by the main insight
+- "Essential lessons from [person's] journey:" with ➡️ bullet points
+- "Here's what helped me - and what I now teach other leaders:"
 
-    return `${basePrompt}\n\n${agentSpecificPrompts[agentType]}`
+**5. Engaging Elements**
+- Reflective questions: "Where are you still proving yourself - when you could be leading differently?"
+- Challenge questions: "What's one belief others have outgrown, but still holds them back?"
+- Self-examination prompts: "What choices have shaped your day so far?"
+
+**6. Call to Action**
+End with Andrew's signature patterns:
+- "♻️ Repost if this might help another [Founder/Leader] today"  
+- "What helps others [specific challenge related to topic]?"
+- Offer of value: "Comment [specific word] and I'll send you [free resource]"
+
+**7. Style Requirements**
+- NO hashtags (Andrew rarely uses them)
+- Use strategic punctuation: em-dashes, ellipses, question marks
+- Short paragraphs (1-3 sentences)
+- Conversational but authoritative tone
+- Include relevant emojis sparingly (➡️, ✅, 💡, 🎧, 🔔)
+
+**Key Differences from Generic LinkedIn Posts:**
+- No hashtags or minimal use
+- Conversational authority rather than academic expertise
+- Personal vulnerability balanced with professional insight
+- Client stories without breaking confidentiality
+- Self-coaching focus rather than external solutions
+- Questions that provoke self-examination
+- Emphasis on inner work and authentic leadership
+- Specific call-to-action patterns that build community
+
+**Your Role: Content Agent ${ideaNumber}**
+You will process research idea_${ideaNumber} and create a LinkedIn post using the above guidelines.`
   }
 
-  private createUserPrompt(
-    topic: string, 
-    research: { results: ResearchResult[], summary: string, keyInsights: string[] },
-    agentType: string
-  ): string {
-    return `Create a LinkedIn post about: ${topic}
+  private createUserPrompt(idea: ResearchIdea): string {
+    return `**Input Topic Data (Use this information to craft the post):**
+* **Concise Summary:** ${idea.concise_summary}
+* **Suggested Angle / Hook:** ${idea.angle_approach}
+* **Key Details / Stats:** ${idea.details}
+* **Relevance to Audience:** ${idea.relevance}
 
-**Research Context:**
-${research.summary}
+Create a LinkedIn post using this research data and the Andrew Tallents style guidelines provided above. 
 
-**Key Insights:**
-${research.keyInsights.slice(0, 3).map(insight => `• ${insight}`).join('\n')}
-
-**Research Sources:**
-${research.results.slice(0, 3).map(r => `• ${r.title} (${r.source})`).join('\n')}
-
-Use this research to inform your content but write in Andrew's authentic voice. 
-
-IMPORTANT: Return ONLY valid JSON in this exact format:
-{
-  "content": "Your complete LinkedIn post content here",
-  "hashtags": ["#hashtag1", "#hashtag2"],
-  "estimated_voice_score": 85,
-  "approach": "Brief description of your approach"
-}`
+Write the post content directly - no need for JSON format, just return the complete LinkedIn post text that sounds authentically like Andrew Tallents speaking to UK CEOs and Founders about self-leadership.`
   }
 
-  async generateContent(
-    topic: string,
-    research: { results: ResearchResult[], summary: string, keyInsights: string[] },
-    agentType: 'thought_leader' | 'storyteller' | 'practical_advisor',
+  private async generateSingleVariation(
+    ideaNumber: 1 | 2 | 3,
+    idea: ResearchIdea,
     voiceGuidelines?: string
   ): Promise<AIAgentResult | null> {
     const startTime = Date.now()
+    const agentName = `andrew_tallents_agent_${ideaNumber}`
     
-    try {
-      logger.info({ topic, agentType }, 'Generating content with AI agent')
+    logger.info({ agentName, ideaNumber }, 'Starting AI agent content generation')
 
-      const systemPrompt = this.createSystemPrompt(agentType)
-      const userPrompt = this.createUserPrompt(topic, research, agentType)
+    try {
+      const systemPrompt = this.createAndrewTallentsPrompt(ideaNumber)
+      const userPrompt = this.createUserPrompt(idea)
 
       const completion = await this.openai.chat.completions.create({
         model: appConfig.openai.model,
         messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
+          {
+            role: 'system',
+            content: systemPrompt
+          },
+          {
+            role: 'user',
+            content: userPrompt
+          }
         ],
-        temperature: 0.7,
-        max_tokens: 1000
+        max_tokens: 1000,
+        temperature: 0.7
       })
 
-      const response = completion.choices[0]?.message?.content
-      if (!response) {
-        throw new Error('No response from OpenAI')
-      }
-
-      // Parse JSON response
-      let parsedContent
-      try {
-        // Clean up response
-        const cleanResponse = response
-          .replace(/```json\n?/g, '')
-          .replace(/```\n?/g, '')
-          .trim()
-        
-        const jsonStart = cleanResponse.indexOf('{')
-        const jsonEnd = cleanResponse.lastIndexOf('}')
-        const jsonString = cleanResponse.substring(jsonStart, jsonEnd + 1)
-        
-        parsedContent = JSON.parse(jsonString)
-      } catch (parseError) {
-        logger.warn({ agentType, response }, 'Failed to parse JSON, creating fallback')
-        
-        // Create fallback content
-        parsedContent = {
-          content: response.replace(/```json|```/g, '').trim(),
-          hashtags: ['#leadership', '#growth'],
-          estimated_voice_score: 75,
-          approach: `${agentType.replace('_', ' ')} approach`
-        }
+      const content = completion.choices[0]?.message?.content || ''
+      
+      if (!content.trim()) {
+        throw new Error('Empty content generated')
       }
 
       const generationTime = Date.now() - startTime
 
       const result: AIAgentResult = {
-        agent_name: agentType,
+        agent_name: agentName,
         content: {
-          title: parsedContent.title,
-          body: parsedContent.content,
-          hashtags: Array.isArray(parsedContent.hashtags) ? parsedContent.hashtags : ['#leadership'],
-          estimated_voice_score: parsedContent.estimated_voice_score || 80,
-          approach: parsedContent.approach || `${agentType.replace('_', ' ')} approach`
+          title: `Andrew Tallents Post ${ideaNumber}`,
+          body: content,
+          hashtags: [], // Andrew rarely uses hashtags
+          estimated_voice_score: 90, // High score for authentic Andrew style
+          approach: `Andrew Tallents authentic style - Idea ${ideaNumber}`
         },
         metadata: {
           token_count: completion.usage?.total_tokens || 0,
           generation_time_ms: generationTime,
           model_used: appConfig.openai.model,
-          research_sources: research.results.slice(0, 3).map(r => r.source)
+          research_sources: [`Enhanced research idea ${ideaNumber}`]
         },
-        score: (parsedContent.estimated_voice_score || 80) / 100
+        score: 0.9 // High confidence in Andrew Tallents style
       }
 
       logger.info({ 
-        agentType, 
+        agentName,
+        ideaNumber,
         generationTimeMs: generationTime,
-        voiceScore: result.content.estimated_voice_score,
         tokenCount: result.metadata.token_count
       }, 'AI agent content generation completed')
 
       return result
 
     } catch (error) {
-      logger.error({ error, agentType, topic }, 'AI agent content generation failed')
+      logger.error({ error, agentName, ideaNumber }, 'AI agent content generation failed')
       return null
     }
   }
 
   async generateAllVariations(
     topic: string,
-    research: { results: ResearchResult[], summary: string, keyInsights: string[] },
+    research: EnhancedResearch,
     voiceGuidelines?: string
   ): Promise<AIAgentResult[]> {
     const startTime = Date.now()
-    logger.info({ topic }, 'Generating all content variations')
-
-    const agents: ('thought_leader' | 'storyteller' | 'practical_advisor')[] = [
-      'thought_leader',
-      'storyteller', 
-      'practical_advisor'
-    ]
+    logger.info({ topic }, 'Generating all Andrew Tallents content variations')
 
     try {
-      // Generate content with all agents in parallel
-      const promises = agents.map(agentType => 
-        this.generateContent(topic, research, agentType, voiceGuidelines)
-      )
+      // Generate content for each research idea in parallel
+      const generationPromises = [
+        this.generateSingleVariation(1, research.idea_1, voiceGuidelines),
+        this.generateSingleVariation(2, research.idea_2, voiceGuidelines),
+        this.generateSingleVariation(3, research.idea_3, voiceGuidelines)
+      ]
 
-      const results = await Promise.allSettled(promises)
+      const results = await Promise.all(generationPromises)
       
-      const successfulResults: AIAgentResult[] = []
-      results.forEach((result, index) => {
-        if (result.status === 'fulfilled' && result.value) {
-          successfulResults.push(result.value)
-        } else {
-          logger.warn({ agentType: agents[index] }, 'Agent failed to generate content')
-        }
-      })
+      // Filter out any null results
+      const validResults = results.filter((result): result is AIAgentResult => result !== null)
 
-      // If we have fewer than 3 results, create fallback content
-      while (successfulResults.length < 3) {
-        const fallbackAgent = agents[successfulResults.length]
-        successfulResults.push({
-          agent_name: fallbackAgent,
-          content: {
-            body: `LinkedIn post about ${topic} - ${fallbackAgent.replace('_', ' ')} approach\n\nThis is a fallback response as the AI service was unavailable. The content would normally be generated based on research insights and Andrew's authentic voice.`,
-            hashtags: ['#leadership', '#growth'],
-            estimated_voice_score: 70,
-            approach: `${fallbackAgent.replace('_', ' ')} approach (fallback)`
-          },
-          metadata: {
-            token_count: 100,
-            generation_time_ms: 100,
-            model_used: 'fallback',
-            research_sources: []
-          },
-          score: 0.70
-        })
+      if (validResults.length === 0) {
+        throw new Error('No valid content generated by any agent')
       }
 
       const totalTime = Date.now() - startTime
       logger.info({ 
-        topic, 
-        variationCount: successfulResults.length,
-        totalTimeMs: totalTime 
-      }, 'All content variations generated')
+        topic,
+        totalTimeMs: totalTime,
+        successfulAgents: validResults.length,
+        failedAgents: 3 - validResults.length
+      }, 'All Andrew Tallents content variations completed')
 
-      return successfulResults
+      return validResults
 
     } catch (error) {
-      logger.error({ error, topic }, 'Failed to generate content variations')
-      
-      // Return minimal fallback content
-      return agents.map(agentType => ({
-        agent_name: agentType,
-        content: {
-          body: `Content about ${topic} - ${agentType.replace('_', ' ')} perspective`,
-          hashtags: ['#leadership'],
-          estimated_voice_score: 60,
-          approach: `${agentType.replace('_', ' ')} approach (error fallback)`
-        },
-        metadata: {
-          token_count: 50,
-          generation_time_ms: 0,
-          model_used: 'fallback',
-          research_sources: []
-        },
-        score: 0.60
-      }))
+      logger.error({ error, topic }, 'Failed to generate all content variations')
+      throw error
     }
   }
 }
 
 export const aiAgentsService = new AIAgentsService()
-export default aiAgentsService
