@@ -11,6 +11,9 @@ export class ContentGenerationWorker {
   private worker: Worker
 
   constructor() {
+    // Railway-optimized worker settings
+    const isRailway = process.env.RAILWAY_ENVIRONMENT_NAME || process.env.RAILWAY_PROJECT_NAME
+    
     this.worker = new Worker(
       QUEUE_NAMES.CONTENT_GENERATION,
       this.processJob.bind(this),
@@ -18,7 +21,26 @@ export class ContentGenerationWorker {
         connection: redis,
         concurrency: appConfig.worker.concurrency,
         removeOnComplete: { count: 50 },
-        removeOnFail: { count: 20 }
+        removeOnFail: { count: 20 },
+        // Railway-specific optimizations
+        maxStalledCount: isRailway ? 2 : 1, // More tolerance for stalled jobs on Railway
+        stalledInterval: isRailway ? 60000 : 30000, // Longer stalled check interval for Railway
+        settings: {
+          // Reduce polling frequency for Railway network conditions
+          stalledInterval: isRailway ? 60000 : 30000,
+          maxStalledCount: isRailway ? 2 : 1,
+          // Reduce Redis polling to minimize timeouts
+          ...(isRailway && {
+            attempts: 5,
+            backoffStrategy: 'exponential',
+            backoffSettings: {
+              delay: 5000,
+              settings: {
+                jitter: true
+              }
+            }
+          })
+        }
       }
     )
 
@@ -39,7 +61,21 @@ export class ContentGenerationWorker {
     })
 
     this.worker.on('error', (err) => {
-      logger.error({ error: err.message }, 'Worker error')
+      // Don't log Redis timeout errors as errors since they're expected on Railway
+      if (err.message?.includes('Command timed out')) {
+        logger.debug({ error: err.message }, 'Redis command timeout (expected on Railway)')
+      } else {
+        logger.error({ error: err.message }, 'Worker error')
+      }
+    })
+
+    // Add Railway-specific connection monitoring
+    this.worker.on('stalled', (jobId) => {
+      logger.warn({ jobId }, 'Job stalled - may be due to Redis timeout')
+    })
+
+    this.worker.on('active', (job) => {
+      logger.info({ jobId: job.id, topic: job.data.topic }, 'Job started processing')
     })
   }
 

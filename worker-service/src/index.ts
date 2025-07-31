@@ -1,12 +1,30 @@
+import express from 'express'
 import { appConfig } from './config'
 import logger from './lib/logger'
 import { checkQueueHealth, closeQueue } from './queue/setup'
 import ContentGenerationWorker from './workers/content-generation'
 import { supabaseService } from './services/supabase'
+import { debugHandler, testJobHandler } from './api/debug'
 
 class WorkerService {
   private contentWorker: ContentGenerationWorker | null = null
   private isShuttingDown = false
+  private app: express.Application
+  private server: any
+
+  constructor() {
+    // Setup Express server for debugging
+    this.app = express()
+    this.app.use(express.json())
+    
+    // Debug endpoints
+    this.app.get('/debug', debugHandler)
+    this.app.post('/debug/test-job', testJobHandler)
+    this.app.get('/health', async (req, res) => {
+      const health = await this.getStatus()
+      res.json(health)
+    })
+  }
 
   async start() {
     try {
@@ -28,6 +46,12 @@ class WorkerService {
 
       // Start periodic cleanup
       this.startPeriodicCleanup()
+
+      // Start debug server
+      const port = process.env.PORT || 3001
+      this.server = this.app.listen(port, () => {
+        logger.info({ port }, 'Debug server started')
+      })
 
       logger.info('Worker service started successfully')
 
@@ -79,6 +103,12 @@ class WorkerService {
           
           await this.contentWorker.stop()
           logger.info('Worker stopped')
+        }
+
+        // Close debug server
+        if (this.server) {
+          this.server.close()
+          logger.info('Debug server closed')
         }
 
         // Close queue connections
@@ -167,7 +197,7 @@ class WorkerService {
   }
 }
 
-// Start the service
+// Create and start the service
 const workerService = new WorkerService()
 workerService.start().catch((error) => {
   logger.fatal({ error }, 'Failed to start worker service')
