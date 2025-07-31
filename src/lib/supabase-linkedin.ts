@@ -403,7 +403,7 @@ export class SupabaseLinkedInService {
   // Transform functions
   private transformPostToDB(post: LinkedInPost): Partial<DBLinkedInPost> {
     // Handle different timestamp formats from LinkedIn API
-    let postedAt: string | null = null
+    let postedAt: string | undefined = undefined
     if (post.posted_at) {
       if (typeof post.posted_at === 'string') {
         postedAt = post.posted_at
