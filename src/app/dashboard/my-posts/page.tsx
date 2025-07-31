@@ -3,13 +3,14 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { RefreshCw, Plus, Settings, TrendingUp } from 'lucide-react'
+import { RefreshCw, Plus, Settings, TrendingUp, RotateCcw, Download } from 'lucide-react'
 import { toast } from "sonner"
 import { ConnectionPostsTable, type ConnectionPost, type PostStats } from '@/components/connection-posts-table'
 
 export default function MyPostsPage() {
   const [posts, setPosts] = useState<ConnectionPost[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isSyncing, setIsSyncing] = useState(false)
   const [stats, setStats] = useState<PostStats>({
     totalPosts: 0,
     totalLikes: 0,
@@ -19,13 +20,13 @@ export default function MyPostsPage() {
     averageEngagement: 0
   })
 
-  // Fetch Andrew's posts from Airtable
+  // Fetch Andrew's posts from Supabase (via LinkedIn API)
   const fetchPosts = async () => {
     setIsLoading(true)
     try {
-      console.log('🔍 Fetching Andrew\'s posts...')
+      console.log('🔍 Fetching LinkedIn posts from Supabase...')
       
-      const response = await fetch('/api/andrew-posts/list?maxRecords=100&sortField=Posted Date&sortDirection=desc', {
+      const response = await fetch('/api/linkedin/posts/list?maxRecords=100&sortField=posted_at&sortDirection=desc&username=andrewtallents', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json'
@@ -33,7 +34,7 @@ export default function MyPostsPage() {
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
+        const errorData = await response.json().catch(() => ({}))
         throw new Error(errorData.error || `HTTP ${response.status}`)
       }
 
@@ -43,14 +44,14 @@ export default function MyPostsPage() {
         setPosts(data.posts)
         setStats(data.stats)
         
-        console.log(`✅ Loaded ${data.posts.length} posts`)
-        toast.success(`Loaded ${data.posts.length} posts`)
+        console.log(`✅ Loaded ${data.posts.length} LinkedIn posts`)
+        toast.success(`Loaded ${data.posts.length} LinkedIn posts${data.meta.lastSync ? ` (Last sync: ${new Date(data.meta.lastSync).toLocaleString()})` : ''}`)
       } else {
         throw new Error(data.error || 'Failed to fetch posts')
       }
 
     } catch (error: any) {
-      console.error('Error fetching Andrew\'s posts:', error)
+      console.error('Error fetching LinkedIn posts:', error)
       toast.error(`Failed to load posts: ${error.message}`)
       
       // Set empty state on error
@@ -65,6 +66,46 @@ export default function MyPostsPage() {
       })
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  // Sync posts and comments from LinkedIn
+  const syncFromLinkedIn = async () => {
+    setIsSyncing(true)
+    try {
+      console.log('🔄 Syncing posts and comments from LinkedIn...')
+      toast.info('Syncing latest LinkedIn data...')
+      
+      const response = await fetch('/api/linkedin/posts/list', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username: 'andrewtallents' })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `Sync failed: HTTP ${response.status}`)
+      }
+
+      const data = await response.json()
+      
+      if (data.success) {
+        const summary = data.data.summary
+        toast.success(`Sync completed! ${summary.newPosts} new posts, ${summary.totalComments} comments, ${summary.totalProspects} prospects identified`)
+        
+        // Refresh the data to show latest
+        await fetchPosts()
+      } else {
+        throw new Error(data.error || 'Sync operation failed')
+      }
+
+    } catch (error: any) {
+      console.error('Error syncing LinkedIn data:', error)
+      toast.error(`Sync failed: ${error.message}`)
+    } finally {
+      setIsSyncing(false)
     }
   }
 
@@ -87,19 +128,27 @@ export default function MyPostsPage() {
     <div className="flex-1 space-y-4 p-8 pt-6">
       <div className="flex items-center justify-between space-y-2">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">My Posts</h2>
+          <h2 className="text-3xl font-bold tracking-tight">My LinkedIn Posts</h2>
           <p className="text-muted-foreground">
-            View and analyze your LinkedIn posts performance
+            View and analyze your LinkedIn posts with automatic prospect identification
           </p>
         </div>
         <div className="flex items-center space-x-2">
+          <Button 
+            variant="outline" 
+            onClick={syncFromLinkedIn}
+            disabled={isSyncing}
+          >
+            <RotateCcw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+            {isSyncing ? 'Syncing...' : 'Sync LinkedIn'}
+          </Button>
           <Button variant="outline" onClick={refreshPosts}>
             <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh Posts
+            Refresh Data
           </Button>
           <Button variant="outline" onClick={() => window.open('/dashboard/content', '_self')}>
             <Plus className="mr-2 h-4 w-4" />
-            Create New Post
+            Create Content
           </Button>
         </div>
       </div>
