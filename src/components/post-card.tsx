@@ -24,6 +24,7 @@ export function PostCard({
   selectedPostId 
 }: PostCardProps) {
   const [imageError, setImageError] = useState(false)
+  const [profileImageError, setProfileImageError] = useState(false)
 
   const formatDate = (dateStr: string) => {
     try {
@@ -114,9 +115,18 @@ export function PostCard({
       {/* Card Header */}
       <CardHeader className="pb-3">
         <div className="flex items-start space-x-3">
-          <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-sm font-medium shrink-0">
-            {post.authorFirstName?.[0]}{post.authorLastName?.[0]}
-          </div>
+          {post.authorProfilePicture && !profileImageError ? (
+            <img 
+              src={post.authorProfilePicture} 
+              alt={`${post.connectionName} profile picture`}
+              className="h-10 w-10 rounded-full object-cover shrink-0"
+              onError={() => setProfileImageError(true)}
+            />
+          ) : (
+            <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-sm font-medium shrink-0">
+              {post.authorFirstName?.[0]}{post.authorLastName?.[0]}
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <div className="font-semibold text-sm truncate">
               {post.connectionName}
