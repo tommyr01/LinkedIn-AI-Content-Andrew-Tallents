@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { icpScorer, ProspectProfile } from './icp-scorer'
 import { enhancedICPScorer, type LinkedInCommentAuthor, type EnhancedProspectProfile } from './enhanced-icp-scorer'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseUrl = process.env.SUPABASE_URL
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 // Handle missing environment variables gracefully during build
