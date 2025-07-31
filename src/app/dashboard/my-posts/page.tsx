@@ -3,14 +3,13 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { RefreshCw, Plus, Settings, TrendingUp, RotateCcw, Download } from 'lucide-react'
+import { RefreshCw, Plus, Settings, TrendingUp, Download } from 'lucide-react'
 import { toast } from "sonner"
 import { ConnectionPostsTable, type ConnectionPost, type PostStats } from '@/components/connection-posts-table'
 
 export default function MyPostsPage() {
   const [posts, setPosts] = useState<ConnectionPost[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [isSyncing, setIsSyncing] = useState(false)
   const [stats, setStats] = useState<PostStats>({
     totalPosts: 0,
     totalLikes: 0,
@@ -69,45 +68,6 @@ export default function MyPostsPage() {
     }
   }
 
-  // Sync posts and comments from LinkedIn
-  const syncFromLinkedIn = async () => {
-    setIsSyncing(true)
-    try {
-      console.log('🔄 Syncing posts and comments from LinkedIn...')
-      toast.info('Syncing latest LinkedIn data...')
-      
-      const response = await fetch('/api/linkedin/posts/list', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ username: 'andrewtallents' })
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || `Sync failed: HTTP ${response.status}`)
-      }
-
-      const data = await response.json()
-      
-      if (data.success) {
-        const summary = data.data.summary
-        toast.success(`Sync completed! ${summary.newPosts} new posts, ${summary.totalComments} comments, ${summary.totalProspects} prospects identified`)
-        
-        // Refresh the data to show latest
-        await fetchPosts()
-      } else {
-        throw new Error(data.error || 'Sync operation failed')
-      }
-
-    } catch (error: any) {
-      console.error('Error syncing LinkedIn data:', error)
-      toast.error(`Sync failed: ${error.message}`)
-    } finally {
-      setIsSyncing(false)
-    }
-  }
 
   // Refresh posts data - this will sync Andrew's posts from LinkedIn
   const refreshPosts = async () => {
@@ -172,14 +132,6 @@ export default function MyPostsPage() {
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button 
-            variant="outline" 
-            onClick={syncFromLinkedIn}
-            disabled={isSyncing}
-          >
-            <RotateCcw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
-            {isSyncing ? 'Syncing...' : 'Sync LinkedIn'}
-          </Button>
           <Button 
             variant="outline" 
             onClick={refreshPosts}
