@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { QueueService } from '@/lib/queue'
 import { SupabaseService } from '@/lib/supabase'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
     console.log('📈 Getting queue and database stats')
