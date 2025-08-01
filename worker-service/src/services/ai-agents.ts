@@ -145,13 +145,28 @@ Write the post content directly - no need for JSON format, just return the compl
         hasHistoricalInsights: !!historicalInsights
       }, 'AI agent generation input parameters')
       
+      // SURGICAL LOGGING: Capture exact failure point
+      logger.error({ 
+        agentName,
+        ideaType: typeof idea,
+        ideaValue: idea,
+        ideaKeys: idea ? Object.keys(idea) : 'no idea object',
+        hasConciseSummary: !!idea?.concise_summary,
+        conciseSummaryType: typeof idea?.concise_summary,
+        conciseSummaryValue: idea?.concise_summary,
+        hasAngleApproach: !!idea?.angle_approach,
+        hasDetails: !!idea?.details,
+        hasRelevance: !!idea?.relevance
+      }, 'SURGICAL AI AGENT INPUT DEBUG - EXACT IDEA STRUCTURE')
+      
       // Extra debug for RAG issue
       if (!idea || !idea.concise_summary) {
         logger.error({ 
           agentName,
           idea: !!idea,
-          hasKeys: idea ? Object.keys(idea) : 'no idea object'
-        }, 'AI agent called with invalid idea structure')
+          hasKeys: idea ? Object.keys(idea) : 'no idea object',
+          fullIdea: JSON.stringify(idea, null, 2)
+        }, 'AI agent called with invalid idea structure - FULL DETAILS')
         throw new Error('Invalid research idea structure')
       }
       // BYPASS STRATEGY: Use RAG insights for metadata only, not in OpenAI prompts
@@ -201,6 +216,16 @@ Write the post content directly - no need for JSON format, just return the compl
       }, 'AI agent prompt previews')
 
       logger.info({ agentName, model: appConfig.openai.model }, 'Making OpenAI API call')
+
+      // SURGICAL LOGGING: Capture API call details
+      logger.error({
+        agentName,
+        model: appConfig.openai.model,
+        systemPromptLength: systemPrompt.length,
+        userPromptLength: userPrompt.length,
+        hasOpenAIKey: !!appConfig.openai.apiKey,
+        openAIKeyLength: appConfig.openai.apiKey?.length || 0
+      }, 'SURGICAL OPENAI API CALL DEBUG - ABOUT TO CALL API')
 
       const completion = await this.openai.chat.completions.create({
         model: appConfig.openai.model,

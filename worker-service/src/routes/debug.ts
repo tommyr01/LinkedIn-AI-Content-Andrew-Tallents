@@ -857,14 +857,34 @@ router.post('/ai-agents-rag-debug', async (req, res) => {
     try {
       logger.info('Testing single AI agent with converted RAG insights')
       
-      // Debug research structure
-      logger.info({ 
+      // SURGICAL LOGGING: Capture exact data structure issues
+      logger.error({ 
+        // Research structure analysis
+        researchType: typeof research,
         researchKeys: Object.keys(research),
+        
+        // Idea 1 deep analysis
         hasIdea1: !!research.idea_1,
-        idea1Keys: research.idea_1 ? Object.keys(research.idea_1) : 'no idea_1',
-        hasIdea2: !!research.idea_2,
-        hasIdea3: !!research.idea_3
-      }, 'Research structure debug')
+        idea1Type: typeof research.idea_1,
+        idea1Keys: research.idea_1 ? Object.keys(research.idea_1) : 'null/undefined',
+        idea1Value: research.idea_1,
+        
+        // Check if idea_1 has expected fields
+        idea1HasSummary: research.idea_1?.concise_summary !== undefined,
+        idea1SummaryType: typeof research.idea_1?.concise_summary,
+        idea1SummaryValue: research.idea_1?.concise_summary,
+        
+        // RAG insights structure analysis
+        convertedInsightsType: typeof convertedInsights,
+        convertedInsightsKeys: convertedInsights ? Object.keys(convertedInsights) : 'null/undefined',
+        
+        // Top performers analysis
+        hasTopPerformers: !!convertedInsights?.topPerformers,
+        topPerformersType: typeof convertedInsights?.topPerformers,
+        topPerformersLength: convertedInsights?.topPerformers?.length,
+        topPerformersValue: convertedInsights?.topPerformers
+        
+      }, 'SURGICAL DATA STRUCTURE DEBUG - EXACT TYPES AND VALUES')
       
       // Ensure research has the proper structure
       if (!research.idea_1 || typeof research.idea_1 === 'string') {
