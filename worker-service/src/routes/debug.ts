@@ -993,6 +993,75 @@ router.post('/ai-agents-rag-debug', async (req, res) => {
   }
 })
 
+// MINIMAL TEST: AI agents with perfect data structure
+router.post('/ai-agents-minimal-test', async (req, res) => {
+  try {
+    const { topic = 'leadership challenges' } = req.body
+    
+    logger.info({ topic }, 'MINIMAL TEST: Testing AI agents with perfect data structure')
+    
+    // Create perfectly structured research data
+    const perfectResearch = {
+      idea_1: {
+        concise_summary: `Recent ${topic} developments affecting UK business leaders`,
+        angle_approach: `How recent ${topic} trends reveal self-leadership challenges facing UK CEOs`,
+        details: `Key research findings about ${topic} that impact executive effectiveness and business growth`,
+        relevance: `This topic directly impacts UK CEOs and Founders who are struggling with self-leadership while scaling their businesses.`
+      },
+      idea_2: {
+        concise_summary: `Industry insights on ${topic} and leadership effectiveness`,
+        angle_approach: `The hidden connection between ${topic} and authentic leadership that most executives miss`,
+        details: `Evidence-based insights about how ${topic} affects leadership performance and team dynamics`,
+        relevance: `These insights are particularly relevant for successful leaders who feel privately stuck despite outward achievements.`
+      },
+      idea_3: {
+        concise_summary: `${topic} challenges requiring new approaches to self-leadership`,
+        angle_approach: `Why traditional approaches to ${topic} fail - and what self-aware leaders do differently`,
+        details: `Research-backed strategies for addressing ${topic} while maintaining executive effectiveness`,
+        relevance: `This resonates with leaders who know they need change but struggle with practical solutions that don't slow them down.`
+      }
+    }
+    
+    logger.info({
+      idea1Type: typeof perfectResearch.idea_1,
+      idea1HasSummary: !!perfectResearch.idea_1.concise_summary,
+      idea2Type: typeof perfectResearch.idea_2,
+      idea3Type: typeof perfectResearch.idea_3
+    }, 'MINIMAL TEST: Perfect research structure created')
+    
+    // Test AI agents with perfect structure (no RAG for now)
+    const results = await aiAgentsService.generateAllVariations(topic, perfectResearch, 'default', null)
+    
+    logger.info({
+      resultsCount: results?.length || 0,
+      agentResults: results?.map(r => ({
+        agentName: r.agent_name,
+        hasContent: !!r.content.body,
+        contentLength: r.content.body.length
+      }))
+    }, 'MINIMAL TEST: AI agents completed successfully!')
+    
+    res.json({
+      success: true,
+      message: 'AI agents work with perfect data structure!',
+      resultsCount: results?.length || 0,
+      results: results?.slice(0, 1) // Return just first result to keep response small
+    })
+    
+  } catch (error) {
+    logger.error({ 
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    }, 'MINIMAL TEST: AI agents failed even with perfect structure')
+    
+    res.status(500).json({
+      success: false,
+      error: 'AI agents failed even with perfect structure',
+      details: error instanceof Error ? error.message : String(error)
+    })
+  }
+})
+
 // Environment variables check
 router.get('/env', async (req, res) => {
   try {
