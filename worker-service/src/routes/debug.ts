@@ -819,6 +819,113 @@ router.post('/single-post-embedding', async (req, res) => {
   }
 })
 
+// Debug AI agents with RAG insights - detailed error logging
+router.post('/ai-agents-rag-debug', async (req, res) => {
+  try {
+    const { topic = 'leadership challenges' } = req.body
+    
+    logger.info({ topic }, 'Debug: Testing AI agents with RAG insights - detailed error capture')
+    
+    // Get research data
+    const research = await researchService.enhancedFirecrawlResearch(topic)
+    
+    // Get RAG insights and convert
+    let ragInsights = null
+    let convertedInsights = null
+    try {
+      ragInsights = await ragHistoricalAnalysisService.generateHistoricalInsights(topic)
+      convertedInsights = convertRAGToEnhancedInsight(ragInsights)
+      
+      logger.info({ 
+        ragInsightsKeys: Object.keys(ragInsights),
+        convertedInsightsKeys: Object.keys(convertedInsights),
+        topPerformersCount: convertedInsights.topPerformers?.length || 0,
+        patternsKeys: Object.keys(convertedInsights.patterns || {}),
+        voiceAnalysisKeys: Object.keys(convertedInsights.voiceAnalysis || {})
+      }, 'RAG insights structure analysis')
+      
+    } catch (ragError) {
+      logger.error({ error: ragError instanceof Error ? ragError.message : String(ragError) }, 'RAG insights failed')
+      return res.status(500).json({
+        success: false,
+        error: 'RAG insights failed',
+        details: ragError instanceof Error ? ragError.message : String(ragError)
+      })
+    }
+    
+    // Try AI agents with detailed error capture
+    try {
+      logger.info('Testing single AI agent with converted RAG insights')
+      
+      const testResults = await aiAgentsService.generateAllVariations(
+        topic,
+        {
+          idea_1: research.idea_1,
+          idea_2: research.idea_2, 
+          idea_3: research.idea_3
+        },
+        undefined, // No voice guidelines
+        convertedInsights // Our converted insights
+      )
+      
+      res.json({
+        success: true,
+        message: 'AI agents with RAG insights test completed',
+        resultsCount: testResults.length,
+        ragInsightsStructure: {
+          hasTopPerformers: !!convertedInsights.topPerformers,
+          topPerformersCount: convertedInsights.topPerformers?.length || 0,
+          hasPatterns: !!convertedInsights.patterns,
+          hasVoiceAnalysis: !!convertedInsights.voiceAnalysis,
+          hasPerformanceFactors: !!convertedInsights.performanceFactors
+        },
+        results: testResults.map(r => ({
+          agentName: r.agent_name,
+          hasContent: !!r.content.body,
+          contentLength: r.content.body.length,
+          historicalContextUsed: r.metadata.historical_context_used
+        }))
+      })
+      
+    } catch (aiError) {
+      logger.error({ 
+        error: aiError instanceof Error ? aiError.message : String(aiError),
+        stack: aiError instanceof Error ? aiError.stack : undefined,
+        convertedInsightsStructure: {
+          topPerformers: convertedInsights?.topPerformers?.length || 0,
+          patterns: Object.keys(convertedInsights?.patterns || {}),
+          voiceAnalysis: Object.keys(convertedInsights?.voiceAnalysis || {}),
+          performanceFactors: Object.keys(convertedInsights?.performanceFactors || {})
+        }
+      }, 'AI agents failed with RAG insights - DETAILED ERROR')
+      
+      res.status(500).json({
+        success: false,
+        error: 'AI agents failed with RAG insights',
+        details: aiError instanceof Error ? aiError.message : String(aiError),
+        stack: aiError instanceof Error ? aiError.stack?.split('\n').slice(0, 10) : undefined,
+        convertedInsightsStructure: {
+          hasTopPerformers: !!convertedInsights?.topPerformers,
+          topPerformersCount: convertedInsights?.topPerformers?.length || 0,
+          hasPatterns: !!convertedInsights?.patterns,
+          patternsKeys: Object.keys(convertedInsights?.patterns || {}),
+          hasVoiceAnalysis: !!convertedInsights?.voiceAnalysis,
+          voiceAnalysisKeys: Object.keys(convertedInsights?.voiceAnalysis || {}),
+          hasPerformanceFactors: !!convertedInsights?.performanceFactors,
+          performanceFactorsKeys: Object.keys(convertedInsights?.performanceFactors || {})
+        }
+      })
+    }
+    
+  } catch (error) {
+    logger.error({ error }, 'AI agents RAG debug test failed')
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
 // Environment variables check
 router.get('/env', async (req, res) => {
   try {
