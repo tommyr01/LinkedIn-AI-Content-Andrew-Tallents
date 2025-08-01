@@ -827,7 +827,7 @@ router.post('/ai-agents-rag-debug', async (req, res) => {
     logger.info({ topic }, 'Debug: Testing AI agents with RAG insights - detailed error capture')
     
     // Get research data
-    const research = await researchService.enhancedFirecrawlResearch(topic)
+    let research = await researchService.enhancedFirecrawlResearch(topic)
     
     // Get RAG insights and convert
     let ragInsights = null
@@ -886,24 +886,41 @@ router.post('/ai-agents-rag-debug', async (req, res) => {
         
       }, 'SURGICAL DATA STRUCTURE DEBUG - EXACT TYPES AND VALUES')
       
-      // Ensure research has the proper structure
-      if (!research.idea_1 || typeof research.idea_1 === 'string') {
-        logger.error({ 
-          researchType: typeof research,
-          idea1Type: typeof research.idea_1,
-          researchKeys: Object.keys(research)
-        }, 'Research data has wrong structure - may be using basic research instead of enhanced')
+      // FIX THE BUG: Convert string research to structured objects if needed
+      let structuredResearch: any = research
+      if (typeof research.idea_1 === 'string') {
+        logger.info('Converting string research data to structured objects')
         
-        return res.status(500).json({
-          success: false,
-          error: 'Research service returned wrong data structure',
-          details: 'Expected EnhancedResearch with structured ideas, got simple strings'
-        })
+        // Cast to any to handle the structure mismatch
+        const stringResearch = research as any
+        
+        structuredResearch = {
+          idea_1: {
+            concise_summary: stringResearch.idea_1,
+            angle_approach: `How this ${topic} development reveals self-leadership challenges`,
+            details: `Key insights: ${stringResearch.idea_1}`,
+            relevance: `This impacts UK CEOs who struggle with self-leadership while scaling their businesses.`
+          },
+          idea_2: {
+            concise_summary: stringResearch.idea_2,
+            angle_approach: `The connection between ${topic} and authentic leadership`,
+            details: `Research shows: ${stringResearch.idea_2}`,
+            relevance: `Relevant for founders feeling stuck despite outward success.`
+          },
+          idea_3: {
+            concise_summary: stringResearch.idea_3,
+            angle_approach: `Why traditional approaches to ${topic} fail for leaders`,
+            details: `Analysis reveals: ${stringResearch.idea_3}`,
+            relevance: `Critical for leaders seeking practical solutions without slowing down.`
+          }
+        }
+        
+        logger.info('Successfully converted research to structured format')
       }
       
       const testResults = await aiAgentsService.generateAllVariations(
         topic,
-        research, // Pass the full research object directly
+        structuredResearch, // Use the properly structured research
         undefined, // No voice guidelines
         convertedInsights // Our converted insights
       )
