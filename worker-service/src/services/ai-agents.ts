@@ -154,6 +154,8 @@ Write the post content directly - no need for JSON format, just return the compl
           patternsKeys: Object.keys(historicalInsights.patterns || {}),
           structureRecsCount: historicalInsights.structureRecommendations?.length || 0
         }, 'Building historical context for AI agent')
+        
+        try {
         const topPost = historicalInsights.topPerformers[0]
         const voiceAnalysis = historicalInsights.voiceAnalysis
         const patterns = historicalInsights.patterns
@@ -197,11 +199,20 @@ Write the post content directly - no need for JSON format, just return the compl
 ${structureRecommendations}
         `
         
-        logger.debug({
-          agentName,
-          historicalContextLength: historicalContext.length,
-          historicalContextPreview: historicalContext.slice(0, 200) + '...'
-        }, 'Historical context built successfully')
+          logger.debug({
+            agentName,
+            historicalContextLength: historicalContext.length,
+            historicalContextPreview: historicalContext.slice(0, 200) + '...'
+          }, 'Historical context built successfully')
+          
+        } catch (contextError) {
+          logger.error({
+            agentName,
+            error: contextError instanceof Error ? contextError.message : String(contextError),
+            stack: contextError instanceof Error ? contextError.stack : undefined
+          }, 'Failed to build historical context - using empty context')
+          historicalContext = '' // Fallback to empty context
+        }
       }
 
       const systemPrompt = this.createAndrewTallentsPrompt(ideaNumber, historicalContext)
