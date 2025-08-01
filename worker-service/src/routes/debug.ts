@@ -886,36 +886,46 @@ router.post('/ai-agents-rag-debug', async (req, res) => {
         
       }, 'SURGICAL DATA STRUCTURE DEBUG - EXACT TYPES AND VALUES')
       
-      // FIX THE BUG: Convert string research to structured objects if needed
+      // ROBUST FIX: Ensure research always has proper structure regardless of input format
       let structuredResearch: any = research
-      if (typeof research.idea_1 === 'string') {
-        logger.info('Converting string research data to structured objects')
+      
+      // Check if we need to convert strings to objects  
+      const needsConversion = typeof research.idea_1 === 'string' || 
+                              !research.idea_1?.concise_summary ||
+                              !research.idea_1?.angle_approach
+      
+      if (needsConversion) {
+        logger.error('CRITICAL: Converting malformed research data to proper structure')
         
-        // Cast to any to handle the structure mismatch
-        const stringResearch = research as any
+        // Handle both string and malformed object cases
+        const idea1 = typeof research.idea_1 === 'string' ? research.idea_1 : (research.idea_1?.concise_summary || `${topic} insights`)
+        const idea2 = typeof research.idea_2 === 'string' ? research.idea_2 : (research.idea_2?.concise_summary || `${topic} analysis`)
+        const idea3 = typeof research.idea_3 === 'string' ? research.idea_3 : (research.idea_3?.concise_summary || `${topic} implications`)
         
         structuredResearch = {
           idea_1: {
-            concise_summary: stringResearch.idea_1,
+            concise_summary: idea1,
             angle_approach: `How this ${topic} development reveals self-leadership challenges`,
-            details: `Key insights: ${stringResearch.idea_1}`,
+            details: `Key insights: ${idea1}`,
             relevance: `This impacts UK CEOs who struggle with self-leadership while scaling their businesses.`
           },
           idea_2: {
-            concise_summary: stringResearch.idea_2,
+            concise_summary: idea2,
             angle_approach: `The connection between ${topic} and authentic leadership`,
-            details: `Research shows: ${stringResearch.idea_2}`,
+            details: `Research shows: ${idea2}`,
             relevance: `Relevant for founders feeling stuck despite outward success.`
           },
           idea_3: {
-            concise_summary: stringResearch.idea_3,
+            concise_summary: idea3,
             angle_approach: `Why traditional approaches to ${topic} fail for leaders`,
-            details: `Analysis reveals: ${stringResearch.idea_3}`,
+            details: `Analysis reveals: ${idea3}`,
             relevance: `Critical for leaders seeking practical solutions without slowing down.`
           }
         }
         
-        logger.info('Successfully converted research to structured format')
+        logger.error('CRITICAL: Research structure conversion completed - this should fix the AI agent failures')
+      } else {
+        logger.info('Research already has proper structure - no conversion needed')
       }
       
       const testResults = await aiAgentsService.generateAllVariations(

@@ -14,7 +14,7 @@ const configSchema = z.object({
   PERPLEXITY_API_KEY: z.string().optional(), // Optional since Perplexity is disabled
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('debug'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  WORKER_CONCURRENCY: z.string().transform(Number).pipe(z.number().min(1).max(10)).default('3'),
+  WORKER_CONCURRENCY: z.string().transform(Number).pipe(z.number().min(1).max(10)).default('1'),
   MAX_JOB_ATTEMPTS: z.string().transform(Number).pipe(z.number().min(1).max(5)).default('3'),
   RAPIDAPI_KEY: z.string().optional()
 })
