@@ -144,6 +144,16 @@ Write the post content directly - no need for JSON format, just return the compl
         hasVoiceGuidelines: !!voiceGuidelines,
         hasHistoricalInsights: !!historicalInsights
       }, 'AI agent generation input parameters')
+      
+      // Extra debug for RAG issue
+      if (!idea || !idea.concise_summary) {
+        logger.error({ 
+          agentName,
+          idea: !!idea,
+          hasKeys: idea ? Object.keys(idea) : 'no idea object'
+        }, 'AI agent called with invalid idea structure')
+        throw new Error('Invalid research idea structure')
+      }
       // BYPASS STRATEGY: Use RAG insights for metadata only, not in OpenAI prompts
       // This ensures AI agents work while we debug the prompt integration issue
       let historicalContext = ''
@@ -163,6 +173,16 @@ Write the post content directly - no need for JSON format, just return the compl
 
       const systemPrompt = this.createAndrewTallentsPrompt(ideaNumber, historicalContext)
       const userPrompt = this.createUserPrompt(idea)
+      
+      // Extra validation
+      if (!systemPrompt || !userPrompt) {
+        logger.error({ 
+          agentName,
+          systemPromptLength: systemPrompt?.length || 0,
+          userPromptLength: userPrompt?.length || 0
+        }, 'Failed to create prompts')
+        throw new Error('Failed to create valid prompts')
+      }
 
       // Debug: Log prompt lengths
       logger.debug({

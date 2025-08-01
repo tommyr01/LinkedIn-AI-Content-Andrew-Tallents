@@ -1,7 +1,11 @@
 // Debug test script for Railway worker service
 // Run with: node debug-test.js
 
-const RAILWAY_URL = 'https://content-commitment-production.up.railway.app' // Replace with your Railway URL
+// Update this with your actual Railway URL from the Railway dashboard
+const RAILWAY_URL = 'https://content-commitment-production.up.railway.app' 
+// Alternative formats to try:
+// 'https://web-production-XXXX.up.railway.app'
+// Check your Railway dashboard for the exact URL
 
 async function testEndpoint(endpoint, method = 'GET', body = null) {
   try {
