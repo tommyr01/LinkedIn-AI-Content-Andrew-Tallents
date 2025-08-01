@@ -144,51 +144,22 @@ Write the post content directly - no need for JSON format, just return the compl
         hasVoiceGuidelines: !!voiceGuidelines,
         hasHistoricalInsights: !!historicalInsights
       }, 'AI agent generation input parameters')
-      // Create historical context if available
+      // BYPASS STRATEGY: Use RAG insights for metadata only, not in OpenAI prompts
+      // This ensures AI agents work while we debug the prompt integration issue
       let historicalContext = ''
+      
       if (historicalInsights && historicalInsights.topPerformers.length > 0) {
-        logger.debug({ 
+        logger.info({ 
           agentName,
+          ragBypassMode: true,
           topPerformersCount: historicalInsights.topPerformers.length,
-          voiceAnalysisKeys: Object.keys(historicalInsights.voiceAnalysis || {}),
-          patternsKeys: Object.keys(historicalInsights.patterns || {}),
-          structureRecsCount: historicalInsights.structureRecommendations?.length || 0
-        }, 'Building historical context for AI agent')
-        
-        try {
-        const topPost = historicalInsights.topPerformers[0]
-        const voiceAnalysis = historicalInsights.voiceAnalysis
-        const patterns = historicalInsights.patterns
-        
-        // Safely escape the post text to prevent template literal issues
-        const safePostText = (topPost.text || 'No content available')
-          .slice(0, 200) // Shorter to reduce issues
-          .replace(/[`$\\]/g, ' ')  // Replace problematic chars with spaces
-          .replace(/\n/g, ' ')      // Replace newlines  
-          .replace(/\r/g, ' ')      // Replace carriage returns
-          .replace(/"/g, "'")       // Replace quotes
-          .trim()
-        
-        // Ultra-minimal context - no complex array processing needed
-
-        historicalContext = `PROVEN PATTERNS (${topPost.total_reactions || 0} reactions): ${safePostText.slice(0, 100)}... 
-TONE: ${voiceAnalysis.tone || 'professional'} | VULNERABILITY: ${voiceAnalysis.vulnerabilityScore || 0}/100 | LENGTH: ${patterns.avgWordCount || 150}w`
-        
-          logger.debug({
-            agentName,
-            historicalContextLength: historicalContext.length,
-            historicalContextPreview: historicalContext.slice(0, 200) + '...'
-          }, 'Historical context built successfully')
-          
-        } catch (contextError) {
-          logger.error({
-            agentName,
-            error: contextError instanceof Error ? contextError.message : String(contextError),
-            stack: contextError instanceof Error ? contextError.stack : undefined
-          }, 'Failed to build historical context - using empty context')
-          historicalContext = '' // Fallback to empty context
-        }
+          voiceScore: historicalInsights.voiceAnalysis.vulnerabilityScore,
+          avgWordCount: historicalInsights.patterns.avgWordCount
+        }, 'RAG insights available - using for metadata only (bypass mode)')
       }
+      
+      // Historical context stays empty to avoid OpenAI prompt issues
+      // RAG insights will still be used for voice scoring and performance prediction below
 
       const systemPrompt = this.createAndrewTallentsPrompt(ideaNumber, historicalContext)
       const userPrompt = this.createUserPrompt(idea)
