@@ -1010,4 +1010,52 @@ router.get('/env', async (req, res) => {
   }
 })
 
+// Clear Redis queue corruption - remove old/stuck jobs
+router.post('/clear-queue', async (req, res) => {
+  try {
+    logger.info('Clearing Redis queue corruption - removing old/stuck jobs')
+    
+    // Get Redis connection from the queue
+    const Redis = require('ioredis')
+    const redis = new Redis(appConfig.redis.url)
+    
+    // Clear all job queues
+    const queues = ['content-generation', 'content-generation:waiting', 'content-generation:active', 'content-generation:completed', 'content-generation:failed']
+    let clearedCount = 0
+    
+    for (const queueName of queues) {
+      const count = await redis.del(queueName)
+      clearedCount += count
+      logger.info({ queueName, count }, 'Cleared queue')
+    }
+    
+    // Clear any job-specific keys (job data, progress, etc.)
+    const jobKeys = await redis.keys('bull:content-generation:*')
+    if (jobKeys.length > 0) {
+      const jobsCleared = await redis.del(...jobKeys)
+      clearedCount += jobsCleared
+      logger.info({ jobsCleared }, 'Cleared job-specific keys')
+    }
+    
+    await redis.disconnect()
+    
+    logger.info({ clearedCount }, 'Redis queue corruption cleared successfully')
+    
+    res.json({
+      success: true,
+      message: 'Queue corruption cleared',
+      clearedItems: clearedCount,
+      details: 'All old/stuck jobs removed from Redis. Queue is now clean for fresh testing.'
+    })
+    
+  } catch (error) {
+    logger.error({ error }, 'Failed to clear queue corruption')
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      message: 'Failed to clear queue corruption'
+    })
+  }
+})
+
 export default router
