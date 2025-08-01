@@ -24,7 +24,17 @@ export class EmbeddingsPopulatorService {
 
       // Get all Andrew's posts from connection_posts
       const posts = await this.getAndrewsPosts()
-      logger.info({ count: posts.length }, 'Found posts to process')
+      logger.info({ count: posts.length }, 'Found Andrew\'s posts to process')
+      
+      if (posts.length > 0) {
+        logger.info({ 
+          samplePost: {
+            id: posts[0].id,
+            textLength: posts[0].post_text.length,
+            reactions: posts[0].total_reactions
+          }
+        }, 'Sample post for processing')
+      }
 
       if (posts.length === 0) {
         logger.warn('No posts found to embed')
@@ -45,7 +55,7 @@ export class EmbeddingsPopulatorService {
           try {
             await this.processPost(post)
             processed++
-            logger.debug({ postId: post.id, progress: `${processed}/${posts.length}` }, 'Processed post')
+            logger.info({ postId: post.id, progress: `${processed}/${posts.length}` }, 'Successfully processed post')
             
             // Small delay to respect rate limits
             await new Promise(resolve => setTimeout(resolve, 1000))
@@ -53,8 +63,10 @@ export class EmbeddingsPopulatorService {
             errors++
             logger.error({ 
               postId: post.id, 
-              error: error instanceof Error ? error.message : String(error) 
-            }, 'Failed to process post')
+              postTextLength: post.post_text?.length,
+              error: error instanceof Error ? error.message : String(error),
+              stack: error instanceof Error ? error.stack : undefined
+            }, 'Failed to process post - detailed error')
           }
         }
 
@@ -94,6 +106,7 @@ export class EmbeddingsPopulatorService {
           shares,
           posted_date
         `)
+        .eq('username', 'andrewtallents')
         .not('post_text', 'is', null)
         .not('post_text', 'eq', '')
         .order('posted_date', { ascending: false })

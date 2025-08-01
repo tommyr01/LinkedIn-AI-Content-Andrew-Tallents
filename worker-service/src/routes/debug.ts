@@ -666,6 +666,87 @@ router.post('/populate-embeddings', async (req, res) => {
   }
 })
 
+// Debug single post embedding
+router.post('/single-post-embedding', async (req, res) => {
+  try {
+    const { postId } = req.body
+    
+    logger.info({ postId }, 'Debug: Testing single post embedding')
+    
+    // Get a single Andrew post for testing
+    let testPost = null
+    if (postId) {
+      const { data: post, error } = await supabaseService['client']
+        .from('connection_posts')
+        .select('id, post_text, total_reactions, like_count, comments_count, reposts, shares, posted_date')
+        .eq('id', postId)
+        .single()
+      
+      if (error) throw error
+      testPost = post
+    } else {
+      // Get the first Andrew post
+      const { data: posts, error } = await supabaseService['client']
+        .from('connection_posts')
+        .select('id, post_text, total_reactions, like_count, comments_count, reposts, shares, posted_date')
+        .eq('username', 'andrewtallents')
+        .not('post_text', 'is', null)
+        .not('post_text', 'eq', '')
+        .order('posted_date', { ascending: false })
+        .limit(1)
+      
+      if (error) throw error
+      testPost = posts?.[0]
+    }
+    
+    if (!testPost) {
+      return res.status(404).json({
+        success: false,
+        error: 'No test post found'
+      })
+    }
+    
+    logger.info({ postId: testPost.id, textLength: testPost.post_text?.length }, 'Found test post')
+    
+    // Try to create embedding using the populator service
+    const performanceMetrics = {
+      total_reactions: testPost.total_reactions || 0,
+      like_count: testPost.like_count || 0,
+      comments_count: testPost.comments_count || 0,
+      reposts_count: testPost.reposts || 0,
+      shares_count: testPost.shares || 0,
+      posted_date: new Date(testPost.posted_date)
+    }
+    
+    await vectorSimilarityService.storePostEmbedding(
+      testPost.id,
+      testPost.post_text,
+      performanceMetrics
+    )
+    
+    logger.info({ postId: testPost.id }, 'Successfully created embedding')
+    
+    res.json({
+      success: true,
+      message: 'Single post embedding test completed',
+      testPost: {
+        id: testPost.id,
+        textPreview: testPost.post_text.slice(0, 100) + '...',
+        textLength: testPost.post_text.length,
+        reactions: testPost.total_reactions
+      }
+    })
+    
+  } catch (error) {
+    logger.error({ error: error instanceof Error ? error.message : String(error) }, 'Single post embedding test failed')
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      details: 'Check if OpenAI API key is working and database permissions are correct'
+    })
+  }
+})
+
 // Environment variables check
 router.get('/env', async (req, res) => {
   try {
