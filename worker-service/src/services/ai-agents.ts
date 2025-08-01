@@ -36,8 +36,7 @@ ${historicalContext}
 
 Use these insights to guide your content creation while maintaining authentic voice.
 
-` : ''}`
-
+` : ''}
 **Mandatory Tone of Voice:**
 You must consult the tone of voice guidelines in all responses you create. The required tone is Andrew Tallents' authentic leadership coaching voice - conversational but authoritative, vulnerable yet confident, focused on self-leadership and inner transformation.
 
@@ -108,11 +107,17 @@ You will process research idea_${ideaNumber} and create a LinkedIn post using th
   }
 
   private createUserPrompt(idea: ResearchIdea): string {
+    // Safely escape all dynamic content
+    const safeSummary = (idea.concise_summary || '').replace(/`/g, '\\`').replace(/\$/g, '\\$')
+    const safeAngle = (idea.angle_approach || '').replace(/`/g, '\\`').replace(/\$/g, '\\$')
+    const safeDetails = (idea.details || '').replace(/`/g, '\\`').replace(/\$/g, '\\$')
+    const safeRelevance = (idea.relevance || '').replace(/`/g, '\\`').replace(/\$/g, '\\$')
+    
     return `**Input Topic Data (Use this information to craft the post):**
-* **Concise Summary:** ${idea.concise_summary}
-* **Suggested Angle / Hook:** ${idea.angle_approach}
-* **Key Details / Stats:** ${idea.details}
-* **Relevance to Audience:** ${idea.relevance}
+* **Concise Summary:** ${safeSummary}
+* **Suggested Angle / Hook:** ${safeAngle}
+* **Key Details / Stats:** ${safeDetails}
+* **Relevance to Audience:** ${safeRelevance}
 
 Create a LinkedIn post using this research data and the Andrew Tallents style guidelines provided above. 
 
@@ -141,9 +146,9 @@ Write the post content directly - no need for JSON format, just return the compl
         // Safely escape the post text to prevent template literal issues
         const safePostText = topPost.text
           .slice(0, 300)
-          .replace(/`/g, '\\`')
-          .replace(/\$/g, '\\$')
-          .replace(/\\/g, '\\\\')
+          .replace(/\\/g, '\\\\')  // Replace backslashes first
+          .replace(/`/g, '\\`')    // Then backticks
+          .replace(/\$/g, '\\$')   // Then dollar signs
         
         historicalContext = `
 **TOP PERFORMING SIMILAR POST EXAMPLE** (${topPost.total_reactions} reactions, ${topPost.comments_count} comments):
@@ -218,7 +223,7 @@ ${historicalInsights.structureRecommendations.slice(0, 2).map(rec =>
             confidenceScore: performancePrediction.confidenceScore
           }, 'Performance prediction generated for content')
         } catch (error) {
-          logger.warn({ error: error.message, agentName }, 'Failed to generate performance prediction')
+          logger.warn({ error: error instanceof Error ? error.message : String(error), agentName }, 'Failed to generate performance prediction')
         }
       }
 
@@ -232,7 +237,7 @@ ${historicalInsights.structureRecommendations.slice(0, 2).map(rec =>
           approach: historicalInsights 
             ? `Performance-optimized Andrew style - Idea ${ideaNumber}` 
             : `Andrew Tallents authentic style - Idea ${ideaNumber}`,
-          performance_prediction: performancePrediction
+          performance_prediction: performancePrediction || undefined
         },
         metadata: {
           token_count: completion.usage?.total_tokens || 0,
@@ -242,8 +247,8 @@ ${historicalInsights.structureRecommendations.slice(0, 2).map(rec =>
           historical_context_used: !!historicalInsights,
           similar_posts_analyzed: historicalInsights?.relatedPosts.length || 0,
           top_performer_score: historicalInsights?.performanceContext.topPerformingScore || 0,
-          predicted_engagement: performancePrediction?.predictedEngagement || null,
-          prediction_confidence: performancePrediction?.confidenceScore || null
+          predicted_engagement: performancePrediction?.predictedEngagement || undefined,
+          prediction_confidence: performancePrediction?.confidenceScore || undefined
         },
         score: historicalInsights ? 0.95 : 0.9 // Higher confidence with historical data
       }

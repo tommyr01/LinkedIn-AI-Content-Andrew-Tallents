@@ -384,7 +384,7 @@ ${allNewsContent}`
           logger.info('No related historical posts found for topic in enhanced research')
         }
       } catch (error) {
-        logger.warn({ error: error.message }, 'Historical analysis failed in enhanced research, continuing without it')
+        logger.warn({ error: error instanceof Error ? error.message : String(error) }, 'Historical analysis failed in enhanced research, continuing without it')
       }
 
       const totalTime = Date.now() - startTime
@@ -520,7 +520,7 @@ ${allNewsContent}`
           logger.info('No related historical posts found for topic')
         }
       } catch (error) {
-        logger.warn({ error: error.message }, 'Historical analysis failed, continuing without it')
+        logger.warn({ error: error instanceof Error ? error.message : String(error) }, 'Historical analysis failed, continuing without it')
       }
 
       const totalTime = Date.now() - startTime

@@ -89,7 +89,7 @@ export class PerformanceInsightsService {
 
       return enhancedInsight
     } catch (error) {
-      logger.error({ error: error.message }, 'Failed to generate enhanced insights')
+      logger.error({ error: error instanceof Error ? error.message : String(error) }, 'Failed to generate enhanced insights')
       throw error
     }
   }
@@ -143,7 +143,7 @@ export class PerformanceInsightsService {
 
       return prediction
     } catch (error) {
-      logger.error({ error: error.message }, 'Failed to predict content performance')
+      logger.error({ error: error instanceof Error ? error.message : String(error) }, 'Failed to predict content performance')
       throw error
     }
   }
@@ -205,7 +205,7 @@ Focus on Andrew's authentic voice: vulnerable leadership stories, CEO coaching i
         voiceAdjustments: result.voiceAdjustments || []
       }
     } catch (error) {
-      logger.error({ error: error.message }, 'Failed to generate optimization suggestions')
+      logger.error({ error: error instanceof Error ? error.message : String(error) }, 'Failed to generate optimization suggestions')
       return {
         suggestions: ['Increase personal vulnerability', 'Add specific client example', 'Include clear call to action'],
         rewriteExamples: ['Try starting with a question', 'End with an actionable insight'],
@@ -271,7 +271,7 @@ Return as JSON:
         actionWords: result.actionWords || []
       }
     } catch (error) {
-      logger.warn({ error: error.message }, 'Failed to analyze voice patterns')
+      logger.warn({ error: error instanceof Error ? error.message : String(error) }, 'Failed to analyze voice patterns')
       return {
         tone: 'professional',
         personalStoryElements: true,
@@ -478,7 +478,7 @@ Return JSON:
         improvements: result.improvements || []
       }
     } catch (error) {
-      logger.warn({ error: error.message }, 'Failed to generate AI prediction')
+      logger.warn({ error: error instanceof Error ? error.message : String(error) }, 'Failed to generate AI prediction')
       return {
         score: 60,
         confidence: 50,

@@ -95,7 +95,7 @@ export class HistoricalAnalysisService {
 
       return similarPosts
     } catch (error) {
-      logger.error({ topic, error: error.message }, 'Failed to find similar historical posts')
+      logger.error({ topic, error: error instanceof Error ? error.message : String(error) }, 'Failed to find similar historical posts')
       throw error
     }
   }
@@ -139,7 +139,7 @@ export class HistoricalAnalysisService {
 
       return insight
     } catch (error) {
-      logger.error({ error: error.message }, 'Failed to analyze top performing posts')
+      logger.error({ error: error instanceof Error ? error.message : String(error) }, 'Failed to analyze top performing posts')
       throw error
     }
   }
@@ -179,7 +179,7 @@ export class HistoricalAnalysisService {
 
       return insights
     } catch (error) {
-      logger.error({ topic, error: error.message }, 'Failed to generate historical insights')
+      logger.error({ topic, error: error instanceof Error ? error.message : String(error) }, 'Failed to generate historical insights')
       throw error
     }
   }
@@ -203,7 +203,7 @@ export class HistoricalAnalysisService {
     try {
       // Use the existing supabase service to get posts
       // This assumes you have a method to get posts by username
-      const supabase = this.supabaseService.getClient()
+      const supabase = this.supabaseService['client']
       
       const { data: posts, error } = await supabase
         .from('connection_posts')
@@ -234,7 +234,7 @@ export class HistoricalAnalysisService {
         throw error
       }
 
-      return (posts || []).map(post => ({
+      return (posts || []).map((post: any) => ({
         id: post.id,
         text: post.post_text || '',
         posted_at: post.posted_date,
@@ -251,7 +251,7 @@ export class HistoricalAnalysisService {
         post_type: post.post_type || 'regular'
       }))
     } catch (error) {
-      logger.error({ error: error.message }, 'Failed to fetch Andrew\'s historical posts')
+      logger.error({ error: error instanceof Error ? error.message : String(error) }, 'Failed to fetch Andrew\'s historical posts')
       throw error
     }
   }
@@ -282,7 +282,7 @@ export class HistoricalAnalysisService {
         // Add small delay to avoid rate limiting
         await new Promise(resolve => setTimeout(resolve, 100))
       } catch (error) {
-        logger.warn({ postId: post.id, error: error.message }, 'Failed to calculate similarity for post')
+        logger.warn({ postId: post.id, error: error instanceof Error ? error.message : String(error) }, 'Failed to calculate similarity for post')
         // Include post with 0 similarity if embedding fails
         postsWithSimilarity.push({
           ...post,
@@ -419,7 +419,7 @@ Return as JSON:
         triggers: result.triggers || []
       }
     } catch (error) {
-      logger.warn({ error: error.message }, 'Failed to analyze content patterns with AI')
+      logger.warn({ error: error instanceof Error ? error.message : String(error) }, 'Failed to analyze content patterns with AI')
       return {
         structures: ['Story-driven narrative', 'Problem-solution format', 'Question-based engagement'],
         formats: ['Paragraph format', 'Bullet points', 'Numbered insights'],
