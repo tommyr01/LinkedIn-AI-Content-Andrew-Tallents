@@ -74,7 +74,7 @@ export function ConnectionPostsTable({ posts, stats, onRefresh, isLoading = fals
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState("")
   const [timeFilter, setTimeFilter] = useState<"all" | "1day" | "3day" | "7day" | "1month">("all")
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
+  const [viewMode, setViewMode] = useState<"grid" | "list">("list")
   const [currentPage, setCurrentPage] = useState(1)
   const postsPerPage = 12
 

@@ -76,7 +76,7 @@ export default function ConnectionsPage() {
       if (showLoading) setIsLoadingPosts(true)
       console.log('🔍 Loading connection posts from Supabase...')
       
-      const res = await fetch('/api/connections/posts/list?limit=100', { cache: 'no-store' })
+      const res = await fetch('/api/connections/posts/list?limit=200', { cache: 'no-store' })
       if (!res.ok) {
         const errorData = await res.json()
         throw new Error(errorData.error || 'Failed to load connection posts')
