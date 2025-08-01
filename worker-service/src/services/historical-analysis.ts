@@ -206,26 +206,21 @@ export class HistoricalAnalysisService {
       const supabase = this.supabaseService['client']
       
       const { data: posts, error } = await supabase
-        .from('connection_posts')
+        .from('linkedin_posts')
         .select(`
           id,
           post_text,
           posted_date,
           total_reactions,
-          likes,
+          like_count,
           comments_count,
           reposts,
-          support,
-          love,
-          insight,
-          celebrate,
+          shares,
           author_first_name,
           author_last_name,
-          post_type,
-          media_type,
-          media_url
+          post_type
         `)
-        .eq('username', 'andrewtallents')
+        .eq('author_username', 'andrewtallents')
         .not('post_text', 'is', null)
         .order('posted_date', { ascending: false })
         .limit(100)
@@ -239,13 +234,13 @@ export class HistoricalAnalysisService {
         text: post.post_text || '',
         posted_at: post.posted_date,
         total_reactions: post.total_reactions || 0,
-        like_count: post.likes || 0,
+        like_count: post.like_count || 0,
         comments_count: post.comments_count || 0,
         reposts_count: post.reposts || 0,
-        support_count: post.support || 0,
-        love_count: post.love || 0,
-        insight_count: post.insight || 0,
-        celebrate_count: post.celebrate || 0,
+        support_count: 0, // Not available in linkedin_posts
+        love_count: 0, // Not available in linkedin_posts  
+        insight_count: 0, // Not available in linkedin_posts
+        celebrate_count: 0, // Not available in linkedin_posts
         author_first_name: post.author_first_name || 'Andrew',
         author_last_name: post.author_last_name || 'Tallents',
         post_type: post.post_type || 'regular'

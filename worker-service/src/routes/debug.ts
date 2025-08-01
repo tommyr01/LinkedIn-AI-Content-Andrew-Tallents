@@ -677,7 +677,7 @@ router.post('/single-post-embedding', async (req, res) => {
     let testPost = null
     if (postId) {
       const { data: post, error } = await supabaseService['client']
-        .from('connection_posts')
+        .from('linkedin_posts')
         .select('id, post_text, total_reactions, like_count, comments_count, reposts, shares, posted_date')
         .eq('id', postId)
         .single()
@@ -687,9 +687,9 @@ router.post('/single-post-embedding', async (req, res) => {
     } else {
       // Get the first Andrew post
       const { data: posts, error } = await supabaseService['client']
-        .from('connection_posts')
+        .from('linkedin_posts')
         .select('id, post_text, total_reactions, like_count, comments_count, reposts, shares, posted_date')
-        .eq('username', 'andrewtallents')
+        .eq('author_username', 'andrewtallents')
         .not('post_text', 'is', null)
         .not('post_text', 'eq', '')
         .order('posted_date', { ascending: false })

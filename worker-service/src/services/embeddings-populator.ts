@@ -90,12 +90,12 @@ export class EmbeddingsPopulatorService {
   }
 
   /**
-   * Get Andrew's posts from the connection_posts table
+   * Get Andrew's posts from the linkedin_posts table
    */
   private async getAndrewsPosts(): Promise<PostToEmbed[]> {
     try {
       const { data: posts, error } = await supabaseService['client']
-        .from('connection_posts')
+        .from('linkedin_posts')
         .select(`
           id,
           post_text,
@@ -106,7 +106,7 @@ export class EmbeddingsPopulatorService {
           shares,
           posted_date
         `)
-        .eq('username', 'andrewtallents')
+        .eq('author_username', 'andrewtallents')
         .not('post_text', 'is', null)
         .not('post_text', 'eq', '')
         .order('posted_date', { ascending: false })
