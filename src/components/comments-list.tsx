@@ -40,7 +40,7 @@ export function CommentsList({ postUrl, initialCommentsCount = 0 }: CommentsList
   const [comments, setComments] = useState<LinkedInComment[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [isExpanded, setIsExpanded] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(true)
   const [totalComments, setTotalComments] = useState(initialCommentsCount)
   const [hasLoaded, setHasLoaded] = useState(false)
   
@@ -99,10 +99,7 @@ export function CommentsList({ postUrl, initialCommentsCount = 0 }: CommentsList
   }
 
   const handleLoadComments = () => {
-    setIsExpanded(true)
-    if (!hasLoaded) {
-      fetchComments()
-    }
+    fetchComments()
   }
 
   const handleRefreshComments = () => {
@@ -167,34 +164,21 @@ export function CommentsList({ postUrl, initialCommentsCount = 0 }: CommentsList
               Refresh
             </Button>
           )}
-          
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsExpanded(!isExpanded)}
-          >
-            {isExpanded ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
-          </Button>
         </div>
       </div>
 
-      {isExpanded && (
-        <div className="space-y-4">
+      <div className="space-y-4">
           {!hasLoaded && !isLoading && (
             <Card>
               <CardContent className="p-6 text-center">
                 <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <CardTitle className="text-lg mb-2">View Comments</CardTitle>
+                <CardTitle className="text-lg mb-2">View LinkedIn Comments</CardTitle>
                 <CardDescription className="mb-4">
                   Load comments from LinkedIn to see the conversation
                 </CardDescription>
-                <Button onClick={handleLoadComments} disabled={isLoading}>
+                <Button onClick={handleLoadComments} disabled={isLoading} size="lg" className="w-full">
                   <MessageSquare className="h-4 w-4 mr-2" />
-                  Load Comments
+                  Load Comments from LinkedIn
                 </Button>
               </CardContent>
             </Card>
@@ -261,7 +245,6 @@ export function CommentsList({ postUrl, initialCommentsCount = 0 }: CommentsList
             </div>
           )}
         </div>
-      )}
 
       {/* Prospect Research Card */}
       <ProspectResearchCard

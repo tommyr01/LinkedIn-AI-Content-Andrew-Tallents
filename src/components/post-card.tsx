@@ -55,7 +55,7 @@ export function PostCard({
     
     if (isVideo) {
       return (
-        <div className="relative w-full h-32 bg-muted rounded-md overflow-hidden group cursor-pointer">
+        <div className="relative w-full h-48 bg-muted rounded-md overflow-hidden group cursor-pointer">
           {post.mediaThumbnail && !imageError ? (
             <img
               src={post.mediaThumbnail}
@@ -82,7 +82,7 @@ export function PostCard({
 
     if (isImage) {
       return (
-        <div className="relative w-full h-32 bg-muted rounded-md overflow-hidden cursor-pointer">
+        <div className="relative w-full h-48 bg-muted rounded-md overflow-hidden cursor-pointer">
           {(post.mediaThumbnail || post.mediaUrl) && !imageError ? (
             <img
               src={post.mediaThumbnail || post.mediaUrl}
@@ -167,7 +167,7 @@ export function PostCard({
   }
 
   return (
-    <Card className="h-full hover:shadow-md transition-shadow duration-200 cursor-pointer group">
+    <Card className="h-full max-w-md mx-auto hover:shadow-md transition-shadow duration-200 cursor-pointer group">
       {/* Card Header */}
       <CardHeader className="pb-3">
         <div className="flex items-start space-x-3">
@@ -203,10 +203,10 @@ export function PostCard({
       <CardContent className="pt-0 space-y-3" onClick={() => onOpenDetails(post)}>
         {/* Post Content */}
         <div className="space-y-2">
-          <p className="text-sm leading-relaxed">
-            {truncateText(post.content, 150)}
+          <p className="text-sm leading-relaxed min-h-[120px]">
+            {truncateText(post.content, 300)}
           </p>
-          {post.content.length > 150 && (
+          {post.content.length > 300 && (
             <button className="text-xs text-blue-600 hover:text-blue-800 font-medium">
               Read more...
             </button>

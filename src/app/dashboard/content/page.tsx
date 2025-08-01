@@ -14,21 +14,12 @@ export default function ContentPage() {
         </div>
       </div>
       
-      <div className="grid gap-8 lg:grid-cols-2">
-        <div>
-          <AsyncContentGenerator
-            onContentGenerated={(drafts) => {
-              console.log('Generated drafts:', drafts)
-            }}
-          />
-        </div>
-
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Real-time Progress</h3>
-          <p className="text-muted-foreground">
-            Content generation progress and results will appear here in real-time. The enhanced research system provides UK-specific insights for self-leadership content.
-          </p>
-        </div>
+      <div>
+        <AsyncContentGenerator
+          onContentGenerated={(drafts) => {
+            console.log('Generated drafts:', drafts)
+          }}
+        />
       </div>
     </div>
   )

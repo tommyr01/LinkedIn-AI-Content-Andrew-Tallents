@@ -87,44 +87,11 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Helper function to fetch all connection posts with pagination
+// Helper function to fetch all connection posts with pagination using efficient JOIN
 async function fetchAllConnectionPosts(limit: number, offset: number): Promise<any[]> {
   if (!supabaseLinkedIn) return []
   
-  // Get all connection posts first
-  const allConnectionPosts = await getAllConnectionPostsWithPagination(limit, offset)
-  
-  // Enrich with connection data
-  const enrichedPosts: any[] = []
-  for (const post of allConnectionPosts) {
-    try {
-      // Get connection data if we have a connection_id
-      let connectionData = null
-      if (post.connection_id) {
-        connectionData = await getConnectionById(post.connection_id)
-      }
-      
-      enrichedPosts.push({
-        ...post,
-        linkedin_connections: connectionData
-      })
-    } catch (error) {
-      console.warn(`Failed to enrich post ${post.id} with connection data:`, error)
-      enrichedPosts.push(post)
-    }
-  }
-  
-  return enrichedPosts
-}
-
-// Get connection posts with basic pagination
-async function getAllConnectionPostsWithPagination(limit: number, offset: number): Promise<DBConnectionPost[]> {
-  if (!supabaseLinkedIn) return []
-  
-  // We'll need to add this method to the service, for now let's get all posts
-  // and do client-side pagination as a temporary solution
   try {
-    // Create a temporary method to get posts from all connections
     const { createClient } = require('@supabase/supabase-js')
     const supabaseUrl = process.env.SUPABASE_URL
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -135,55 +102,39 @@ async function getAllConnectionPostsWithPagination(limit: number, offset: number
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
     
+    console.log(`🔍 Fetching ${limit} connection posts with JOIN query...`)
+    
+    // Single efficient query with JOIN to get posts and connection data
     const { data, error } = await supabase
       .from('connection_posts')
-      .select('*')
+      .select(`
+        *,
+        linkedin_connections!inner(
+          id,
+          full_name,
+          current_company,
+          profile_picture_url,
+          headline
+        )
+      `)
       .order('posted_date', { ascending: false })
       .range(offset, offset + limit - 1)
 
     if (error) {
+      console.error('Error fetching connection posts with JOIN:', error)
       throw new Error(`Failed to fetch connection posts: ${error.message}`)
     }
 
+    console.log(`✅ Fetched ${data?.length || 0} posts with connection data in single query`)
     return data || []
+    
   } catch (error: any) {
-    console.error('Error in getAllConnectionPostsWithPagination:', error)
-    return []
+    console.error('Error in fetchAllConnectionPosts:', error)
+    throw error
   }
 }
 
-// Get connection by ID
-async function getConnectionById(connectionId: string): Promise<any> {
-  if (!supabaseLinkedIn) return null
-  
-  try {
-    const { createClient } = require('@supabase/supabase-js')
-    const supabaseUrl = process.env.SUPABASE_URL
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    
-    if (!supabaseUrl || !supabaseServiceKey) {
-      return null
-    }
-    
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
-    
-    const { data, error } = await supabase
-      .from('linkedin_connections')
-      .select('id, full_name, current_company, profile_picture_url, headline')
-      .eq('id', connectionId)
-      .single()
-
-    if (error) {
-      console.warn(`Failed to fetch connection ${connectionId}:`, error)
-      return null
-    }
-
-    return data
-  } catch (error) {
-    console.warn(`Error fetching connection ${connectionId}:`, error)
-    return null
-  }
-}
+// No longer needed - replaced with efficient JOIN query above
 
 // Transform connection posts to match ConnectionPost interface
 async function transformConnectionPosts(posts: any[]): Promise<any[]> {

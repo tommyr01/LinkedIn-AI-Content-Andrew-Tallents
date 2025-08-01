@@ -74,7 +74,7 @@ export function ConnectionPostsTable({ posts, stats, onRefresh, isLoading = fals
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState("")
   const [timeFilter, setTimeFilter] = useState<"all" | "1day" | "3day" | "7day" | "1month">("all")
-  const [viewMode, setViewMode] = useState<"grid" | "list">("list")
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [currentPage, setCurrentPage] = useState(1)
   const postsPerPage = 12
 
@@ -216,6 +216,7 @@ export function ConnectionPostsTable({ posts, stats, onRefresh, isLoading = fals
             onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
           >
             {viewMode === "grid" ? <List className="h-4 w-4" /> : <Grid className="h-4 w-4" />}
+            <span className="ml-2 hidden sm:inline">{viewMode === "grid" ? "List View" : "Grid View"}</span>
           </Button>
           <Button
             variant="outline"
@@ -320,7 +321,7 @@ export function ConnectionPostsTable({ posts, stats, onRefresh, isLoading = fals
       ) : (
         <div className={viewMode === "grid" 
           ? "grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" 
-          : "space-y-4"
+          : "space-y-4 max-w-2xl mx-auto"
         }>
           {paginatedPosts.map((post) => (
             <PostCard

@@ -295,162 +295,173 @@ export function AsyncContentGenerator({ onContentGenerated }: AsyncContentGenera
   }
 
   return (
-    <div className="space-y-6">
-      {/* Input Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5" />
-            AI Content Generator (Async)
-          </CardTitle>
-          <CardDescription>
-            Generate LinkedIn content with real-time progress updates
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="topic">Topic or Idea</Label>
-            <Textarea
-              id="topic"
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              className="min-h-[100px]"
-              placeholder="Enter your topic, idea, or key message for the LinkedIn post..."
-              disabled={isGenerating}
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="voiceGuidelines">Voice Guidelines</Label>
-              <Button 
-                onClick={handleSaveVoiceGuidelines} 
-                variant="outline" 
-                size="sm"
-                disabled={isSavingVoice || isGenerating}
-              >
-                {isSavingVoice ? 'Saving...' : 'Save'}
-              </Button>
-            </div>
-            <Textarea
-              id="voiceGuidelines"
-              value={voiceGuidelines}
-              onChange={(e) => setVoiceGuidelines(e.target.value)}
-              className="min-h-[80px]"
-              placeholder="Enter tone of voice guidelines..."
-              disabled={isGenerating}
-            />
-          </div>
-
-          <Button 
-            onClick={handleGenerate}
-            disabled={isGenerating || !topic.trim()}
-            className="w-full"
-            size="lg"
-          >
-            {isGenerating ? (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                Generating Content...
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-4 w-4 mr-2" />
-                Generate Content
-              </>
-            )}
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Job Status */}
-      {currentJob && (
+    <div className="flex flex-col lg:flex-row lg:gap-8">
+      {/* Left Column - Input Section */}
+      <div className="lg:w-1/2">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                {getStatusIcon(currentJob.status)}
-                Job Status
-              </span>
-              <Badge variant="outline" className={getStatusColor(currentJob.status)}>
-                {currentJob.status.toUpperCase()}
-              </Badge>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5" />
+              AI Content Generator
             </CardTitle>
+            <CardDescription>
+              Generate LinkedIn content with real-time progress updates
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span>Progress</span>
-                <span>{currentJob.progress}%</span>
-              </div>
-              <Progress value={currentJob.progress} className="w-full" />
+            <div className="space-y-2">
+              <Label htmlFor="topic">Topic or Idea</Label>
+              <Textarea
+                id="topic"
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                className="min-h-[175px]"
+                placeholder="Enter your topic, idea, or key message for the LinkedIn post..."
+                disabled={isGenerating}
+              />
             </div>
             
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="font-medium">Topic:</span>
-                <p className="text-muted-foreground">{currentJob.topic}</p>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="voiceGuidelines">Voice Guidelines</Label>
+                <Button 
+                  onClick={handleSaveVoiceGuidelines} 
+                  variant="outline" 
+                  size="sm"
+                  disabled={isSavingVoice || isGenerating}
+                >
+                  {isSavingVoice ? 'Saving...' : 'Save'}
+                </Button>
               </div>
-              <div>
-                <span className="font-medium">Platform:</span>
-                <p className="text-muted-foreground">{currentJob.platform}</p>
-              </div>
+              <Textarea
+                id="voiceGuidelines"
+                value={voiceGuidelines}
+                onChange={(e) => setVoiceGuidelines(e.target.value)}
+                className="min-h-[300px]"
+                placeholder="Enter tone of voice guidelines..."
+                disabled={isGenerating}
+              />
             </div>
 
-            {currentJob.error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-                <p className="text-red-800 text-sm">{currentJob.error}</p>
-              </div>
-            )}
+            <Button 
+              onClick={handleGenerate}
+              disabled={isGenerating || !topic.trim()}
+              className="w-full"
+              size="lg"
+            >
+              {isGenerating ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Generating Content...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Generate Content
+                </>
+              )}
+            </Button>
           </CardContent>
         </Card>
-      )}
+      </div>
 
-      {/* Generated Content */}
-      {jobDrafts.length > 0 && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Generated Content ({jobDrafts.length} variations)</h3>
-          {jobDrafts.map((draft, index) => (
-            <Card key={draft.id}>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>Variation {draft.variant_number}: {draft.agent_name.replace('_', ' ')}</span>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline">
-                      Score: {draft.content.estimated_voice_score}%
-                    </Badge>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleCopyContent(draft.content.body)}
-                    >
-                      <Copy className="h-4 w-4 mr-1" />
-                      Copy
-                    </Button>
-                  </div>
-                </CardTitle>
-                <CardDescription>
-                  {draft.content.approach} • {draft.metadata.token_count} tokens • {draft.metadata.generation_time_ms}ms
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="whitespace-pre-wrap text-sm mb-4">
-                  {draft.content.body}
+      {/* Right Column - Results Section */}
+      <div className="lg:w-1/2 mt-6 lg:mt-0">
+        {/* Job Status */}
+        {currentJob ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  {getStatusIcon(currentJob.status)}
+                  Job Status
+                </span>
+                <Badge variant="outline" className={getStatusColor(currentJob.status)}>
+                  {currentJob.status.toUpperCase()}
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span>Progress</span>
+                  <span>{currentJob.progress}%</span>
                 </div>
-                {draft.content.hashtags.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {draft.content.hashtags.map((tag, tagIndex) => (
-                      <Badge key={tagIndex} variant="secondary">
-                        {tag}
+                <Progress value={currentJob.progress} className="w-full" />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium">Topic:</span>
+                  <p className="text-muted-foreground">{currentJob.topic}</p>
+                </div>
+                <div>
+                  <span className="font-medium">Platform:</span>
+                  <p className="text-muted-foreground">{currentJob.platform}</p>
+                </div>
+              </div>
+
+              {currentJob.error && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                  <p className="text-red-800 text-sm">{currentJob.error}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="h-full flex items-center justify-center">
+            <p className="text-muted-foreground text-center">
+              Generated content and progress will appear here.
+            </p>
+          </div>
+        )}
+
+        {/* Generated Content */}
+        {jobDrafts.length > 0 && (
+          <div className="space-y-4 mt-6">
+            <h3 className="text-lg font-semibold">Generated Content ({jobDrafts.length} variations)</h3>
+            {jobDrafts.map((draft, index) => (
+              <Card key={draft.id}>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span>Variation {draft.variant_number}: {draft.agent_name.replace('_', ' ')}</span>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">
+                        Score: {draft.content.estimated_voice_score}%
                       </Badge>
-                    ))}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleCopyContent(draft.content.body)}
+                      >
+                        <Copy className="h-4 w-4 mr-1" />
+                        Copy
+                      </Button>
+                    </div>
+                  </CardTitle>
+                  <CardDescription>
+                    {draft.content.approach} • {draft.metadata.token_count} tokens • {draft.metadata.generation_time_ms}ms
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="whitespace-pre-wrap text-sm mb-4">
+                    {draft.content.body}
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+                  {draft.content.hashtags.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {draft.content.hashtags.map((tag, tagIndex) => (
+                        <Badge key={tagIndex} variant="secondary">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

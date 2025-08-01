@@ -7,9 +7,7 @@ import { Button } from "@/components/ui/button"
 import {
   LayoutDashboard,
   FileText,
-  Calendar,
   Users,
-  MessageSquare,
   BarChart3,
   Settings,
   User2,
@@ -32,18 +30,8 @@ const items = [
     icon: User2,
   },
   {
-    title: "Calendar",
-    href: "/dashboard/calendar",
-    icon: Calendar,
-  },
-  {
-    title: "Engagement",
-    href: "/dashboard/engagement",
-    icon: MessageSquare,
-  },
-  {
-    title: "Connections",
-    href: "/dashboard/connections",
+    title: "LinkedIn Network",
+    href: "/dashboard/network",
     icon: Users,
   },
   {
