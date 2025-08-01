@@ -857,13 +857,33 @@ router.post('/ai-agents-rag-debug', async (req, res) => {
     try {
       logger.info('Testing single AI agent with converted RAG insights')
       
+      // Debug research structure
+      logger.info({ 
+        researchKeys: Object.keys(research),
+        hasIdea1: !!research.idea_1,
+        idea1Keys: research.idea_1 ? Object.keys(research.idea_1) : 'no idea_1',
+        hasIdea2: !!research.idea_2,
+        hasIdea3: !!research.idea_3
+      }, 'Research structure debug')
+      
+      // Ensure research has the proper structure
+      if (!research.idea_1 || typeof research.idea_1 === 'string') {
+        logger.error({ 
+          researchType: typeof research,
+          idea1Type: typeof research.idea_1,
+          researchKeys: Object.keys(research)
+        }, 'Research data has wrong structure - may be using basic research instead of enhanced')
+        
+        return res.status(500).json({
+          success: false,
+          error: 'Research service returned wrong data structure',
+          details: 'Expected EnhancedResearch with structured ideas, got simple strings'
+        })
+      }
+      
       const testResults = await aiAgentsService.generateAllVariations(
         topic,
-        {
-          idea_1: research.idea_1,
-          idea_2: research.idea_2, 
-          idea_3: research.idea_3
-        },
+        research, // Pass the full research object directly
         undefined, // No voice guidelines
         convertedInsights // Our converted insights
       )
