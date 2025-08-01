@@ -138,9 +138,16 @@ Write the post content directly - no need for JSON format, just return the compl
         const voiceAnalysis = historicalInsights.voiceAnalysis
         const patterns = historicalInsights.patterns
         
+        // Safely escape the post text to prevent template literal issues
+        const safePostText = topPost.text
+          .slice(0, 300)
+          .replace(/`/g, '\\`')
+          .replace(/\$/g, '\\$')
+          .replace(/\\/g, '\\\\')
+        
         historicalContext = `
 **TOP PERFORMING SIMILAR POST EXAMPLE** (${topPost.total_reactions} reactions, ${topPost.comments_count} comments):
-"${topPost.text.slice(0, 300)}..."
+"${safePostText}..."
 
 **SUCCESSFUL VOICE PATTERNS:**
 - Tone: ${voiceAnalysis.tone}
