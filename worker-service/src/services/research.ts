@@ -2,6 +2,8 @@ import { createHash } from 'crypto'
 import { appConfig } from '../config'
 import logger from '../lib/logger'
 import { supabaseService } from './supabase'
+import { historicalAnalysisService } from './historical-analysis'
+import { performanceInsightsService } from './performance-insights'
 import type { ResearchResult } from '../types'
 
 export class ResearchService {
@@ -191,6 +193,7 @@ export class ResearchService {
       details: string
       relevance: string
     }
+    historicalInsights?: any
   }> {
     const startTime = Date.now()
     logger.info({ topic }, 'Starting enhanced Firecrawl research')
@@ -361,13 +364,40 @@ ${allNewsContent}`
         researchData = this.ensureRequiredIdeas(researchData, topic)
       }
 
+      // NEW: Add historical analysis
+      let historicalInsights = null
+      try {
+        logger.info({ topic }, 'Starting historical analysis for enhanced Firecrawl research')
+        historicalInsights = await historicalAnalysisService.generateHistoricalInsights(topic)
+        
+        if (historicalInsights.relatedPosts.length > 0) {
+          // Enhance insights with performance data
+          const enhancedInsights = await performanceInsightsService.generateEnhancedInsights(historicalInsights)
+          historicalInsights = enhancedInsights
+          
+          logger.info({ 
+            relatedPosts: historicalInsights.relatedPosts.length,
+            topPerformers: historicalInsights.topPerformers.length,
+            avgEngagement: historicalInsights.performanceContext.avgEngagement
+          }, 'Historical analysis completed for enhanced research')
+        } else {
+          logger.info('No related historical posts found for topic in enhanced research')
+        }
+      } catch (error) {
+        logger.warn({ error: error.message }, 'Historical analysis failed in enhanced research, continuing without it')
+      }
+
       const totalTime = Date.now() - startTime
       logger.info({ 
         totalTimeMs: totalTime,
-        ideasFound: 3 
+        ideasFound: 3,
+        hasHistoricalInsights: !!historicalInsights
       }, 'Enhanced Firecrawl research completed')
 
-      return researchData
+      return {
+        ...researchData,
+        historicalInsights
+      }
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
@@ -423,6 +453,7 @@ ${allNewsContent}`
     results: ResearchResult[]
     summary: string
     keyInsights: string[]
+    historicalInsights?: any
   }> {
     const startTime = Date.now()
     logger.info({ topic, platform }, 'Starting comprehensive research')
@@ -469,17 +500,42 @@ ${allNewsContent}`
       const summary = this.generateSummary(rankedResults, topic)
       const keyInsights = this.extractKeyInsights(rankedResults)
 
+      // NEW: Add historical analysis
+      let historicalInsights = null
+      try {
+        logger.info({ topic }, 'Starting historical analysis for enhanced research')
+        historicalInsights = await historicalAnalysisService.generateHistoricalInsights(topic)
+        
+        if (historicalInsights.relatedPosts.length > 0) {
+          // Enhance insights with performance data
+          const enhancedInsights = await performanceInsightsService.generateEnhancedInsights(historicalInsights)
+          historicalInsights = enhancedInsights
+          
+          logger.info({ 
+            relatedPosts: historicalInsights.relatedPosts.length,
+            topPerformers: historicalInsights.topPerformers.length,
+            avgEngagement: historicalInsights.performanceContext.avgEngagement
+          }, 'Historical analysis completed successfully')
+        } else {
+          logger.info('No related historical posts found for topic')
+        }
+      } catch (error) {
+        logger.warn({ error: error.message }, 'Historical analysis failed, continuing without it')
+      }
+
       const totalTime = Date.now() - startTime
       logger.info({ 
         topic, 
         resultCount: rankedResults.length, 
+        hasHistoricalInsights: !!historicalInsights,
         totalTimeMs: totalTime 
       }, 'Comprehensive research completed')
 
       return {
         results: rankedResults,
         summary,
-        keyInsights
+        keyInsights,
+        historicalInsights
       }
 
     } catch (error) {
@@ -487,7 +543,8 @@ ${allNewsContent}`
       return {
         results: [],
         summary: `Research unavailable for topic: ${topic}`,
-        keyInsights: []
+        keyInsights: [],
+        historicalInsights: null
       }
     }
   }

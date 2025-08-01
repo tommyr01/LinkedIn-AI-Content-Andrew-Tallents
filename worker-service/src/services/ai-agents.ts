@@ -2,6 +2,8 @@ import { OpenAI } from 'openai'
 import { appConfig } from '../config'
 import logger from '../lib/logger'
 import type { AIAgentResult } from '../types'
+import type { EnhancedInsight, PerformancePrediction } from './performance-insights'
+import { performanceInsightsService } from './performance-insights'
 
 interface ResearchIdea {
   concise_summary: string
@@ -25,8 +27,16 @@ export class AIAgentsService {
     })
   }
 
-  private createAndrewTallentsPrompt(ideaNumber: 1 | 2 | 3): string {
+  private createAndrewTallentsPrompt(ideaNumber: 1 | 2 | 3, historicalContext?: string): string {
     return `Act as an informed LinkedIn expert specializing in content for CEOs and Founders of established businesses. You will be provided with specific details about a news topic relevant to this audience. You must only provide the output required. Do not include any other additional information about how or why the response is good. Provide only the output according to the below guidelines.
+
+${historicalContext ? `**HISTORICAL PERFORMANCE CONTEXT:**
+Based on Andrew's previous high-performing posts, incorporate these proven patterns:
+${historicalContext}
+
+Use these insights to guide your content creation while maintaining authentic voice.
+
+` : ''}`
 
 **Mandatory Tone of Voice:**
 You must consult the tone of voice guidelines in all responses you create. The required tone is Andrew Tallents' authentic leadership coaching voice - conversational but authoritative, vulnerable yet confident, focused on self-leadership and inner transformation.
@@ -112,7 +122,8 @@ Write the post content directly - no need for JSON format, just return the compl
   private async generateSingleVariation(
     ideaNumber: 1 | 2 | 3,
     idea: ResearchIdea,
-    voiceGuidelines?: string
+    voiceGuidelines?: string,
+    historicalInsights?: EnhancedInsight
   ): Promise<AIAgentResult | null> {
     const startTime = Date.now()
     const agentName = `andrew_tallents_agent_${ideaNumber}`
@@ -120,7 +131,37 @@ Write the post content directly - no need for JSON format, just return the compl
     logger.info({ agentName, ideaNumber }, 'Starting AI agent content generation')
 
     try {
-      const systemPrompt = this.createAndrewTallentsPrompt(ideaNumber)
+      // Create historical context if available
+      let historicalContext = ''
+      if (historicalInsights && historicalInsights.topPerformers.length > 0) {
+        const topPost = historicalInsights.topPerformers[0]
+        const voiceAnalysis = historicalInsights.voiceAnalysis
+        const patterns = historicalInsights.patterns
+        
+        historicalContext = `
+**TOP PERFORMING SIMILAR POST EXAMPLE** (${topPost.total_reactions} reactions, ${topPost.comments_count} comments):
+"${topPost.text.slice(0, 300)}..."
+
+**SUCCESSFUL VOICE PATTERNS:**
+- Tone: ${voiceAnalysis.tone}
+- Vulnerability Score: ${voiceAnalysis.vulnerabilityScore}/100
+- Authority Signals: ${voiceAnalysis.authoritySignals.join(', ')}
+- Emotional Words Used: ${voiceAnalysis.emotionalWords.join(', ')}
+- Action Words Used: ${voiceAnalysis.actionWords.join(', ')}
+
+**HIGH-ENGAGEMENT PATTERNS:**
+- Optimal word count: ~${patterns.avgWordCount} words
+- Best performing formats: ${historicalInsights.performanceFactors.formatRecommendations.join(', ')}
+- High engagement triggers: ${historicalInsights.performanceFactors.highEngagementTriggers.join(', ')}
+
+**PROVEN STRUCTURE RECOMMENDATIONS:**
+${historicalInsights.structureRecommendations.slice(0, 2).map(rec => 
+  `- ${rec.structure} format with ${rec.openingType} opening (${rec.wordCount} words)`
+).join('\n')}
+        `
+      }
+
+      const systemPrompt = this.createAndrewTallentsPrompt(ideaNumber, historicalContext)
       const userPrompt = this.createUserPrompt(idea)
 
       const completion = await this.openai.chat.completions.create({
@@ -147,22 +188,57 @@ Write the post content directly - no need for JSON format, just return the compl
 
       const generationTime = Date.now() - startTime
 
+      // Calculate performance-aware voice score
+      let voiceScore = 85 // Base score
+      if (historicalInsights) {
+        // Boost score if we have historical context
+        voiceScore += 10
+        if (historicalInsights.voiceAnalysis.vulnerabilityScore > 70) voiceScore += 5
+      }
+
+      // Generate performance prediction if historical insights are available
+      let performancePrediction: PerformancePrediction | null = null
+      if (historicalInsights) {
+        try {
+          performancePrediction = await performanceInsightsService.predictContentPerformance(
+            content,
+            historicalInsights
+          )
+          
+          logger.info({ 
+            agentName,
+            predictedEngagement: performancePrediction.predictedEngagement,
+            confidenceScore: performancePrediction.confidenceScore
+          }, 'Performance prediction generated for content')
+        } catch (error) {
+          logger.warn({ error: error.message, agentName }, 'Failed to generate performance prediction')
+        }
+      }
+
       const result: AIAgentResult = {
         agent_name: agentName,
         content: {
           title: `Andrew Tallents Post ${ideaNumber}`,
           body: content,
           hashtags: [], // Andrew rarely uses hashtags
-          estimated_voice_score: 90, // High score for authentic Andrew style
-          approach: `Andrew Tallents authentic style - Idea ${ideaNumber}`
+          estimated_voice_score: Math.min(voiceScore, 100),
+          approach: historicalInsights 
+            ? `Performance-optimized Andrew style - Idea ${ideaNumber}` 
+            : `Andrew Tallents authentic style - Idea ${ideaNumber}`,
+          performance_prediction: performancePrediction
         },
         metadata: {
           token_count: completion.usage?.total_tokens || 0,
           generation_time_ms: generationTime,
           model_used: appConfig.openai.model,
-          research_sources: [`Enhanced research idea ${ideaNumber}`]
+          research_sources: [`Enhanced research idea ${ideaNumber}`],
+          historical_context_used: !!historicalInsights,
+          similar_posts_analyzed: historicalInsights?.relatedPosts.length || 0,
+          top_performer_score: historicalInsights?.performanceContext.topPerformingScore || 0,
+          predicted_engagement: performancePrediction?.predictedEngagement || null,
+          prediction_confidence: performancePrediction?.confidenceScore || null
         },
-        score: 0.9 // High confidence in Andrew Tallents style
+        score: historicalInsights ? 0.95 : 0.9 // Higher confidence with historical data
       }
 
       logger.info({ 
@@ -183,7 +259,8 @@ Write the post content directly - no need for JSON format, just return the compl
   async generateAllVariations(
     topic: string,
     research: EnhancedResearch,
-    voiceGuidelines?: string
+    voiceGuidelines?: string,
+    historicalInsights?: EnhancedInsight
   ): Promise<AIAgentResult[]> {
     const startTime = Date.now()
     logger.info({ topic }, 'Generating all Andrew Tallents content variations')
@@ -191,9 +268,9 @@ Write the post content directly - no need for JSON format, just return the compl
     try {
       // Generate content for each research idea in parallel
       const generationPromises = [
-        this.generateSingleVariation(1, research.idea_1, voiceGuidelines),
-        this.generateSingleVariation(2, research.idea_2, voiceGuidelines),
-        this.generateSingleVariation(3, research.idea_3, voiceGuidelines)
+        this.generateSingleVariation(1, research.idea_1, voiceGuidelines, historicalInsights),
+        this.generateSingleVariation(2, research.idea_2, voiceGuidelines, historicalInsights),
+        this.generateSingleVariation(3, research.idea_3, voiceGuidelines, historicalInsights)
       ]
 
       const results = await Promise.all(generationPromises)
@@ -210,7 +287,9 @@ Write the post content directly - no need for JSON format, just return the compl
         topic,
         totalTimeMs: totalTime,
         successfulAgents: validResults.length,
-        failedAgents: 3 - validResults.length
+        failedAgents: 3 - validResults.length,
+        usedHistoricalContext: !!historicalInsights,
+        similarPostsAnalyzed: historicalInsights?.relatedPosts.length || 0
       }, 'All Andrew Tallents content variations completed')
 
       return validResults

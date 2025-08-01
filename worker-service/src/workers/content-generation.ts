@@ -124,10 +124,21 @@ export class ContentGenerationWorker {
       // Step 3: AI Agents phase
       logger.info({ jobId: job.id }, 'Starting Andrew Tallents content generation with 3 agents')
       
+      // Get historical insights from research if available
+      const historicalInsights = research.historicalInsights || null
+      
+      logger.info({ 
+        jobId: job.id,
+        hasHistoricalInsights: !!historicalInsights,
+        relatedPosts: historicalInsights?.relatedPosts?.length || 0,
+        topPerformers: historicalInsights?.topPerformers?.length || 0
+      }, 'Historical insights for AI agent generation')
+      
       const agentResults = await aiAgentsService.generateAllVariations(
         topic,
         research,
-        voiceGuidelines
+        voiceGuidelines,
+        historicalInsights
       )
 
       // Update progress for each completed agent

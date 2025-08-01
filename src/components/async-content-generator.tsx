@@ -427,8 +427,18 @@ export function AsyncContentGenerator({ onContentGenerated }: AsyncContentGenera
                     <span>Variation {draft.variant_number}: {draft.agent_name.replace('_', ' ')}</span>
                     <div className="flex items-center gap-2">
                       <Badge variant="outline">
-                        Score: {draft.content.estimated_voice_score}%
+                        Voice: {draft.content.estimated_voice_score}%
                       </Badge>
+                      {draft.metadata.predicted_engagement && (
+                        <Badge variant="outline" className="bg-green-50">
+                          Predicted: {draft.metadata.predicted_engagement} eng.
+                        </Badge>
+                      )}
+                      {draft.metadata.prediction_confidence && (
+                        <Badge variant="outline" className="bg-blue-50">
+                          Confidence: {draft.metadata.prediction_confidence}%
+                        </Badge>
+                      )}
                       <Button
                         variant="outline"
                         size="sm"
@@ -441,12 +451,67 @@ export function AsyncContentGenerator({ onContentGenerated }: AsyncContentGenera
                   </CardTitle>
                   <CardDescription>
                     {draft.content.approach} • {draft.metadata.token_count} tokens • {draft.metadata.generation_time_ms}ms
+                    {draft.metadata.historical_context_used && (
+                      <span className="ml-2 text-green-600">• Historical insights applied</span>
+                    )}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="whitespace-pre-wrap text-sm mb-4">
                     {draft.content.body}
                   </div>
+                  
+                  {/* Performance Insights */}
+                  {draft.content.performance_prediction && (
+                    <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                      <h4 className="font-semibold text-sm mb-2">📊 Performance Insights</h4>
+                      <div className="grid grid-cols-2 gap-4 text-xs">
+                        <div>
+                          <span className="font-medium">Predicted Engagement:</span>
+                          <p className="text-green-600">{draft.content.performance_prediction.predictedEngagement} points</p>
+                        </div>
+                        <div>
+                          <span className="font-medium">Confidence:</span>
+                          <p className="text-blue-600">{draft.content.performance_prediction.confidenceScore}%</p>
+                        </div>
+                      </div>
+                      
+                      {draft.content.performance_prediction.strengthFactors.length > 0 && (
+                        <div className="mt-3">
+                          <span className="font-medium text-xs">✅ Strengths:</span>
+                          <ul className="text-xs mt-1 space-y-1">
+                            {draft.content.performance_prediction.strengthFactors.map((factor, i) => (
+                              <li key={i} className="text-green-700">• {factor}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      
+                      {draft.content.performance_prediction.improvementSuggestions.length > 0 && (
+                        <div className="mt-3">
+                          <span className="font-medium text-xs">💡 Improvements:</span>
+                          <ul className="text-xs mt-1 space-y-1">
+                            {draft.content.performance_prediction.improvementSuggestions.map((suggestion, i) => (
+                              <li key={i} className="text-amber-700">• {suggestion}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Historical Context */}
+                  {(draft.metadata.similar_posts_analyzed && draft.metadata.similar_posts_analyzed > 0) && (
+                    <div className="bg-blue-50 rounded-lg p-3 mb-4">
+                      <h4 className="font-semibold text-sm mb-2">🔍 Historical Context</h4>
+                      <div className="text-xs space-y-1">
+                        <p><span className="font-medium">Similar posts analyzed:</span> {draft.metadata.similar_posts_analyzed}</p>
+                        <p><span className="font-medium">Top performer score:</span> {draft.metadata.top_performer_score || 0}</p>
+                        <p className="text-blue-700">This variation was optimized using patterns from Andrew's highest-performing similar content.</p>
+                      </div>
+                    </div>
+                  )}
+                  
                   {draft.content.hashtags.length > 0 && (
                     <div className="flex flex-wrap gap-1">
                       {draft.content.hashtags.map((tag, tagIndex) => (

@@ -73,12 +73,28 @@ export interface AIAgentResult {
     hashtags: string[]
     estimated_voice_score: number
     approach: string
+    performance_prediction?: {
+      predictedEngagement: number
+      confidenceScore: number
+      strengthFactors: string[]
+      improvementSuggestions: string[]
+      similarPostPerformance: {
+        avgEngagement: number
+        topPerformance: number
+        similarityScore: number
+      }
+    }
   }
   metadata: {
     token_count: number
     generation_time_ms: number
     model_used: string
     research_sources: string[]
+    historical_context_used?: boolean
+    similar_posts_analyzed?: number
+    top_performer_score?: number
+    predicted_engagement?: number
+    prediction_confidence?: number
   }
   score?: number
 }
