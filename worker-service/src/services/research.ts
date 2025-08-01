@@ -305,17 +305,24 @@ ${allNewsContent}`
 
       const responseContent = completion.choices[0]?.message?.content || ''
       
-      // Add debug logging for the raw response
-      logger.debug({ 
+      // SURGICAL LOGGING: Capture exact OpenAI response
+      logger.error({ 
         responseLength: responseContent.length,
-        responsePreview: responseContent.substring(0, 200) + '...'
-      }, 'Raw OpenAI response received')
+        responsePreview: responseContent.substring(0, 500) + '...',
+        fullResponse: responseContent
+      }, 'SURGICAL DEBUG - RAW OPENAI RESPONSE FOR RESEARCH')
       
       // Robust JSON parsing with fallback handling
       let researchData
       try {
         // Try direct JSON parsing first
         researchData = JSON.parse(responseContent)
+        logger.error({ 
+          parsedDataType: typeof researchData,
+          parsedDataKeys: Object.keys(researchData),
+          idea1Type: typeof researchData.idea_1,
+          idea1Value: researchData.idea_1
+        }, 'SURGICAL DEBUG - PARSED RESEARCH DATA STRUCTURE')
       } catch (parseError) {
         logger.warn({ parseError }, 'Direct JSON parsing failed, trying extraction methods')
         
