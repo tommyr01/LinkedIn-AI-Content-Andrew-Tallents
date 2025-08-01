@@ -5,7 +5,7 @@ import { supabaseService } from '../services/supabase'
 import { researchService } from '../services/research'
 import { aiAgentsService } from '../services/ai-agents'
 import { historicalAnalysisService } from '../services/historical-analysis'
-import { performanceInsightsService } from '../services/performance-insights'
+import { performanceInsightsService, type EnhancedInsight } from '../services/performance-insights'
 import { simpleAIAgentsService } from '../services/ai-agents-simple'
 import { OpenAI } from 'openai'
 import { Redis } from 'ioredis'
@@ -115,7 +115,7 @@ router.post('/research', async (req, res) => {
     logger.info({ topic }, 'Debug: Testing research service')
     
     // Test basic research (without historical analysis to isolate issues)
-    const research = await researchService.conductResearch(topic, 'linkedin')
+    const research = await researchService.enhancedFirecrawlResearch(topic)
     
     res.json({
       success: true,
@@ -155,8 +155,9 @@ router.post('/historical', async (req, res) => {
     // Test finding similar posts
     const similarPosts = await historicalAnalysisService.findSimilarHistoricalPosts(topic, 5)
     
-    // Test generating insights
-    const insights = await historicalAnalysisService.generateHistoricalInsights(topic)
+    // Test generating insights (using performance insights service for enhanced insights)
+    const basicInsight = await historicalAnalysisService.generateHistoricalInsights(topic)
+    const insights: EnhancedInsight = await performanceInsightsService.generateEnhancedInsights(basicInsight)
     
     res.json({
       success: true,
@@ -171,7 +172,9 @@ router.post('/historical', async (req, res) => {
       insightsPreview: insights ? {
         topPerformersCount: insights.topPerformers.length,
         avgWordCount: insights.patterns.avgWordCount,
-        tone: insights.voiceAnalysis.tone
+        commonOpenings: insights.patterns.commonOpenings.length,
+        tone: insights.voiceAnalysis.tone,
+        vulnerabilityScore: insights.voiceAnalysis.vulnerabilityScore
       } : null
     })
   } catch (error) {
@@ -314,11 +317,11 @@ router.post('/simple-job', async (req, res) => {
     }
     
     // Update job to processing
-    await supabaseService.updateJobStatus(job.id, 'processing', 25)
+    await supabaseService.updateJobProgress(job.id, 25, 'processing')
     
     // Test basic research
-    const research = await researchService.conductResearch(topic, 'linkedin')
-    await supabaseService.updateJobStatus(job.id, 'processing', 50)
+    const research = await researchService.enhancedFirecrawlResearch(topic)
+    await supabaseService.updateJobProgress(job.id, 50, 'processing')
     
     // Test AI agents (without historical context)
     const results = await aiAgentsService.generateAllVariations(
@@ -327,23 +330,12 @@ router.post('/simple-job', async (req, res) => {
       undefined,
       undefined
     )
-    await supabaseService.updateJobStatus(job.id, 'processing', 75)
+    await supabaseService.updateJobProgress(job.id, 75, 'processing')
     
-    // Save drafts
-    for (let i = 0; i < results.length; i++) {
-      const result = results[i]
-      await supabaseService.createDraft({
-        job_id: job.id,
-        variant_number: i + 1,
-        agent_name: result.agent_name,
-        content: result.content,
-        metadata: result.metadata,
-        score: result.score
-      })
-    }
+    // Complete job with drafts
+    await supabaseService.completeJob(job.id, results)
     
-    // Complete job
-    await supabaseService.updateJobStatus(job.id, 'completed', 100)
+    // Job is already completed by completeJob method
     
     res.json({
       success: true,
