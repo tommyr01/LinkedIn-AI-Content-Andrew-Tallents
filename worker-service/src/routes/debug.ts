@@ -678,7 +678,7 @@ router.post('/single-post-embedding', async (req, res) => {
     if (postId) {
       const { data: post, error } = await supabaseService['client']
         .from('linkedin_posts')
-        .select('id, post_text, total_reactions, like_count, comments_count, reposts, shares, posted_date')
+        .select('id, text, posted_at, total_reactions, like_count, comments_count, reposts_count')
         .eq('id', postId)
         .single()
       
@@ -688,11 +688,11 @@ router.post('/single-post-embedding', async (req, res) => {
       // Get the first Andrew post
       const { data: posts, error } = await supabaseService['client']
         .from('linkedin_posts')
-        .select('id, post_text, total_reactions, like_count, comments_count, reposts, shares, posted_date')
+        .select('id, text, posted_at, total_reactions, like_count, comments_count, reposts_count')
         .eq('author_username', 'andrewtallents')
-        .not('post_text', 'is', null)
-        .not('post_text', 'eq', '')
-        .order('posted_date', { ascending: false })
+        .not('text', 'is', null)
+        .not('text', 'eq', '')
+        .order('posted_at', { ascending: false })
         .limit(1)
       
       if (error) throw error
@@ -706,21 +706,21 @@ router.post('/single-post-embedding', async (req, res) => {
       })
     }
     
-    logger.info({ postId: testPost.id, textLength: testPost.post_text?.length }, 'Found test post')
+    logger.info({ postId: testPost.id, textLength: testPost.text?.length }, 'Found test post')
     
     // Try to create embedding using the populator service
     const performanceMetrics = {
       total_reactions: testPost.total_reactions || 0,
       like_count: testPost.like_count || 0,
       comments_count: testPost.comments_count || 0,
-      reposts_count: testPost.reposts || 0,
-      shares_count: testPost.shares || 0,
-      posted_date: new Date(testPost.posted_date)
+      reposts_count: testPost.reposts_count || 0,
+      shares_count: 0, // Not available in linkedin_posts
+      posted_date: new Date(testPost.posted_at)
     }
     
     await vectorSimilarityService.storePostEmbedding(
       testPost.id,
-      testPost.post_text,
+      testPost.text,
       performanceMetrics
     )
     
@@ -731,9 +731,9 @@ router.post('/single-post-embedding', async (req, res) => {
       message: 'Single post embedding test completed',
       testPost: {
         id: testPost.id,
-        textPreview: testPost.post_text.slice(0, 100) + '...',
-        textLength: testPost.post_text.length,
-        reactions: testPost.total_reactions
+        textPreview: testPost.text.slice(0, 100) + '...',
+        textLength: testPost.text.length,
+        reactions: testPost.total_reactions || 0
       }
     })
     

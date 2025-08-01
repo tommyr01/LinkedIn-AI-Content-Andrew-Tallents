@@ -98,18 +98,17 @@ export class EmbeddingsPopulatorService {
         .from('linkedin_posts')
         .select(`
           id,
-          post_text,
+          text,
+          posted_at,
           total_reactions,
           like_count,
           comments_count,
-          reposts,
-          shares,
-          posted_date
+          reposts_count
         `)
         .eq('author_username', 'andrewtallents')
-        .not('post_text', 'is', null)
-        .not('post_text', 'eq', '')
-        .order('posted_date', { ascending: false })
+        .not('text', 'is', null)
+        .not('text', 'eq', '')
+        .order('posted_at', { ascending: false })
 
       if (error) {
         throw error
@@ -117,13 +116,13 @@ export class EmbeddingsPopulatorService {
 
       return (posts || []).map(post => ({
         id: post.id,
-        post_text: post.post_text || '',
+        post_text: post.text || '',
         total_reactions: post.total_reactions || 0,
         like_count: post.like_count || 0,
         comments_count: post.comments_count || 0,
-        reposts: post.reposts || 0,
-        shares: post.shares || 0,
-        posted_date: post.posted_date
+        reposts: post.reposts_count || 0,
+        shares: 0, // Not available in linkedin_posts
+        posted_date: post.posted_at
       }))
     } catch (error) {
       logger.error({ error: error instanceof Error ? error.message : String(error) }, 'Failed to fetch Andrew\'s posts')
