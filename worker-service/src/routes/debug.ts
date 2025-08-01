@@ -6,6 +6,7 @@ import { researchService } from '../services/research'
 import { aiAgentsService } from '../services/ai-agents'
 import { historicalAnalysisService } from '../services/historical-analysis'
 import { performanceInsightsService } from '../services/performance-insights'
+import { simpleAIAgentsService } from '../services/ai-agents-simple'
 import { OpenAI } from 'openai'
 import { Redis } from 'ioredis'
 
@@ -183,7 +184,60 @@ router.post('/historical', async (req, res) => {
   }
 })
 
-// Simple AI agents test (without historical context)
+// Simple AI agents test (completely simplified, no historical context)
+router.post('/ai-agents-simple', async (req, res) => {
+  try {
+    const { topic = 'test leadership topic' } = req.body
+    
+    logger.info({ topic }, 'Debug: Testing simple AI agents service')
+    
+    // Create simple research data for testing
+    const simpleResearch = {
+      idea_1: {
+        concise_summary: 'Test leadership insight',
+        angle_approach: 'Personal story approach',
+        details: 'Focus on self-leadership challenges',
+        relevance: 'Highly relevant to CEO audience'
+      },
+      idea_2: {
+        concise_summary: 'Test business growth insight',
+        angle_approach: 'Data-driven approach',
+        details: 'Key metrics and performance indicators',
+        relevance: 'Relevant to scaling businesses'
+      },
+      idea_3: {
+        concise_summary: 'Test team management insight',
+        angle_approach: 'Vulnerability-based approach',
+        details: 'Managing team dynamics and culture',
+        relevance: 'Critical for established leaders'
+      }
+    }
+    
+    // Test simple AI agents (no historical context, no complex features)
+    const results = await simpleAIAgentsService.generateAllVariations(topic, simpleResearch)
+    
+    res.json({
+      success: true,
+      message: 'Simple AI agents test completed',
+      resultsCount: results.length,
+      results: results.map(r => ({
+        agentName: r.agent_name,
+        hasContent: !!r.content.body,
+        contentPreview: r.content.body.slice(0, 100) + '...',
+        voiceScore: r.content.estimated_voice_score,
+        tokenCount: r.metadata.token_count
+      }))
+    })
+  } catch (error) {
+    logger.error({ error }, 'Simple AI agents debug test failed')
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
+// Complex AI agents test (with historical context)
 router.post('/ai-agents', async (req, res) => {
   try {
     const { topic = 'test leadership topic' } = req.body
