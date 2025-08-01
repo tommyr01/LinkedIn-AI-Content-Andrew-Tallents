@@ -346,7 +346,7 @@ ${allNewsContent}`
             idea_3: typeof researchData.idea_3 === 'string' ? fixIdea(researchData.idea_3, 3) : researchData.idea_3
           }
           
-          logger.info('Research data structure auto-corrected successfully')
+          logger.info('Research data structure auto-corrected successfully - DEPLOYMENT TIMESTAMP: ' + new Date().toISOString())
         }
         
       } catch (parseError) {
