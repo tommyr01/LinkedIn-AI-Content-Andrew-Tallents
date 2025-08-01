@@ -10,7 +10,7 @@ CREATE TABLE linkedin_connections (
   first_name text,
   last_name text,
   headline text,
-  username text UNIQUE,
+  username text,
   about text,
   
   -- Profile media
@@ -102,6 +102,11 @@ CREATE INDEX idx_linkedin_connections_synced ON linkedin_connections(last_synced
 CREATE INDEX idx_connection_posts_connection_id ON connection_posts(connection_id);
 CREATE INDEX idx_connection_posts_urn ON connection_posts(post_urn);
 CREATE INDEX idx_connection_posts_posted_date ON connection_posts(posted_date DESC);
+
+-- Create partial unique index for username (only enforced when username is not null and not empty)
+CREATE UNIQUE INDEX idx_linkedin_connections_username_unique 
+ON linkedin_connections(username) 
+WHERE username IS NOT NULL AND username != '';
 
 -- Enable Row Level Security
 ALTER TABLE linkedin_connections ENABLE ROW LEVEL SECURITY;

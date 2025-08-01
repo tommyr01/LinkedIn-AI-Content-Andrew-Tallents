@@ -48,13 +48,14 @@ export async function POST(request: NextRequest) {
     })
     
     // Map to Supabase fields using exact column names
-    const connectionData = mapLinkedInProfileToSupabase(profile.data.basic_info)
+    const connectionData = mapLinkedInProfileToSupabase(profile.data)
     console.log(`🗂️ Mapped profile data for Supabase:`, {
       'Full Name': connectionData.full_name,
       'Current Company': connectionData.current_company,
       'Title': connectionData.title,
       'Follower Count': connectionData.follower_count,
-      'Username': connectionData.username
+      'Username': connectionData.username,
+      'Start Date': connectionData.start_date
     })
 
     let supabaseRecord = null
@@ -146,34 +147,78 @@ export async function POST(request: NextRequest) {
 }
 
 // Helper function to map LinkedIn profile to Supabase connection format
-function mapLinkedInProfileToSupabase(profile: any) {
+function mapLinkedInProfileToSupabase(profileData: any) {
+  const profile = profileData.basic_info || profileData
+  const experience = profileData.experience || []
+  
+  // Find current job from experience array
+  const currentJob = experience.find((exp: any) => exp.is_current) || experience[0]
+  
+  // Format start date if available
+  let startDate = ''
+  if (currentJob?.start_date) {
+    const year = currentJob.start_date.year
+    const month = currentJob.start_date.month
+    // Convert month name to number if needed
+    const monthNumber = getMonthNumber(month)
+    startDate = `${year}-${monthNumber.toString().padStart(2, '0')}-01`
+  }
+  
+  // Extract hashtags - handle both array and string formats
+  let hashtags = ''
+  if (profile.creator_hashtags) {
+    hashtags = Array.isArray(profile.creator_hashtags) 
+      ? profile.creator_hashtags.join(', ')
+      : profile.creator_hashtags
+  }
+  
   return {
     full_name: profile.fullname || 'Unknown',
     first_name: profile.first_name || '',
     last_name: profile.last_name || '',
     headline: profile.headline || '',
-    username: profile.username || '',
+    username: profile.public_identifier || '', // Use public_identifier, not username
     profile_picture_url: profile.profile_picture_url || '',
     about: profile.about || '',
     full_location: profile.location?.full || '',
-    hashtags: profile.hashtags || '',
+    hashtags: hashtags,
     is_creator: profile.is_creator || false,
     is_influencer: profile.is_influencer || false,
     is_premium: profile.is_premium || false,
-    show_follower_count: true,
+    show_follower_count: profile.show_follower_count !== false,
     background_picture_url: profile.background_picture_url || '',
     urn: profile.urn || '',
     follower_count: profile.follower_count || 0,
     connection_count: profile.connection_count || 0,
-    current_company: profile.current_company || '',
-    title: profile.title || '',
-    company_location: '',
-    duration: '',
-    start_date: undefined,
-    is_current: true,
-    company_linkedin_url: profile.company_linkedin_url || '',
+    current_company: profile.current_company || currentJob?.company || '',
+    title: currentJob?.title || '', // Get title from experience
+    company_location: currentJob?.location || '',
+    duration: currentJob?.duration || '',
+    start_date: startDate,
+    is_current: currentJob?.is_current || false,
+    company_linkedin_url: profile.current_company_url || currentJob?.company_linkedin_url || '', // Use current_company_url
     current_company_urn: profile.current_company_urn || ''
   }
+}
+
+// Helper function to convert month name to number
+function getMonthNumber(monthName: string): number {
+  if (!monthName) return 1
+  const months: { [key: string]: number } = {
+    'Jan': 1, 'January': 1,
+    'Feb': 2, 'February': 2,
+    'Mar': 3, 'March': 3,
+    'Apr': 4, 'April': 4,
+    'May': 5,
+    'Jun': 6, 'June': 6,
+    'Jul': 7, 'July': 7,
+    'Aug': 8, 'August': 8,
+    'Sep': 9, 'September': 9,
+    'Oct': 10, 'October': 10,
+    'Nov': 11, 'November': 11,
+    'Dec': 12, 'December': 12
+  }
+  return months[monthName] || 1
 }
 
 // Helper function to fetch and save connection posts  
@@ -250,7 +295,7 @@ export async function GET(request: NextRequest) {
   try {
     // Just fetch and return the data without creating a record
     const profile = await linkedInScraper.getProfile(username)
-    const mappedData = mapLinkedInProfileToSupabase(profile.data.basic_info)
+    const mappedData = mapLinkedInProfileToSupabase(profile.data)
 
     return NextResponse.json({
       success: true,

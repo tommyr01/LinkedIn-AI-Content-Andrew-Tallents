@@ -463,17 +463,36 @@ export class SupabaseLinkedInService {
     
     const dbConnection = this.transformConnectionToDB(connectionData)
     
+    // If username exists, check if connection already exists
+    if (dbConnection.username) {
+      const existing = await this.getConnectionByUsername(dbConnection.username)
+      if (existing) {
+        // Update existing connection
+        const { data, error } = await supabase!
+          .from('linkedin_connections')
+          .update(dbConnection)
+          .eq('id', existing.id)
+          .select()
+          .single()
+
+        if (error) {
+          console.error('Error updating LinkedIn connection:', error)
+          throw new Error(`Failed to update connection: ${error.message}`)
+        }
+
+        return data
+      }
+    }
+    
+    // Insert new connection (no conflict resolution needed)
     const { data, error } = await supabase!
       .from('linkedin_connections')
-      .upsert(dbConnection, { 
-        onConflict: 'username',
-        ignoreDuplicates: false 
-      })
+      .insert(dbConnection)
       .select()
       .single()
 
     if (error) {
-      console.error('Error upserting LinkedIn connection:', error)
+      console.error('Error inserting LinkedIn connection:', error)
       throw new Error(`Failed to save connection: ${error.message}`)
     }
 
@@ -504,9 +523,9 @@ export class SupabaseLinkedInService {
       .from('linkedin_connections')
       .select('*')
       .eq('username', username)
-      .single()
+      .maybeSingle() // Use maybeSingle() instead of single() to handle no results gracefully
 
-    if (error && error.code !== 'PGRST116') { // Not found error
+    if (error) {
       console.error('Error fetching connection:', error)
       throw new Error(`Failed to fetch connection: ${error.message}`)
     }
