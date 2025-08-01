@@ -169,33 +169,10 @@ Write the post content directly - no need for JSON format, just return the compl
           .replace(/"/g, "'")       // Replace quotes
           .trim()
         
-        // Build historical context with defensive array handling
-        const authoritySignals = (voiceAnalysis.authoritySignals || []).join(', ') || 'Leadership experience'
-        const emotionalWords = (voiceAnalysis.emotionalWords || []).join(', ') || 'Professional language'
-        const actionWords = (voiceAnalysis.actionWords || []).join(', ') || 'Action-oriented words'
-        const formatRecommendations = (historicalInsights.performanceFactors.formatRecommendations || []).join(', ') || 'Standard formatting'
-        const engagementTriggers = (historicalInsights.performanceFactors.highEngagementTriggers || []).join(', ') || 'Engaging content'
-        
-        const structureRecommendations = (historicalInsights.structureRecommendations || [])
-          .slice(0, 2)
-          .map(rec => `- ${rec.structure || 'standard'} format with ${rec.openingType || 'engaging'} opening (${rec.wordCount || 150} words)`)
-          .join('\n') || '- Standard structure with engaging opening (150 words)'
+        // Ultra-minimal context - no complex array processing needed
 
-        historicalContext = `Based on Andrew's top-performing posts:
-
-EXAMPLE POST (${topPost.total_reactions || 0} reactions): ${safePostText}
-
-VOICE PATTERNS:
-- Tone: ${voiceAnalysis.tone || 'professional'}
-- Vulnerability: ${voiceAnalysis.vulnerabilityScore || 0}/100
-- Authority: ${authoritySignals}
-
-ENGAGEMENT PATTERNS:  
-- Optimal length: ${patterns.avgWordCount || 150} words
-- Triggers: ${engagementTriggers}
-- Formats: ${formatRecommendations}
-
-Use these insights to create authentic Andrew-style content.`
+        historicalContext = `PROVEN PATTERNS (${topPost.total_reactions || 0} reactions): ${safePostText.slice(0, 100)}... 
+TONE: ${voiceAnalysis.tone || 'professional'} | VULNERABILITY: ${voiceAnalysis.vulnerabilityScore || 0}/100 | LENGTH: ${patterns.avgWordCount || 150}w`
         
           logger.debug({
             agentName,
