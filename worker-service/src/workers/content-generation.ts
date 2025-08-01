@@ -135,6 +135,36 @@ export class ContentGenerationWorker {
         contextSize: historicalInsights ? JSON.stringify(historicalInsights).length : 0
       }, 'Historical insights for AI agent generation')
       
+      // FIX: Convert string research to structured objects if needed (PRODUCTION FIX)
+      let structuredResearch: any = research
+      if (typeof research.idea_1 === 'string') {
+        logger.info({ jobId: job.id }, 'PRODUCTION: Converting string research data to structured objects')
+        
+        const stringResearch = research as any
+        structuredResearch = {
+          idea_1: {
+            concise_summary: stringResearch.idea_1,
+            angle_approach: `How this ${topic} development reveals self-leadership challenges`,
+            details: `Key insights: ${stringResearch.idea_1}`,
+            relevance: `This impacts UK CEOs who struggle with self-leadership while scaling their businesses.`
+          },
+          idea_2: {
+            concise_summary: stringResearch.idea_2,
+            angle_approach: `The connection between ${topic} and authentic leadership`,
+            details: `Research shows: ${stringResearch.idea_2}`,
+            relevance: `Relevant for founders feeling stuck despite outward success.`
+          },
+          idea_3: {
+            concise_summary: stringResearch.idea_3,
+            angle_approach: `Why traditional approaches to ${topic} fail for leaders`,
+            details: `Analysis reveals: ${stringResearch.idea_3}`,
+            relevance: `Critical for leaders seeking practical solutions without slowing down.`
+          }
+        }
+        
+        logger.info({ jobId: job.id }, 'PRODUCTION: Successfully converted research to structured format')
+      }
+
       // Log memory usage before AI generation
       const memoryBefore = process.memoryUsage()
       logger.info({ 
@@ -148,7 +178,7 @@ export class ContentGenerationWorker {
       
       const agentResults = await aiAgentsService.generateAllVariations(
         topic,
-        research,
+        structuredResearch, // Use structured research instead of raw research
         voiceGuidelines,
         historicalInsights
       )
