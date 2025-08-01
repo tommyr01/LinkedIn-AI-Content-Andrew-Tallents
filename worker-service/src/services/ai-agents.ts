@@ -147,6 +147,13 @@ Write the post content directly - no need for JSON format, just return the compl
       // Create historical context if available
       let historicalContext = ''
       if (historicalInsights && historicalInsights.topPerformers.length > 0) {
+        logger.debug({ 
+          agentName,
+          topPerformersCount: historicalInsights.topPerformers.length,
+          voiceAnalysisKeys: Object.keys(historicalInsights.voiceAnalysis || {}),
+          patternsKeys: Object.keys(historicalInsights.patterns || {}),
+          structureRecsCount: historicalInsights.structureRecommendations?.length || 0
+        }, 'Building historical context for AI agent')
         const topPost = historicalInsights.topPerformers[0]
         const voiceAnalysis = historicalInsights.voiceAnalysis
         const patterns = historicalInsights.patterns
@@ -158,27 +165,43 @@ Write the post content directly - no need for JSON format, just return the compl
           .replace(/`/g, '\\`')    // Then backticks
           .replace(/\$/g, '\\$')   // Then dollar signs
         
+        // Build historical context with defensive array handling
+        const authoritySignals = (voiceAnalysis.authoritySignals || []).join(', ') || 'Leadership experience'
+        const emotionalWords = (voiceAnalysis.emotionalWords || []).join(', ') || 'Professional language'
+        const actionWords = (voiceAnalysis.actionWords || []).join(', ') || 'Action-oriented words'
+        const formatRecommendations = (historicalInsights.performanceFactors.formatRecommendations || []).join(', ') || 'Standard formatting'
+        const engagementTriggers = (historicalInsights.performanceFactors.highEngagementTriggers || []).join(', ') || 'Engaging content'
+        
+        const structureRecommendations = (historicalInsights.structureRecommendations || [])
+          .slice(0, 2)
+          .map(rec => `- ${rec.structure || 'standard'} format with ${rec.openingType || 'engaging'} opening (${rec.wordCount || 150} words)`)
+          .join('\n') || '- Standard structure with engaging opening (150 words)'
+
         historicalContext = `
-**TOP PERFORMING SIMILAR POST EXAMPLE** (${topPost.total_reactions} reactions, ${topPost.comments_count} comments):
+**TOP PERFORMING SIMILAR POST EXAMPLE** (${topPost.total_reactions || 0} reactions, ${topPost.comments_count || 0} comments):
 "${safePostText}..."
 
 **SUCCESSFUL VOICE PATTERNS:**
-- Tone: ${voiceAnalysis.tone}
-- Vulnerability Score: ${voiceAnalysis.vulnerabilityScore}/100
-- Authority Signals: ${voiceAnalysis.authoritySignals.join(', ')}
-- Emotional Words Used: ${voiceAnalysis.emotionalWords.join(', ')}
-- Action Words Used: ${voiceAnalysis.actionWords.join(', ')}
+- Tone: ${voiceAnalysis.tone || 'professional'}
+- Vulnerability Score: ${voiceAnalysis.vulnerabilityScore || 0}/100
+- Authority Signals: ${authoritySignals}
+- Emotional Words Used: ${emotionalWords}
+- Action Words Used: ${actionWords}
 
 **HIGH-ENGAGEMENT PATTERNS:**
-- Optimal word count: ~${patterns.avgWordCount} words
-- Best performing formats: ${historicalInsights.performanceFactors.formatRecommendations.join(', ')}
-- High engagement triggers: ${historicalInsights.performanceFactors.highEngagementTriggers.join(', ')}
+- Optimal word count: ~${patterns.avgWordCount || 150} words
+- Best performing formats: ${formatRecommendations}
+- High engagement triggers: ${engagementTriggers}
 
 **PROVEN STRUCTURE RECOMMENDATIONS:**
-${historicalInsights.structureRecommendations.slice(0, 2).map(rec => 
-  `- ${rec.structure} format with ${rec.openingType} opening (${rec.wordCount} words)`
-).join('\n')}
+${structureRecommendations}
         `
+        
+        logger.debug({
+          agentName,
+          historicalContextLength: historicalContext.length,
+          historicalContextPreview: historicalContext.slice(0, 200) + '...'
+        }, 'Historical context built successfully')
       }
 
       const systemPrompt = this.createAndrewTallentsPrompt(ideaNumber, historicalContext)
