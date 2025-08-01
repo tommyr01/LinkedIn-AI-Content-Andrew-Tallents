@@ -31,7 +31,7 @@ function createRedisConnection() {
     tls: {}, // Enable TLS for Upstash
     enableReadyCheck: false,
     lazyConnect: false, // Connect immediately for health checks
-    maxRetriesPerRequest: null, // Required by BullMQ
+    maxRetriesPerRequest: 10, // Reduce from default 20 to avoid debug test failures
     keyPrefix: '',
     db: 0
   }

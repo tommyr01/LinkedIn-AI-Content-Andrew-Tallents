@@ -360,6 +360,102 @@ router.post('/simple-job', async (req, res) => {
   }
 })
 
+// Test with real production data (most important debug test)
+router.post('/production-data', async (req, res) => {
+  try {
+    const { topic = 'leadership challenges' } = req.body
+    
+    logger.info({ topic }, 'Debug: Testing AI agents with real production data')
+    
+    // Use the exact same process as production
+    // 1. Get real research data
+    const research = await researchService.enhancedFirecrawlResearch(topic)
+    logger.info({ 
+      hasResearch: !!research,
+      idea1Length: research.idea_1?.concise_summary?.length || 0,
+      idea2Length: research.idea_2?.concise_summary?.length || 0,
+      idea3Length: research.idea_3?.concise_summary?.length || 0
+    }, 'Production research data loaded')
+    
+    // 2. Get real historical insights
+    let historicalInsights = null
+    try {
+      const basicInsight = await historicalAnalysisService.generateHistoricalInsights(topic)
+      historicalInsights = await performanceInsightsService.generateEnhancedInsights(basicInsight)
+      logger.info({
+        topPerformersCount: historicalInsights.topPerformers.length,
+        relatedPostsCount: historicalInsights.relatedPosts.length,
+        contextLength: JSON.stringify(historicalInsights).length
+      }, 'Production historical insights loaded')
+    } catch (historicalError) {
+      logger.warn({ error: historicalError instanceof Error ? historicalError.message : String(historicalError) }, 'Historical insights failed, continuing without')
+    }
+    
+    // 3. Test AI agents with EXACT production data (sequential, not parallel)
+    const results = []
+    for (let i = 1; i <= 3; i++) {
+      try {
+        const ideaKey = `idea_${i}` as keyof typeof research
+        const idea = research[ideaKey]
+        
+        logger.info({ agentNumber: i, ideaSummary: idea.concise_summary.slice(0, 50) }, 'Testing individual AI agent with production data')
+        
+        // Use the actual production AI service method
+        const agentResults = await aiAgentsService.generateAllVariations(
+          topic,
+          { idea_1: idea, idea_2: idea, idea_3: idea }, // Use same idea for all to test single agent
+          undefined, // No voice guidelines
+          historicalInsights || undefined
+        )
+        
+        if (agentResults.length > 0) {
+          results.push(agentResults[0]) // Take first result
+          logger.info({ agentNumber: i, success: true }, 'AI agent succeeded with production data')
+        } else {
+          logger.error({ agentNumber: i }, 'AI agent failed with production data')
+        }
+      } catch (agentError) {
+        logger.error({ 
+          agentNumber: i, 
+          error: agentError instanceof Error ? agentError.message : String(agentError),
+          stack: agentError instanceof Error ? agentError.stack : undefined
+        }, 'AI agent error with production data')
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: 'Production data test completed',
+      topic,
+      resultsCount: results.length,
+      successfulAgents: results.length,
+      failedAgents: 3 - results.length,
+      dataInfo: {
+        researchLoaded: !!research,
+        historicalInsightsLoaded: !!historicalInsights,
+        contextSize: historicalInsights ? JSON.stringify(historicalInsights).length : 0
+      },
+      results: results.map(r => ({
+        agentName: r.agent_name,
+        hasContent: !!r.content.body,
+        contentLength: r.content.body.length,
+        contentPreview: r.content.body.slice(0, 100) + '...',
+        voiceScore: r.content.estimated_voice_score,
+        tokenCount: r.metadata.token_count,
+        historicalContextUsed: r.metadata.historical_context_used
+      }))
+    })
+    
+  } catch (error) {
+    logger.error({ error }, 'Production data debug test failed')
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      details: 'This test uses the exact same data and process as production jobs'
+    })
+  }
+})
+
 // Environment variables check
 router.get('/env', async (req, res) => {
   try {

@@ -131,8 +131,20 @@ export class ContentGenerationWorker {
         jobId: job.id,
         hasHistoricalInsights: !!historicalInsights,
         relatedPosts: historicalInsights?.relatedPosts?.length || 0,
-        topPerformers: historicalInsights?.topPerformers?.length || 0
+        topPerformers: historicalInsights?.topPerformers?.length || 0,
+        contextSize: historicalInsights ? JSON.stringify(historicalInsights).length : 0
       }, 'Historical insights for AI agent generation')
+      
+      // Log memory usage before AI generation
+      const memoryBefore = process.memoryUsage()
+      logger.info({ 
+        jobId: job.id,
+        memoryBefore: {
+          heapUsed: Math.round(memoryBefore.heapUsed / 1024 / 1024),
+          heapTotal: Math.round(memoryBefore.heapTotal / 1024 / 1024),
+          rss: Math.round(memoryBefore.rss / 1024 / 1024)
+        }
+      }, 'Memory usage before AI agent generation')
       
       const agentResults = await aiAgentsService.generateAllVariations(
         topic,
@@ -140,6 +152,22 @@ export class ContentGenerationWorker {
         voiceGuidelines,
         historicalInsights
       )
+      
+      // Log memory usage after AI generation
+      const memoryAfter = process.memoryUsage()
+      logger.info({ 
+        jobId: job.id,
+        memoryAfter: {
+          heapUsed: Math.round(memoryAfter.heapUsed / 1024 / 1024),
+          heapTotal: Math.round(memoryAfter.heapTotal / 1024 / 1024),
+          rss: Math.round(memoryAfter.rss / 1024 / 1024)
+        },
+        memoryDelta: {
+          heapUsed: Math.round((memoryAfter.heapUsed - memoryBefore.heapUsed) / 1024 / 1024),
+          rss: Math.round((memoryAfter.rss - memoryBefore.rss) / 1024 / 1024)
+        },
+        agentResultsCount: agentResults.length
+      }, 'Memory usage after AI agent generation')
 
       // Update progress for each completed agent
       for (let i = 0; i < agentResults.length; i++) {
