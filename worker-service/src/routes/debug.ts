@@ -824,7 +824,7 @@ router.post('/ai-agents-rag-debug', async (req, res) => {
   try {
     const { topic = 'leadership challenges' } = req.body
     
-    logger.info({ topic }, 'Debug: Testing AI agents with RAG insights - detailed error capture')
+    logger.info({ topic }, 'Debug: Testing AI agents with RAG insights - FORCE FRESH DEPLOYMENT')
     
     // Get research data
     let research = await researchService.enhancedFirecrawlResearch(topic)
