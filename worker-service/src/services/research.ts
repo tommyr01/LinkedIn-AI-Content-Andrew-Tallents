@@ -323,6 +323,32 @@ ${allNewsContent}`
           idea1Type: typeof researchData.idea_1,
           idea1Value: researchData.idea_1
         }, 'SURGICAL DEBUG - PARSED RESEARCH DATA STRUCTURE')
+        
+        // CRITICAL FIX: Validate and auto-correct structure if OpenAI returns strings instead of objects
+        if (researchData && (typeof researchData.idea_1 === 'string' || typeof researchData.idea_2 === 'string' || typeof researchData.idea_3 === 'string')) {
+          logger.error({
+            idea1Type: typeof researchData.idea_1,
+            idea2Type: typeof researchData.idea_2,
+            idea3Type: typeof researchData.idea_3
+          }, 'RESEARCH SERVICE FIX: OpenAI returned strings instead of objects - auto-correcting structure')
+          
+          // Convert string ideas to proper objects
+          const fixIdea = (ideaString: string, ideaNumber: number) => ({
+            concise_summary: `Research insight ${ideaNumber} on ${topic}`,
+            angle_approach: `How this ${topic} development reveals key leadership challenges for UK executives`,
+            details: typeof ideaString === 'string' ? ideaString.substring(0, 200) + '...' : 'Key insights from recent research',
+            relevance: `This topic directly impacts UK CEOs and Founders who are struggling with self-leadership challenges as their businesses grow.`
+          })
+          
+          researchData = {
+            idea_1: typeof researchData.idea_1 === 'string' ? fixIdea(researchData.idea_1, 1) : researchData.idea_1,
+            idea_2: typeof researchData.idea_2 === 'string' ? fixIdea(researchData.idea_2, 2) : researchData.idea_2,
+            idea_3: typeof researchData.idea_3 === 'string' ? fixIdea(researchData.idea_3, 3) : researchData.idea_3
+          }
+          
+          logger.info('Research data structure auto-corrected successfully')
+        }
+        
       } catch (parseError) {
         logger.warn({ parseError }, 'Direct JSON parsing failed, trying extraction methods')
         
