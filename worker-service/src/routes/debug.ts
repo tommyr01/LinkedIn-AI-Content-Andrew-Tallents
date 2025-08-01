@@ -7,6 +7,9 @@ import { aiAgentsService } from '../services/ai-agents'
 import { historicalAnalysisService } from '../services/historical-analysis'
 import { performanceInsightsService, type EnhancedInsight } from '../services/performance-insights'
 import { simpleAIAgentsService } from '../services/ai-agents-simple'
+import { vectorSimilarityService } from '../services/vector-similarity'
+import { ragHistoricalAnalysisService } from '../services/historical-analysis-rag'
+import { embeddingsPopulatorService } from '../services/embeddings-populator'
 import { OpenAI } from 'openai'
 import { Redis } from 'ioredis'
 
@@ -452,6 +455,213 @@ router.post('/production-data', async (req, res) => {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
       details: 'This test uses the exact same data and process as production jobs'
+    })
+  }
+})
+
+// Vector similarity and RAG testing endpoints
+
+// Test vector similarity search
+router.post('/vector-similarity', async (req, res) => {
+  try {
+    const { topic = 'leadership challenges' } = req.body
+    
+    logger.info({ topic }, 'Debug: Testing vector similarity search')
+    
+    const similarPosts = await vectorSimilarityService.findSimilarHighPerformingPosts(topic, {
+      match_count: 5,
+      similarity_threshold: 0.3
+    })
+    
+    res.json({
+      success: true,
+      message: 'Vector similarity test completed',
+      topic,
+      results: {
+        found_posts: similarPosts.length,
+        posts: similarPosts.map(post => ({
+          post_id: post.post_id,
+          similarity_score: post.similarity_score,
+          engagement_score: post.engagement_score,
+          performance_tier: post.performance_tier,
+          content_preview: post.content.slice(0, 100) + '...',
+          combined_score: post.combined_score
+        }))
+      }
+    })
+  } catch (error) {
+    logger.error({ error }, 'Vector similarity debug test failed')
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
+// Test RAG-based historical analysis
+router.post('/rag-historical', async (req, res) => {
+  try {
+    const { topic = 'leadership challenges' } = req.body
+    
+    logger.info({ topic }, 'Debug: Testing RAG-based historical analysis')
+    
+    const insights = await ragHistoricalAnalysisService.generateHistoricalInsights(topic)
+    
+    res.json({
+      success: true,
+      message: 'RAG historical analysis test completed',
+      topic,
+      results: {
+        similar_posts_found: insights.similar_posts.length,
+        avg_engagement: insights.performance_context.avg_engagement,
+        prediction_confidence: insights.performance_context.prediction_confidence,
+        success_factors: insights.patterns.success_factors,
+        optimization_suggestions: insights.performance_factors.format_recommendations.slice(0, 3),
+        context_size_kb: Math.round(JSON.stringify(insights).length / 1024)
+      },
+      full_insights: insights
+    })
+  } catch (error) {
+    logger.error({ error }, 'RAG historical analysis debug test failed')
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
+// Test production data with RAG (the key test)
+router.post('/production-data-rag', async (req, res) => {
+  try {
+    const { topic = 'leadership challenges' } = req.body
+    
+    logger.info({ topic }, 'Debug: Testing AI agents with production data using RAG')
+    
+    // Use the exact same process as production but with RAG
+    // 1. Get real research data
+    const research = await researchService.enhancedFirecrawlResearch(topic)
+    logger.info({ 
+      hasResearch: !!research,
+      idea1Length: research.idea_1?.concise_summary?.length || 0
+    }, 'Production research data loaded')
+    
+    // 2. Get RAG-based historical insights (much smaller context)
+    let historicalInsights = null
+    try {
+      historicalInsights = await ragHistoricalAnalysisService.generateHistoricalInsights(topic)
+      logger.info({
+        similarPostsCount: historicalInsights.similar_posts.length,
+        contextSizeKB: Math.round(JSON.stringify(historicalInsights).length / 1024),
+        predictionConfidence: historicalInsights.performance_context.prediction_confidence
+      }, 'RAG historical insights loaded (much smaller context)')
+    } catch (historicalError) {
+      logger.warn({ error: historicalError instanceof Error ? historicalError.message : String(historicalError) }, 'RAG historical insights failed, continuing without')
+    }
+    
+    // 3. Test AI agents with RAG data (sequential, not parallel)
+    const results = []
+    for (let i = 1; i <= 3; i++) {
+      try {
+        const ideaKey = `idea_${i}` as keyof typeof research
+        const idea = research[ideaKey]
+        
+        logger.info({ agentNumber: i, ideaSummary: idea.concise_summary.slice(0, 50) }, 'Testing AI agent with RAG-based production data')
+        
+        // Use the actual production AI service method with RAG insights
+        const agentResults = await aiAgentsService.generateAllVariations(
+          topic,
+          { idea_1: idea, idea_2: idea, idea_3: idea }, // Use same idea for all to test single agent
+          undefined, // No voice guidelines
+          historicalInsights as any // RAG insights (much smaller)
+        )
+        
+        if (agentResults.length > 0) {
+          results.push(agentResults[0]) // Take first result
+          logger.info({ agentNumber: i, success: true }, 'AI agent succeeded with RAG production data')
+        } else {
+          logger.error({ agentNumber: i }, 'AI agent failed with RAG production data')
+        }
+      } catch (agentError) {
+        logger.error({ 
+          agentNumber: i, 
+          error: agentError instanceof Error ? agentError.message : String(agentError),
+          stack: agentError instanceof Error ? agentError.stack : undefined
+        }, 'AI agent error with RAG production data')
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: 'Production data RAG test completed',
+      topic,
+      resultsCount: results.length,
+      successfulAgents: results.length,
+      failedAgents: 3 - results.length,
+      dataInfo: {
+        researchLoaded: !!research,
+        ragInsightsLoaded: !!historicalInsights,
+        contextSizeKB: historicalInsights ? Math.round(JSON.stringify(historicalInsights).length / 1024) : 0,
+        vs_old_context: '858KB → ' + (historicalInsights ? Math.round(JSON.stringify(historicalInsights).length / 1024) : 0) + 'KB'
+      },
+      results: results.map(r => ({
+        agentName: r.agent_name,
+        hasContent: !!r.content.body,
+        contentLength: r.content.body.length,
+        contentPreview: r.content.body.slice(0, 100) + '...',
+        voiceScore: r.content.estimated_voice_score,
+        tokenCount: r.metadata.token_count,
+        historicalContextUsed: r.metadata.historical_context_used
+      }))
+    })
+    
+  } catch (error) {
+    logger.error({ error }, 'Production data RAG debug test failed')
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      details: 'This test uses RAG approach with much smaller context'
+    })
+  }
+})
+
+// Embeddings management endpoints
+router.get('/embeddings-stats', async (req, res) => {
+  try {
+    const stats = await embeddingsPopulatorService.getEmbeddingsStats()
+    
+    res.json({
+      success: true,
+      message: 'Embeddings database statistics',
+      stats
+    })
+  } catch (error) {
+    logger.error({ error }, 'Failed to get embeddings stats')
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
+router.post('/populate-embeddings', async (req, res) => {
+  try {
+    logger.info('Starting embeddings population (this may take a while)')
+    
+    // This is a long-running operation, so we'll start it and return immediately
+    embeddingsPopulatorService.populateAllPostEmbeddings().catch(error => {
+      logger.error({ error }, 'Embeddings population failed')
+    })
+    
+    res.json({
+      success: true,
+      message: 'Embeddings population started in background',
+      note: 'Check logs for progress. This may take 10-30 minutes depending on post count.'
+    })
+  } catch (error) {
+    logger.error({ error }, 'Failed to start embeddings population')
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
     })
   }
 })
