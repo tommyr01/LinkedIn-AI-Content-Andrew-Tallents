@@ -1030,7 +1030,7 @@ router.post('/ai-agents-minimal-test', async (req, res) => {
     }, 'MINIMAL TEST: Perfect research structure created')
     
     // Test AI agents with perfect structure (no RAG for now)
-    const results = await aiAgentsService.generateAllVariations(topic, perfectResearch, 'default', null)
+    const results = await aiAgentsService.generateAllVariations(topic, perfectResearch, 'default', undefined)
     
     logger.info({
       resultsCount: results?.length || 0,
