@@ -22,9 +22,9 @@ const router = express.Router()
 function convertRAGToEnhancedInsight(ragInsight: RAGHistoricalInsight): EnhancedInsight {
   // Convert similar_posts to HistoricalPost format
   const convertToHistoricalPost = (post: any): HistoricalPost => ({
-    id: post.post_id,
-    text: post.content,
-    posted_at: post.posted_date,
+    id: post.post_id || 'unknown',
+    text: post.content || 'No content available', // Ensure text is always present
+    posted_at: post.posted_date || new Date().toISOString(),
     total_reactions: post.total_reactions || 0,
     like_count: post.total_reactions || 0, // Use total_reactions as fallback
     comments_count: post.comments_count || 0,
@@ -36,50 +36,50 @@ function convertRAGToEnhancedInsight(ragInsight: RAGHistoricalInsight): Enhanced
     author_first_name: 'Andrew',
     author_last_name: 'Tallents',
     post_type: 'regular',
-    similarity_score: post.similarity_score
+    similarity_score: post.similarity_score || 0
   })
 
-  const historicalPosts = ragInsight.similar_posts.map(convertToHistoricalPost)
+  const historicalPosts = (ragInsight.similar_posts || []).map(convertToHistoricalPost)
 
   return {
     relatedPosts: historicalPosts,
-    topPerformers: historicalPosts.slice(0, 5), // Top 5 as top performers
+    topPerformers: historicalPosts.length > 0 ? historicalPosts.slice(0, 5) : [], // Ensure not empty
     patterns: {
-      avgWordCount: ragInsight.patterns.avg_word_count,
-      commonOpenings: ragInsight.patterns.common_openings,
-      commonStructures: ragInsight.structure_recommendations.map(s => s.structure),
-      bestPerformingFormats: ragInsight.performance_factors.format_recommendations,
-      engagementTriggers: ragInsight.patterns.engagement_triggers
+      avgWordCount: ragInsight.patterns?.avg_word_count || 150,
+      commonOpenings: ragInsight.patterns?.common_openings || [],
+      commonStructures: (ragInsight.structure_recommendations || []).map(s => s.structure || 'single_thought'),
+      bestPerformingFormats: ragInsight.performance_factors?.format_recommendations || [],
+      engagementTriggers: ragInsight.patterns?.engagement_triggers || []
     },
     performanceContext: {
-      avgEngagement: ragInsight.performance_context.avg_engagement,
-      topPerformingScore: ragInsight.performance_context.top_performing_score,
-      suggestionScore: Math.round(ragInsight.performance_context.top_performing_score * 0.8)
+      avgEngagement: ragInsight.performance_context?.avg_engagement || 0,
+      topPerformingScore: ragInsight.performance_context?.top_performing_score || 0,
+      suggestionScore: Math.round((ragInsight.performance_context?.top_performing_score || 0) * 0.8)
     },
     voiceAnalysis: {
-      tone: ragInsight.voice_analysis.tone as any,
-      personalStoryElements: ragInsight.voice_analysis.vulnerability_score > 30,
-      vulnerabilityScore: ragInsight.voice_analysis.vulnerability_score,
-      authoritySignals: ragInsight.voice_analysis.authority_signals,
-      emotionalWords: ragInsight.voice_analysis.emotional_words,
-      actionWords: ragInsight.voice_analysis.action_words
+      tone: (ragInsight.voice_analysis?.tone as any) || 'professional',
+      personalStoryElements: (ragInsight.voice_analysis?.vulnerability_score || 0) > 30,
+      vulnerabilityScore: ragInsight.voice_analysis?.vulnerability_score || 0,
+      authoritySignals: ragInsight.voice_analysis?.authority_signals || [],
+      emotionalWords: ragInsight.voice_analysis?.emotional_words || [],
+      actionWords: ragInsight.voice_analysis?.action_words || []
     },
-    structureRecommendations: ragInsight.structure_recommendations.map(rec => ({
-      wordCount: rec.wordCount,
-      sentenceCount: Math.round(rec.wordCount / 15), // Estimate
-      paragraphCount: Math.round(rec.wordCount / 75), // Estimate
-      hasQuestions: rec.openingType.includes('question'),
+    structureRecommendations: (ragInsight.structure_recommendations || []).map(rec => ({
+      wordCount: rec.wordCount || 150,
+      sentenceCount: Math.round((rec.wordCount || 150) / 15), // Estimate
+      paragraphCount: Math.round((rec.wordCount || 150) / 75), // Estimate
+      hasQuestions: (rec.openingType || '').includes('question'),
       hasEmojis: false, // Default
       hasHashtags: false, // Default
       hasCallToAction: true, // Default for recommendations
-      openingType: rec.openingType.includes('question') ? 'question' : 'statement' as any,
-      structure: rec.structure as any
+      openingType: (rec.openingType || '').includes('question') ? 'question' : 'statement' as any,
+      structure: (rec.structure || 'single_thought') as any
     })),
     performanceFactors: {
-      highEngagementTriggers: ragInsight.performance_factors.high_engagement_triggers,
-      optimalTiming: ragInsight.performance_factors.optimal_timing,
-      contentLengthOptimal: ragInsight.performance_factors.content_length_optimal,
-      formatRecommendations: ragInsight.performance_factors.format_recommendations
+      highEngagementTriggers: ragInsight.performance_factors?.high_engagement_triggers || [],
+      optimalTiming: ragInsight.performance_factors?.optimal_timing || [],
+      contentLengthOptimal: ragInsight.performance_factors?.content_length_optimal || 150,
+      formatRecommendations: ragInsight.performance_factors?.format_recommendations || []
     }
   }
 }
