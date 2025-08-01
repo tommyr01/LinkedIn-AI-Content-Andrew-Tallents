@@ -161,11 +161,13 @@ Write the post content directly - no need for JSON format, just return the compl
         const patterns = historicalInsights.patterns
         
         // Safely escape the post text to prevent template literal issues
-        const safePostText = topPost.text
-          .slice(0, 300)
-          .replace(/\\/g, '\\\\')  // Replace backslashes first
-          .replace(/`/g, '\\`')    // Then backticks
-          .replace(/\$/g, '\\$')   // Then dollar signs
+        const safePostText = (topPost.text || 'No content available')
+          .slice(0, 200) // Shorter to reduce issues
+          .replace(/[`$\\]/g, ' ')  // Replace problematic chars with spaces
+          .replace(/\n/g, ' ')      // Replace newlines  
+          .replace(/\r/g, ' ')      // Replace carriage returns
+          .replace(/"/g, "'")       // Replace quotes
+          .trim()
         
         // Build historical context with defensive array handling
         const authoritySignals = (voiceAnalysis.authoritySignals || []).join(', ') || 'Leadership experience'
@@ -179,25 +181,21 @@ Write the post content directly - no need for JSON format, just return the compl
           .map(rec => `- ${rec.structure || 'standard'} format with ${rec.openingType || 'engaging'} opening (${rec.wordCount || 150} words)`)
           .join('\n') || '- Standard structure with engaging opening (150 words)'
 
-        historicalContext = `
-**TOP PERFORMING SIMILAR POST EXAMPLE** (${topPost.total_reactions || 0} reactions, ${topPost.comments_count || 0} comments):
-"${safePostText}..."
+        historicalContext = `Based on Andrew's top-performing posts:
 
-**SUCCESSFUL VOICE PATTERNS:**
+EXAMPLE POST (${topPost.total_reactions || 0} reactions): ${safePostText}
+
+VOICE PATTERNS:
 - Tone: ${voiceAnalysis.tone || 'professional'}
-- Vulnerability Score: ${voiceAnalysis.vulnerabilityScore || 0}/100
-- Authority Signals: ${authoritySignals}
-- Emotional Words Used: ${emotionalWords}
-- Action Words Used: ${actionWords}
+- Vulnerability: ${voiceAnalysis.vulnerabilityScore || 0}/100
+- Authority: ${authoritySignals}
 
-**HIGH-ENGAGEMENT PATTERNS:**
-- Optimal word count: ~${patterns.avgWordCount || 150} words
-- Best performing formats: ${formatRecommendations}
-- High engagement triggers: ${engagementTriggers}
+ENGAGEMENT PATTERNS:  
+- Optimal length: ${patterns.avgWordCount || 150} words
+- Triggers: ${engagementTriggers}
+- Formats: ${formatRecommendations}
 
-**PROVEN STRUCTURE RECOMMENDATIONS:**
-${structureRecommendations}
-        `
+Use these insights to create authentic Andrew-style content.`
         
           logger.debug({
             agentName,
