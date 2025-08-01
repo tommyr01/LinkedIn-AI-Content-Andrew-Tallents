@@ -5,9 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { User, UserPlus, Search, Building, Calendar, MessageSquare, TrendingUp, Star, RefreshCw, MapPin, Users, ExternalLink } from 'lucide-react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { User, UserPlus, Search, Building, Calendar, MessageSquare, TrendingUp, Star, RefreshCw, MapPin, Users, ExternalLink, FileText } from 'lucide-react'
 import { toast } from "sonner"
 import { AddConnectionModal } from '@/components/add-connection-modal'
+import { ConnectionPostsTable, type ConnectionPost, type PostStats } from '@/components/connection-posts-table'
 
 interface Connection {
   id: string
@@ -34,6 +36,19 @@ export default function ConnectionsPage() {
   const [addOpen, setAddOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
+  
+  // Connection posts state
+  const [connectionPosts, setConnectionPosts] = useState<ConnectionPost[]>([])
+  const [postsStats, setPostsStats] = useState<PostStats>({
+    totalPosts: 0,
+    totalLikes: 0,
+    totalComments: 0,
+    totalReactions: 0,
+    uniqueConnections: 0,
+    averageEngagement: 0
+  })
+  const [isLoadingPosts, setIsLoadingPosts] = useState(false)
+  const [activeTab, setActiveTab] = useState('connections')
 
   const loadConnections = async (showLoading = true) => {
     try {
@@ -56,13 +71,59 @@ export default function ConnectionsPage() {
     }
   }
 
+  const loadConnectionPosts = async (showLoading = true) => {
+    try {
+      if (showLoading) setIsLoadingPosts(true)
+      console.log('🔍 Loading connection posts from Supabase...')
+      
+      const res = await fetch('/api/connections/posts/list?limit=100', { cache: 'no-store' })
+      if (!res.ok) {
+        const errorData = await res.json()
+        throw new Error(errorData.error || 'Failed to load connection posts')
+      }
+      
+      const data = await res.json()
+      if (data.success) {
+        setConnectionPosts(data.posts)
+        setPostsStats(data.stats)
+        console.log(`✅ Loaded ${data.posts.length} connection posts from Supabase`)
+      } else {
+        throw new Error(data.error || 'Failed to load connection posts')
+      }
+    } catch (e: any) {
+      console.error('Error loading connection posts:', e)
+      toast.error(e.message || 'Failed to load connection posts')
+      setConnectionPosts([])
+      setPostsStats({
+        totalPosts: 0,
+        totalLikes: 0,
+        totalComments: 0,
+        totalReactions: 0,
+        uniqueConnections: 0,
+        averageEngagement: 0
+      })
+    } finally {
+      if (showLoading) setIsLoadingPosts(false)
+    }
+  }
+
   const handleRefresh = () => {
     loadConnections(true)
+    if (activeTab === 'posts') {
+      loadConnectionPosts(true)
+    }
   }
 
   useEffect(() => {
     loadConnections()
   }, [])
+
+  // Load posts when posts tab is activated
+  useEffect(() => {
+    if (activeTab === 'posts' && connectionPosts.length === 0) {
+      loadConnectionPosts()
+    }
+  }, [activeTab])
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
@@ -149,7 +210,7 @@ export default function ConnectionsPage() {
       <AddConnectionModal open={addOpen} onOpenChange={(o) => { setAddOpen(o); if (!o) loadConnections() }} />
       <div className="flex items-center justify-between space-y-2">
         <div className="flex items-center space-x-4">
-          <h2 className="text-3xl font-bold tracking-tight">Key Connections</h2>
+          <h2 className="text-3xl font-bold tracking-tight">LinkedIn Network</h2>
           {lastRefresh && (
             <p className="text-sm text-muted-foreground">
               Last updated: {lastRefresh.toLocaleTimeString()}
@@ -161,10 +222,10 @@ export default function ConnectionsPage() {
             onClick={handleRefresh} 
             variant="outline" 
             size="sm"
-            disabled={isLoading}
+            disabled={isLoading || isLoadingPosts}
           >
-            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-            {isLoading ? 'Refreshing...' : 'Refresh'}
+            <RefreshCw className={`mr-2 h-4 w-4 ${(isLoading || isLoadingPosts) ? 'animate-spin' : ''}`} />
+            {(isLoading || isLoadingPosts) ? 'Refreshing...' : 'Refresh'}
           </Button>
           <Button onClick={() => setAddOpen(true)}>
             <UserPlus className="mr-2 h-4 w-4" />
@@ -172,6 +233,20 @@ export default function ConnectionsPage() {
           </Button>
         </div>
       </div>
+
+      <Tabs defaultValue="connections" className="space-y-4" onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="connections">
+            <Users className="mr-2 h-4 w-4" />
+            Connections ({connections.length})
+          </TabsTrigger>
+          <TabsTrigger value="posts">
+            <FileText className="mr-2 h-4 w-4" />
+            Their Posts ({postsStats.totalPosts})
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="connections" className="space-y-4">
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -324,7 +399,67 @@ export default function ConnectionsPage() {
             ))}
           </div>
         </CardContent>
-      </Card>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="posts" className="space-y-4">
+          {/* Posts Stats */}
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Posts</CardTitle>
+                <FileText className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{postsStats.totalPosts}</div>
+                <p className="text-xs text-muted-foreground">From all connections</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Reactions</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{postsStats.totalReactions}</div>
+                <p className="text-xs text-muted-foreground">Across all posts</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Active Connections</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{postsStats.uniqueConnections}</div>
+                <p className="text-xs text-muted-foreground">Posted content</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Avg Engagement</CardTitle>
+                <MessageSquare className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{postsStats.averageEngagement}</div>
+                <p className="text-xs text-muted-foreground">Per post</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Connection Posts Table */}
+          <ConnectionPostsTable 
+            posts={connectionPosts} 
+            stats={postsStats}
+            onRefresh={() => loadConnectionPosts(true)}
+            isLoading={isLoadingPosts}
+            showCommentGeneration={true}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
