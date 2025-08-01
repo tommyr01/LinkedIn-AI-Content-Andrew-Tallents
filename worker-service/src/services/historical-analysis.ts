@@ -189,7 +189,7 @@ export class HistoricalAnalysisService {
    */
   private async generateEmbedding(text: string): Promise<number[]> {
     const response = await this.openai.embeddings.create({
-      model: 'text-embedding-3-small',
+              model: 'text-embedding-ada-002',
       input: text.slice(0, 8000) // Limit input length
     })
 

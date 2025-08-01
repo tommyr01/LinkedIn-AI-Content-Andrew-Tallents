@@ -8,12 +8,81 @@ import { historicalAnalysisService } from '../services/historical-analysis'
 import { performanceInsightsService, type EnhancedInsight } from '../services/performance-insights'
 import { simpleAIAgentsService } from '../services/ai-agents-simple'
 import { vectorSimilarityService } from '../services/vector-similarity'
-import { ragHistoricalAnalysisService } from '../services/historical-analysis-rag'
+import { ragHistoricalAnalysisService, type RAGHistoricalInsight } from '../services/historical-analysis-rag'
 import { embeddingsPopulatorService } from '../services/embeddings-populator'
 import { OpenAI } from 'openai'
 import { Redis } from 'ioredis'
+import type { HistoricalPost } from '../services/historical-analysis'
 
 const router = express.Router()
+
+/**
+ * Convert RAG insights to EnhancedInsight format for AI agents
+ */
+function convertRAGToEnhancedInsight(ragInsight: RAGHistoricalInsight): EnhancedInsight {
+  // Convert similar_posts to HistoricalPost format
+  const convertToHistoricalPost = (post: any): HistoricalPost => ({
+    id: post.post_id,
+    text: post.content,
+    posted_at: post.posted_date,
+    total_reactions: post.total_reactions || 0,
+    like_count: post.total_reactions || 0, // Use total_reactions as fallback
+    comments_count: post.comments_count || 0,
+    reposts_count: 0, // Not available in RAG format
+    support_count: 0,
+    love_count: 0,
+    insight_count: 0,
+    celebrate_count: 0,
+    author_first_name: 'Andrew',
+    author_last_name: 'Tallents',
+    post_type: 'regular',
+    similarity_score: post.similarity_score
+  })
+
+  const historicalPosts = ragInsight.similar_posts.map(convertToHistoricalPost)
+
+  return {
+    relatedPosts: historicalPosts,
+    topPerformers: historicalPosts.slice(0, 5), // Top 5 as top performers
+    patterns: {
+      avgWordCount: ragInsight.patterns.avg_word_count,
+      commonOpenings: ragInsight.patterns.common_openings,
+      commonStructures: ragInsight.structure_recommendations.map(s => s.structure),
+      bestPerformingFormats: ragInsight.performance_factors.format_recommendations,
+      engagementTriggers: ragInsight.patterns.engagement_triggers
+    },
+    performanceContext: {
+      avgEngagement: ragInsight.performance_context.avg_engagement,
+      topPerformingScore: ragInsight.performance_context.top_performing_score,
+      suggestionScore: Math.round(ragInsight.performance_context.top_performing_score * 0.8)
+    },
+    voiceAnalysis: {
+      tone: ragInsight.voice_analysis.tone as any,
+      personalStoryElements: ragInsight.voice_analysis.vulnerability_score > 30,
+      vulnerabilityScore: ragInsight.voice_analysis.vulnerability_score,
+      authoritySignals: ragInsight.voice_analysis.authority_signals,
+      emotionalWords: ragInsight.voice_analysis.emotional_words,
+      actionWords: ragInsight.voice_analysis.action_words
+    },
+    structureRecommendations: ragInsight.structure_recommendations.map(rec => ({
+      wordCount: rec.wordCount,
+      sentenceCount: Math.round(rec.wordCount / 15), // Estimate
+      paragraphCount: Math.round(rec.wordCount / 75), // Estimate
+      hasQuestions: rec.openingType.includes('question'),
+      hasEmojis: false, // Default
+      hasHashtags: false, // Default
+      hasCallToAction: true, // Default for recommendations
+      openingType: rec.openingType.includes('question') ? 'question' : 'statement' as any,
+      structure: rec.structure as any
+    })),
+    performanceFactors: {
+      highEngagementTriggers: ragInsight.performance_factors.high_engagement_triggers,
+      optimalTiming: ragInsight.performance_factors.optimal_timing,
+      contentLengthOptimal: ragInsight.performance_factors.content_length_optimal,
+      formatRecommendations: ragInsight.performance_factors.format_recommendations
+    }
+  }
+}
 
 // Redis connection test
 router.get('/redis', async (req, res) => {
@@ -546,14 +615,17 @@ router.post('/production-data-rag', async (req, res) => {
     }, 'Production research data loaded')
     
     // 2. Get RAG-based historical insights (much smaller context)
-    let historicalInsights = null
+    let historicalInsights: EnhancedInsight | undefined = undefined
     try {
-      historicalInsights = await ragHistoricalAnalysisService.generateHistoricalInsights(topic)
+      const ragInsights = await ragHistoricalAnalysisService.generateHistoricalInsights(topic)
+      // Convert RAG insights to format expected by AI agents
+      historicalInsights = convertRAGToEnhancedInsight(ragInsights)
       logger.info({
-        similarPostsCount: historicalInsights.similar_posts.length,
-        contextSizeKB: Math.round(JSON.stringify(historicalInsights).length / 1024),
-        predictionConfidence: historicalInsights.performance_context.prediction_confidence
-      }, 'RAG historical insights loaded (much smaller context)')
+        similarPostsCount: ragInsights.similar_posts.length,
+        contextSizeKB: Math.round(JSON.stringify(ragInsights).length / 1024),
+        predictionConfidence: ragInsights.performance_context.prediction_confidence,
+        convertedToEnhanced: true
+      }, 'RAG historical insights loaded and converted (much smaller context)')
     } catch (historicalError) {
       logger.warn({ error: historicalError instanceof Error ? historicalError.message : String(historicalError) }, 'RAG historical insights failed, continuing without')
     }
@@ -572,7 +644,7 @@ router.post('/production-data-rag', async (req, res) => {
           topic,
           { idea_1: idea, idea_2: idea, idea_3: idea }, // Use same idea for all to test single agent
           undefined, // No voice guidelines
-          historicalInsights as any // RAG insights (much smaller)
+          historicalInsights // Converted RAG insights (much smaller)
         )
         
         if (agentResults.length > 0) {
