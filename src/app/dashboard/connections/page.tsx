@@ -38,14 +38,19 @@ export default function ConnectionsPage() {
   const loadConnections = async (showLoading = true) => {
     try {
       if (showLoading) setIsLoading(true)
-      const res = await fetch('/api/connections/list', { cache: 'no-store' })
-      if (!res.ok) throw new Error('Failed')
+      // Use Supabase endpoint instead of Airtable
+      const res = await fetch('/api/connections/supabase/list', { cache: 'no-store' })
+      if (!res.ok) {
+        const errorData = await res.json()
+        throw new Error(errorData.error || 'Failed to load connections')
+      }
       const data: Connection[] = await res.json()
       setConnections(data)
       setLastRefresh(new Date())
-    } catch (e) {
-      console.error(e)
-      toast.error('Failed to load connections')
+      console.log(`✅ Loaded ${data.length} connections from Supabase`)
+    } catch (e: any) {
+      console.error('Error loading connections:', e)
+      toast.error(e.message || 'Failed to load connections')
     } finally {
       if (showLoading) setIsLoading(false)
     }

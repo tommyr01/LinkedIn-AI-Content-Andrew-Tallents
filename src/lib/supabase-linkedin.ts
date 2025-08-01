@@ -140,6 +140,97 @@ export interface DBLinkedInComment {
   updated_at: string
 }
 
+// LinkedIn Connection types
+export interface LinkedInConnection {
+  full_name: string
+  first_name?: string
+  last_name?: string
+  headline?: string
+  username?: string
+  profile_picture_url?: string
+  about?: string
+  full_location?: string
+  hashtags?: string
+  is_creator?: boolean
+  is_influencer?: boolean
+  is_premium?: boolean
+  show_follower_count?: boolean
+  background_picture_url?: string
+  urn?: string
+  follower_count?: number
+  connection_count?: number
+  current_company?: string
+  title?: string
+  company_location?: string
+  duration?: string
+  start_date?: string
+  is_current?: boolean
+  company_linkedin_url?: string
+  current_company_urn?: string
+}
+
+export interface DBLinkedInConnection {
+  id: string
+  full_name: string
+  first_name?: string
+  last_name?: string
+  headline?: string
+  username?: string
+  profile_picture_url?: string
+  about?: string
+  full_location?: string
+  hashtags?: string
+  is_creator: boolean
+  is_influencer: boolean
+  is_premium: boolean
+  show_follower_count: boolean
+  background_picture_url?: string
+  urn?: string
+  follower_count: number
+  connection_count: number
+  current_company?: string
+  title?: string
+  company_location?: string
+  duration?: string
+  start_date?: string
+  is_current: boolean
+  company_linkedin_url?: string
+  current_company_urn?: string
+  last_synced_at: string
+  created_at: string
+  updated_at: string
+}
+
+export interface DBConnectionPost {
+  id: string
+  connection_id: string
+  post_urn: string
+  full_urn?: string
+  posted_date?: string
+  relative_posted?: string
+  post_type: string
+  post_text?: string
+  post_url?: string
+  author_first_name?: string
+  author_last_name?: string
+  author_headline?: string
+  username?: string
+  author_linkedin_url?: string
+  author_profile_picture?: string
+  total_reactions: number
+  likes: number
+  support: number
+  love: number
+  insight: number
+  celebrate: number
+  comments_count: number
+  reposts: number
+  media_type?: string
+  media_url?: string
+  media_thumbnail?: string
+  created_at: string
+}
+
 export class SupabaseLinkedInService {
   
   private checkSupabaseConnection() {
@@ -366,6 +457,120 @@ export class SupabaseLinkedInService {
     }
   }
 
+  // Connections Operations
+  async upsertConnection(connectionData: LinkedInConnection): Promise<DBLinkedInConnection> {
+    this.checkSupabaseConnection()
+    
+    const dbConnection = this.transformConnectionToDB(connectionData)
+    
+    const { data, error } = await supabase!
+      .from('linkedin_connections')
+      .upsert(dbConnection, { 
+        onConflict: 'username',
+        ignoreDuplicates: false 
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error upserting LinkedIn connection:', error)
+      throw new Error(`Failed to save connection: ${error.message}`)
+    }
+
+    return data
+  }
+
+  async getConnections(limit: number = 200): Promise<DBLinkedInConnection[]> {
+    this.checkSupabaseConnection()
+    
+    const { data, error } = await supabase!
+      .from('linkedin_connections')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    if (error) {
+      console.error('Error fetching connections:', error)
+      throw new Error(`Failed to fetch connections: ${error.message}`)
+    }
+
+    return data || []
+  }
+
+  async getConnectionByUsername(username: string): Promise<DBLinkedInConnection | null> {
+    this.checkSupabaseConnection()
+    
+    const { data, error } = await supabase!
+      .from('linkedin_connections')
+      .select('*')
+      .eq('username', username)
+      .single()
+
+    if (error && error.code !== 'PGRST116') { // Not found error
+      console.error('Error fetching connection:', error)
+      throw new Error(`Failed to fetch connection: ${error.message}`)
+    }
+
+    return data
+  }
+
+  async searchConnections(searchTerm: string): Promise<DBLinkedInConnection[]> {
+    this.checkSupabaseConnection()
+    
+    const { data, error } = await supabase!
+      .from('linkedin_connections')
+      .select('*')
+      .or(`full_name.ilike.%${searchTerm}%,current_company.ilike.%${searchTerm}%,title.ilike.%${searchTerm}%,headline.ilike.%${searchTerm}%`)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Error searching connections:', error)
+      throw new Error(`Failed to search connections: ${error.message}`)
+    }
+
+    return data || []
+  }
+
+  // Connection Posts Operations
+  async upsertConnectionPost(connectionId: string, postData: any): Promise<DBConnectionPost> {
+    this.checkSupabaseConnection()
+    
+    const dbPost = this.transformConnectionPostToDB(connectionId, postData)
+    
+    const { data, error } = await supabase!
+      .from('connection_posts')
+      .upsert(dbPost, { 
+        onConflict: 'post_urn',
+        ignoreDuplicates: false 
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error upserting connection post:', error)
+      throw new Error(`Failed to save connection post: ${error.message}`)
+    }
+
+    return data
+  }
+
+  async getConnectionPosts(connectionId: string): Promise<DBConnectionPost[]> {
+    this.checkSupabaseConnection()
+    
+    const { data, error } = await supabase!
+      .from('connection_posts')
+      .select('*')
+      .eq('connection_id', connectionId)
+      .order('posted_date', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching connection posts:', error)
+      throw new Error(`Failed to fetch connection posts: ${error.message}`)
+    }
+
+    return data || []
+  }
+
   // Analytics
   async getHighValueProspects(minScore: number = 60): Promise<any[]> {
     this.checkSupabaseConnection()
@@ -557,6 +762,79 @@ export class SupabaseLinkedInService {
     }
     
     return 'Unknown'
+  }
+
+  // Connection transform functions
+  private transformConnectionToDB(connection: LinkedInConnection): Partial<DBLinkedInConnection> {
+    return {
+      full_name: connection.full_name,
+      first_name: connection.first_name,
+      last_name: connection.last_name,
+      headline: connection.headline,
+      username: connection.username,
+      profile_picture_url: connection.profile_picture_url,
+      about: connection.about,
+      full_location: connection.full_location,
+      hashtags: connection.hashtags,
+      is_creator: connection.is_creator || false,
+      is_influencer: connection.is_influencer || false,
+      is_premium: connection.is_premium || false,
+      show_follower_count: connection.show_follower_count !== false,
+      background_picture_url: connection.background_picture_url,
+      urn: connection.urn,
+      follower_count: connection.follower_count || 0,
+      connection_count: connection.connection_count || 0,
+      current_company: connection.current_company,
+      title: connection.title,
+      company_location: connection.company_location,
+      duration: connection.duration,
+      start_date: connection.start_date ? new Date(connection.start_date).toISOString() : undefined,
+      is_current: connection.is_current !== false,
+      company_linkedin_url: connection.company_linkedin_url,
+      current_company_urn: connection.current_company_urn,
+      last_synced_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+  }
+
+  private transformConnectionPostToDB(connectionId: string, postData: any): Partial<DBConnectionPost> {
+    // Handle different timestamp formats
+    let postedDate: string | undefined = undefined
+    if (postData.posted_at) {
+      if (typeof postData.posted_at === 'string') {
+        postedDate = postData.posted_at
+      } else if (typeof postData.posted_at === 'object' && postData.posted_at.date) {
+        postedDate = new Date(postData.posted_at.date).toISOString()
+      }
+    }
+
+    return {
+      connection_id: connectionId,
+      post_urn: postData.urn || postData.post_urn,
+      full_urn: postData.full_urn,
+      posted_date: postedDate,
+      relative_posted: typeof postData.posted_at === 'object' ? postData.posted_at.relative : undefined,
+      post_type: postData.post_type || 'regular',
+      post_text: postData.text || postData.post_text,
+      post_url: postData.url || postData.post_url,
+      author_first_name: postData.author?.first_name,
+      author_last_name: postData.author?.last_name,
+      author_headline: postData.author?.headline,
+      username: postData.author?.username || postData.username,
+      author_linkedin_url: postData.author?.profile_url,
+      author_profile_picture: postData.author?.profile_picture,
+      total_reactions: postData.stats?.total_reactions || 0,
+      likes: postData.stats?.like || postData.stats?.likes || 0,
+      support: postData.stats?.support || 0,
+      love: postData.stats?.love || 0,
+      insight: postData.stats?.insight || 0,
+      celebrate: postData.stats?.celebrate || 0,
+      comments_count: postData.stats?.comments || postData.stats?.comments_count || 0,
+      reposts: postData.stats?.reposts || 0,
+      media_type: postData.media?.type,
+      media_url: postData.media?.url,
+      media_thumbnail: postData.media?.thumbnail
+    }
   }
 }
 

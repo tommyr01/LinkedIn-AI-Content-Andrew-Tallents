@@ -48,7 +48,8 @@ export function AddConnectionModal({ open, onOpenChange, onConnectionCreated }: 
 
     setIsEnriching(true)
     try {
-      const res = await fetch('/api/connections/enrich-from-linkedin', {
+      // Use Supabase endpoint instead of Airtable
+      const res = await fetch('/api/connections/supabase/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -95,9 +96,9 @@ export function AddConnectionModal({ open, onOpenChange, onConnectionCreated }: 
           createRecord: true // Create the full enriched record
         }
         
-        console.log('📤 Making API request to enrich-from-linkedin:', requestBody)
+        console.log('📤 Making API request to supabase/sync:', requestBody)
         
-        const res = await fetch('/api/connections/enrich-from-linkedin', {
+        const res = await fetch('/api/connections/supabase/sync', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(requestBody)
@@ -114,13 +115,13 @@ export function AddConnectionModal({ open, onOpenChange, onConnectionCreated }: 
         const responseData = await res.json()
         console.log('✅ API Success Response:', responseData)
         
-        if (responseData.airtableRecord) {
-          console.log('🎯 Airtable record created:', responseData.airtableRecord.id)
+        if (responseData.supabaseRecord) {
+          console.log('🎯 Supabase record created:', responseData.supabaseRecord.id)
         } else {
-          console.warn('⚠️ No Airtable record in response')
+          console.warn('⚠️ No Supabase record in response')
         }
         
-        toast.success('Connection added with LinkedIn data!')
+        toast.success('Connection added to Supabase with LinkedIn data!')
         onConnectionCreated?.()
         handleReset()
         onOpenChange(false)
