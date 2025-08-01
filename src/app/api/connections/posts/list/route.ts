@@ -95,7 +95,7 @@ async function fetchAllConnectionPosts(limit: number, offset: number): Promise<a
   const allConnectionPosts = await getAllConnectionPostsWithPagination(limit, offset)
   
   // Enrich with connection data
-  const enrichedPosts = []
+  const enrichedPosts: any[] = []
   for (const post of allConnectionPosts) {
     try {
       // Get connection data if we have a connection_id

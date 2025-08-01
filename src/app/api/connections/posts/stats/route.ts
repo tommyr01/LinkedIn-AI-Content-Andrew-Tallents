@@ -70,7 +70,7 @@ async function calculateConnectionPostsStats() {
     throw new Error(`Failed to fetch connection posts: ${postsError.message}`)
   }
 
-  const allPosts = posts || []
+  const allPosts: any[] = posts || []
 
   // Get all connections for name mapping
   const { data: connections, error: connectionsError } = await supabase
@@ -83,7 +83,7 @@ async function calculateConnectionPostsStats() {
 
   const connectionsMap = new Map()
   if (connections) {
-    connections.forEach(conn => {
+    connections.forEach((conn: any) => {
       connectionsMap.set(conn.id, conn)
     })
   }
@@ -98,7 +98,7 @@ async function calculateConnectionPostsStats() {
 
   // Top connections by post count and engagement
   const connectionStats = new Map()
-  allPosts.forEach(post => {
+  allPosts.forEach((post: any) => {
     const connectionId = post.connection_id
     if (!connectionId) return
 
@@ -138,14 +138,14 @@ async function calculateConnectionPostsStats() {
   const thirtyDaysAgo = new Date()
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
   
-  const recentPosts = allPosts.filter(post => {
+  const recentPosts = allPosts.filter((post: any) => {
     if (!post.posted_date) return false
     const postDate = new Date(post.posted_date)
     return postDate >= thirtyDaysAgo
   })
 
   const dailyStats = new Map()
-  recentPosts.forEach(post => {
+  recentPosts.forEach((post: any) => {
     const date = new Date(post.posted_date).toISOString().split('T')[0]
     if (!dailyStats.has(date)) {
       dailyStats.set(date, { date, posts: 0, reactions: 0 })
