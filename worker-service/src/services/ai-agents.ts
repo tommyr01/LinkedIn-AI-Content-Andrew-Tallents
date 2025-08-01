@@ -136,6 +136,14 @@ Write the post content directly - no need for JSON format, just return the compl
     logger.info({ agentName, ideaNumber }, 'Starting AI agent content generation')
 
     try {
+      // Debug: Log input parameters
+      logger.debug({ 
+        agentName,
+        hasIdea: !!idea,
+        ideaSummary: idea?.concise_summary?.slice(0, 50),
+        hasVoiceGuidelines: !!voiceGuidelines,
+        hasHistoricalInsights: !!historicalInsights
+      }, 'AI agent generation input parameters')
       // Create historical context if available
       let historicalContext = ''
       if (historicalInsights && historicalInsights.topPerformers.length > 0) {
@@ -176,6 +184,24 @@ ${historicalInsights.structureRecommendations.slice(0, 2).map(rec =>
       const systemPrompt = this.createAndrewTallentsPrompt(ideaNumber, historicalContext)
       const userPrompt = this.createUserPrompt(idea)
 
+      // Debug: Log prompt lengths
+      logger.debug({
+        agentName,
+        systemPromptLength: systemPrompt.length,
+        userPromptLength: userPrompt.length,
+        historicalContextLength: historicalContext.length,
+        totalPromptLength: systemPrompt.length + userPrompt.length
+      }, 'AI agent prompt lengths')
+
+      // Debug: Log first 200 chars of each prompt for debugging
+      logger.debug({
+        agentName,
+        systemPromptPreview: systemPrompt.slice(0, 200) + '...',
+        userPromptPreview: userPrompt.slice(0, 200) + '...'
+      }, 'AI agent prompt previews')
+
+      logger.info({ agentName, model: appConfig.openai.model }, 'Making OpenAI API call')
+
       const completion = await this.openai.chat.completions.create({
         model: appConfig.openai.model,
         messages: [
@@ -192,11 +218,24 @@ ${historicalInsights.structureRecommendations.slice(0, 2).map(rec =>
         temperature: 0.7
       })
 
+      logger.info({ 
+        agentName, 
+        tokensUsed: completion.usage?.total_tokens,
+        finishReason: completion.choices[0]?.finish_reason
+      }, 'OpenAI API call completed')
+
       const content = completion.choices[0]?.message?.content || ''
       
       if (!content.trim()) {
+        logger.error({ agentName, finishReason: completion.choices[0]?.finish_reason }, 'Empty content generated from OpenAI')
         throw new Error('Empty content generated')
       }
+
+      logger.debug({ 
+        agentName, 
+        contentLength: content.length,
+        contentPreview: content.slice(0, 100) + '...'
+      }, 'Content generated successfully')
 
       const generationTime = Date.now() - startTime
 
@@ -263,7 +302,34 @@ ${historicalInsights.structureRecommendations.slice(0, 2).map(rec =>
       return result
 
     } catch (error) {
-      logger.error({ error, agentName, ideaNumber }, 'AI agent content generation failed')
+      // Enhanced error logging
+      const errorDetails = {
+        agentName,
+        ideaNumber,
+        error: error instanceof Error ? error.message : String(error),
+        errorStack: error instanceof Error ? error.stack : undefined,
+        errorName: error instanceof Error ? error.name : 'Unknown',
+        hasIdea: !!idea,
+        hasVoiceGuidelines: !!voiceGuidelines,
+        hasHistoricalInsights: !!historicalInsights,
+        openaiModel: appConfig.openai.model,
+        hasOpenaiKey: !!appConfig.openai.apiKey
+      }
+      
+      logger.error(errorDetails, 'AI agent content generation failed - detailed error info')
+      
+      // If it's an OpenAI error, log additional details
+      if (error && typeof error === 'object' && 'response' in error) {
+        logger.error({
+          agentName,
+          openaiError: {
+            status: (error as any).response?.status,
+            statusText: (error as any).response?.statusText,
+            data: (error as any).response?.data
+          }
+        }, 'OpenAI API error details')
+      }
+      
       return null
     }
   }

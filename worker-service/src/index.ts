@@ -5,6 +5,7 @@ import { checkQueueHealth, closeQueue } from './queue/setup'
 import ContentGenerationWorker from './workers/content-generation'
 import { supabaseService } from './services/supabase'
 import { debugHandler, testJobHandler } from './api/debug'
+import debugRouter from './routes/debug'
 
 class WorkerService {
   private contentWorker: ContentGenerationWorker | null = null
@@ -20,6 +21,7 @@ class WorkerService {
     // Debug endpoints
     this.app.get('/debug', debugHandler)
     this.app.post('/debug/test-job', testJobHandler)
+    this.app.use('/debug', debugRouter)
     this.app.get('/health', async (req, res) => {
       const health = await this.getStatus()
       res.json(health)

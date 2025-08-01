@@ -1,0 +1,344 @@
+import express from 'express'
+import { appConfig } from '../config'
+import logger from '../lib/logger'
+import { supabaseService } from '../services/supabase'
+import { researchService } from '../services/research'
+import { aiAgentsService } from '../services/ai-agents'
+import { historicalAnalysisService } from '../services/historical-analysis'
+import { performanceInsightsService } from '../services/performance-insights'
+import { OpenAI } from 'openai'
+import { Redis } from 'ioredis'
+
+const router = express.Router()
+
+// Redis connection test
+router.get('/redis', async (req, res) => {
+  try {
+    const redis = new Redis(appConfig.redis.url)
+    
+    await redis.set('debug:test', 'connection-test', 'EX', 10)
+    const result = await redis.get('debug:test')
+    await redis.del('debug:test')
+    await redis.disconnect()
+    
+    res.json({
+      success: true,
+      message: 'Redis connection successful',
+      testResult: result,
+      redisUrl: appConfig.redis.url.replace(/:[^:]*@/, ':***@') // Hide password
+    })
+  } catch (error) {
+    logger.error({ error }, 'Redis debug test failed')
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      redisUrl: appConfig.redis.url.replace(/:[^:]*@/, ':***@')
+    })
+  }
+})
+
+// OpenAI connection test
+router.get('/openai', async (req, res) => {
+  try {
+    const openai = new OpenAI({
+      apiKey: appConfig.openai.apiKey
+    })
+    
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: [
+        { role: 'system', content: 'You are a test assistant.' },
+        { role: 'user', content: 'Say "OpenAI connection test successful"' }
+      ],
+      max_tokens: 20
+    })
+    
+    res.json({
+      success: true,
+      message: 'OpenAI connection successful',
+      testResult: completion.choices[0]?.message?.content,
+      model: appConfig.openai.model,
+      hasApiKey: !!appConfig.openai.apiKey
+    })
+  } catch (error) {
+    logger.error({ error }, 'OpenAI debug test failed')
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      hasApiKey: !!appConfig.openai.apiKey,
+      model: appConfig.openai.model
+    })
+  }
+})
+
+// Supabase connection test
+router.get('/supabase', async (req, res) => {
+  try {
+    // Test basic connection by trying to fetch a job (even if none exist)
+    const testJob = await supabaseService.getJob('test-id')
+    
+    // Test job creation
+    const testJobData = {
+      topic: 'debug test topic',
+      platform: 'linkedin' as const,
+      queue_job_id: 'debug-test-' + Date.now()
+    }
+    
+    const createdJob = await supabaseService.createJob(testJobData)
+    
+    res.json({
+      success: true,
+      message: 'Supabase connection successful',
+      canQuery: true,
+      canCreate: !!createdJob,
+      createdJobId: createdJob?.id,
+      supabaseUrl: appConfig.supabase.url,
+      hasServiceKey: !!appConfig.supabase.serviceKey
+    })
+  } catch (error) {
+    logger.error({ error }, 'Supabase debug test failed')
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      supabaseUrl: appConfig.supabase.url,
+      hasServiceKey: !!appConfig.supabase.serviceKey
+    })
+  }
+})
+
+// Research services test
+router.post('/research', async (req, res) => {
+  try {
+    const { topic = 'test leadership topic' } = req.body
+    
+    logger.info({ topic }, 'Debug: Testing research service')
+    
+    // Test basic research (without historical analysis to isolate issues)
+    const research = await researchService.conductResearch(topic, 'linkedin')
+    
+    res.json({
+      success: true,
+      message: 'Research service test completed',
+      hasResults: !!research,
+      resultCount: research ? Object.keys(research).length : 0,
+      research: research ? {
+        idea_1: research.idea_1?.concise_summary || 'No summary',
+        idea_2: research.idea_2?.concise_summary || 'No summary', 
+        idea_3: research.idea_3?.concise_summary || 'No summary'
+      } : null,
+      apiKeys: {
+        hasFirecrawl: !!appConfig.research.firecrawl.apiKey,
+        hasPerplexity: !!appConfig.research.perplexity.apiKey
+      }
+    })
+  } catch (error) {
+    logger.error({ error }, 'Research debug test failed')
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      apiKeys: {
+        hasFirecrawl: !!appConfig.research.firecrawl.apiKey,
+        hasPerplexity: !!appConfig.research.perplexity.apiKey
+      }
+    })
+  }
+})
+
+// Historical analysis test
+router.post('/historical', async (req, res) => {
+  try {
+    const { topic = 'leadership' } = req.body
+    
+    logger.info({ topic }, 'Debug: Testing historical analysis service')
+    
+    // Test finding similar posts
+    const similarPosts = await historicalAnalysisService.findSimilarHistoricalPosts(topic, 5)
+    
+    // Test generating insights
+    const insights = await historicalAnalysisService.generateHistoricalInsights(topic)
+    
+    res.json({
+      success: true,
+      message: 'Historical analysis test completed',
+      similarPostsCount: similarPosts.length,
+      hasInsights: !!insights,
+      samplePost: similarPosts[0] ? {
+        id: similarPosts[0].id,
+        textPreview: similarPosts[0].text.slice(0, 100) + '...',
+        reactions: similarPosts[0].total_reactions
+      } : null,
+      insightsPreview: insights ? {
+        topPerformersCount: insights.topPerformers.length,
+        avgWordCount: insights.patterns.avgWordCount,
+        tone: insights.voiceAnalysis.tone
+      } : null
+    })
+  } catch (error) {
+    logger.error({ error }, 'Historical analysis debug test failed')
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      details: 'Check if historical posts exist in database and OpenAI embeddings are working'
+    })
+  }
+})
+
+// Simple AI agents test (without historical context)
+router.post('/ai-agents', async (req, res) => {
+  try {
+    const { topic = 'test leadership topic' } = req.body
+    
+    logger.info({ topic }, 'Debug: Testing AI agents service')
+    
+    // Create simple research data for testing
+    const simpleResearch = {
+      idea_1: {
+        concise_summary: 'Test leadership insight',
+        angle_approach: 'Personal story approach',
+        details: 'Focus on self-leadership challenges',
+        relevance: 'Highly relevant to CEO audience'
+      },
+      idea_2: {
+        concise_summary: 'Test business growth insight',
+        angle_approach: 'Data-driven approach',
+        details: 'Key metrics and performance indicators',
+        relevance: 'Relevant to scaling businesses'
+      },
+      idea_3: {
+        concise_summary: 'Test team management insight',
+        angle_approach: 'Vulnerability-based approach',
+        details: 'Managing team dynamics and culture',
+        relevance: 'Critical for established leaders'
+      }
+    }
+    
+    // Test AI agents without historical context
+    const results = await aiAgentsService.generateAllVariations(
+      topic,
+      simpleResearch,
+      undefined, // No voice guidelines
+      undefined  // No historical insights
+    )
+    
+    res.json({
+      success: true,
+      message: 'AI agents test completed',
+      resultsCount: results.length,
+      results: results.map(r => ({
+        agentName: r.agent_name,
+        hasContent: !!r.content.body,
+        contentPreview: r.content.body.slice(0, 100) + '...',
+        voiceScore: r.content.estimated_voice_score,
+        tokenCount: r.metadata.token_count
+      }))
+    })
+  } catch (error) {
+    logger.error({ error }, 'AI agents debug test failed')
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
+// Simple job test (minimal processing)
+router.post('/simple-job', async (req, res) => {
+  try {
+    const { topic = 'test topic' } = req.body
+    
+    logger.info({ topic }, 'Debug: Testing simple job processing')
+    
+    // Create a minimal job that bypasses complex features
+    const job = await supabaseService.createJob({
+      topic,
+      platform: 'linkedin',
+      queue_job_id: 'debug-simple-' + Date.now()
+    })
+    
+    if (!job) {
+      throw new Error('Failed to create debug job')
+    }
+    
+    // Update job to processing
+    await supabaseService.updateJobStatus(job.id, 'processing', 25)
+    
+    // Test basic research
+    const research = await researchService.conductResearch(topic, 'linkedin')
+    await supabaseService.updateJobStatus(job.id, 'processing', 50)
+    
+    // Test AI agents (without historical context)
+    const results = await aiAgentsService.generateAllVariations(
+      topic,
+      research,
+      undefined,
+      undefined
+    )
+    await supabaseService.updateJobStatus(job.id, 'processing', 75)
+    
+    // Save drafts
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i]
+      await supabaseService.createDraft({
+        job_id: job.id,
+        variant_number: i + 1,
+        agent_name: result.agent_name,
+        content: result.content,
+        metadata: result.metadata,
+        score: result.score
+      })
+    }
+    
+    // Complete job
+    await supabaseService.updateJobStatus(job.id, 'completed', 100)
+    
+    res.json({
+      success: true,
+      message: 'Simple job test completed successfully',
+      jobId: job.id,
+      draftsCreated: results.length,
+      stages: {
+        jobCreated: true,
+        researchCompleted: !!research,
+        aiAgentsCompleted: results.length > 0,
+        draftsStored: true,
+        jobCompleted: true
+      }
+    })
+    
+  } catch (error) {
+    logger.error({ error }, 'Simple job debug test failed')
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
+// Environment variables check
+router.get('/env', async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      environment: {
+        hasOpenAIKey: !!appConfig.openai.apiKey,
+        openAIModel: appConfig.openai.model,
+        hasFirecrawlKey: !!appConfig.research.firecrawl.apiKey,
+        hasPerplexityKey: !!appConfig.research.perplexity.apiKey,
+        hasSupabaseUrl: !!appConfig.supabase.url,
+        hasSupabaseKey: !!appConfig.supabase.serviceKey,
+        hasRedisUrl: !!appConfig.redis.url,
+        workerConcurrency: appConfig.worker.concurrency,
+        maxJobAttempts: appConfig.worker.maxJobAttempts,
+        logLevel: appConfig.logging.level
+      }
+    })
+  } catch (error) {
+    logger.error({ error }, 'Environment debug check failed')
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
+export default router
