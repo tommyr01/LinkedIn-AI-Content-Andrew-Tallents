@@ -27,11 +27,9 @@ export default function CalendarPage() {
 
   const fetchScheduledPosts = async () => {
     try {
-      const response = await fetch('/api/airtable/posts?scheduled=true')
-      if (response.ok) {
-        const posts = await response.json()
-        setScheduledPosts(posts.filter((post: ScheduledPost) => post.fields['Scheduled Date']))
-      }
+      // TODO: Replace with Supabase-based content scheduling when implemented
+      console.log('Calendar: Scheduled posts feature disabled (migrated from Airtable to Supabase)')
+      setScheduledPosts([])
     } catch (error) {
       console.error('Error fetching scheduled posts:', error)
     } finally {
