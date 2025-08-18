@@ -240,16 +240,33 @@ export class ContentGenerationWorker {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       logger.error({ jobId: job.id, error: errorMessage }, 'Content generation failed')
 
-      // Try to update job status in database
-      if (job.data.topic) {
-        // Create a failed job record if we don't have a database job yet
+      // Try to find existing database job by queue_job_id first
+      let existingDbJob = null
+      try {
+        if (job.id) {
+          const jobWithDrafts = await supabaseService.getJobWithDrafts(job.id.toString())
+          existingDbJob = jobWithDrafts?.job || null
+        }
+      } catch (findError) {
+        logger.warn({ jobId: job.id, error: findError }, 'Could not find existing database job')
+      }
+
+      // Update existing job or create failed job record
+      if (existingDbJob) {
+        // Update the existing job to failed status
+        await supabaseService.failJob(existingDbJob.id, errorMessage)
+        logger.info({ jobId: job.id, dbJobId: existingDbJob.id }, 'Updated existing job to failed status')
+      } else if (job.data.topic) {
+        // Create a failed job record with proper queue_job_id if we don't have one yet
         const dbJob = await supabaseService.createJob({
           topic: job.data.topic,
-          platform: job.data.platform || 'linkedin'
+          platform: job.data.platform || 'linkedin',
+          queue_job_id: job.id // Important: include the queue job ID
         })
         
         if (dbJob) {
           await supabaseService.failJob(dbJob.id, errorMessage)
+          logger.info({ jobId: job.id, dbJobId: dbJob.id }, 'Created new failed job record')
         }
       }
 
