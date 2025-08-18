@@ -3,6 +3,7 @@ import { linkedInScraper } from '@/lib/linkedin-scraper'
 import { createConnection } from '@/lib/airtable-http'
 
 export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
