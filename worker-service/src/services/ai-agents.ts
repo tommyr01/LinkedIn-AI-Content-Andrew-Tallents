@@ -110,7 +110,7 @@ You will process research idea_${ideaNumber} and create a LinkedIn post using th
     // Safely escape all dynamic content
     const safeSummary = (idea.concise_summary || '').replace(/`/g, '\\`').replace(/\$/g, '\\$')
     const safeAngle = (idea.angle_approach || '').replace(/`/g, '\\`').replace(/\$/g, '\\$')
-    const safeDetails = (idea.details || '').replace(/`/g, '\\`').replace(/\$/g, '\\$')
+    const safeDetails = (Array.isArray(idea.details) ? idea.details.join('\n• ') : (idea.details || '')).replace(/`/g, '\\`').replace(/\$/g, '\\$')
     const safeRelevance = (idea.relevance || '').replace(/`/g, '\\`').replace(/\$/g, '\\$')
     
     return `**Input Topic Data (Use this information to craft the post):**
