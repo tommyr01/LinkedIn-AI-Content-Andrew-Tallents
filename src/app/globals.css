@@ -58,97 +58,19 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
   }
   body {
     @apply bg-background text-foreground;
-    font-family: var(--font-family-primary);
-  }
-  
-  /* Typography Utilities */
-  .text-h1 {
-    font-size: var(--font-size-h1);
-    line-height: var(--line-height-tight);
-    font-weight: var(--font-weight-bold);
-    letter-spacing: var(--letter-spacing-tight);
-  }
-  
-  .text-h2 {
-    font-size: var(--font-size-h2);
-    line-height: var(--line-height-snug);
-    font-weight: var(--font-weight-semibold);
-    letter-spacing: var(--letter-spacing-tight);
-  }
-  
-  .text-h3 {
-    font-size: var(--font-size-h3);
-    line-height: var(--line-height-snug);
-    font-weight: var(--font-weight-semibold);
-  }
-  
-  .text-h4 {
-    font-size: var(--font-size-h4);
-    line-height: var(--line-height-normal);
-    font-weight: var(--font-weight-medium);
-  }
-  
-  .text-h5 {
-    font-size: var(--font-size-h5);
-    line-height: var(--line-height-normal);
-    font-weight: var(--font-weight-medium);
-  }
-  
-  .text-body-lg {
-    font-size: var(--font-size-body-lg);
-    line-height: var(--line-height-relaxed);
-    font-weight: var(--font-weight-normal);
-  }
-  
-  .text-body {
-    font-size: var(--font-size-body);
-    line-height: var(--line-height-normal);
-    font-weight: var(--font-weight-normal);
-  }
-  
-  .text-body-sm {
-    font-size: var(--font-size-body-sm);
-    line-height: var(--line-height-normal);
-    font-weight: var(--font-weight-normal);
-  }
-  
-  .text-caption {
-    font-size: var(--font-size-caption);
-    line-height: var(--line-height-snug);
-    font-weight: var(--font-weight-normal);
-  }
-  
-  .text-label {
-    font-size: var(--font-size-body-sm);
-    line-height: var(--line-height-normal);
-    font-weight: var(--font-weight-medium);
-    text-transform: uppercase;
-    letter-spacing: var(--letter-spacing-wide);
-  }
-  
-  .text-code {
-    font-family: var(--font-family-mono);
-    font-size: var(--font-size-body-sm);
-    line-height: var(--line-height-normal);
   }
 }
 
 @layer components {
   /* Accessibility enhancements */
   .focus-ring:focus-visible {
-    outline: 2px solid var(--color-primary);
+    outline: 2px solid oklch(0.65 0.15 180);
     outline-offset: 2px;
     border-radius: 4px;
-  }
-  
-  .focus-ring-enhanced:focus-visible {
-    outline: 3px solid var(--color-primary);
-    outline-offset: 3px;
-    box-shadow: 0 0 0 6px rgba(0, 102, 204, 0.2);
   }
   
   /* Reduced motion support */
@@ -165,100 +87,9 @@
       transform: none;
     }
   }
-  
-  /* High contrast mode support */
-  @media (prefers-contrast: high) {
-    :root {
-      --color-primary: #0052A3;
-      --color-primary-dark: #003366;
-      --color-neutral-600: #000000;
-      --color-neutral-700: #000000;
-      --font-weight-normal: 500;
-      --font-weight-medium: 600;
-    }
-  }
 }
 
 @layer utilities {
-  /* Spacing utilities based on design tokens */
-  .space-xs { margin: var(--spacing-xs); }
-  .space-sm { margin: var(--spacing-sm); }
-  .space-md { margin: var(--spacing-md); }
-  .space-lg { margin: var(--spacing-lg); }
-  .space-xl { margin: var(--spacing-xl); }
-  .space-2xl { margin: var(--spacing-2xl); }
-  .space-3xl { margin: var(--spacing-3xl); }
-  
-  .gap-xs { gap: var(--spacing-xs); }
-  .gap-sm { gap: var(--spacing-sm); }
-  .gap-md { gap: var(--spacing-md); }
-  .gap-lg { gap: var(--spacing-lg); }
-  .gap-xl { gap: var(--spacing-xl); }
-  .gap-2xl { gap: var(--spacing-2xl); }
-  .gap-3xl { gap: var(--spacing-3xl); }
-  
-  /* Relevance score utilities */
-  .relevance-high { color: var(--color-relevance-high); }
-  .relevance-high-bg { background-color: var(--color-relevance-high-bg); }
-  .relevance-medium { color: var(--color-relevance-medium); }
-  .relevance-medium-bg { background-color: var(--color-relevance-medium-bg); }
-  .relevance-low { color: var(--color-relevance-low); }
-  .relevance-low-bg { background-color: var(--color-relevance-low-bg); }
-  
-  /* Animation utilities */
-  .animate-micro { transition-duration: var(--duration-micro); }
-  .animate-short { transition-duration: var(--duration-short); }
-  .animate-medium { transition-duration: var(--duration-medium); }
-  .animate-long { transition-duration: var(--duration-long); }
-  
-  .ease-out { transition-timing-function: var(--ease-out); }
-  .ease-in-out { transition-timing-function: var(--ease-in-out); }
-  .ease-spring { transition-timing-function: var(--ease-spring); }
-  
-  /* Responsive utilities */
-  .container-responsive {
-    @apply mx-auto px-4;
-    max-width: 1200px;
-  }
-  
-  @media (max-width: 767px) {
-    .container-responsive {
-      @apply px-3;
-      max-width: none;
-    }
-  }
-  
-  @media (min-width: 768px) and (max-width: 1023px) {
-    .container-responsive {
-      max-width: 768px;
-    }
-  }
-  
-  @media (min-width: 1024px) {
-    .container-responsive {
-      max-width: 1024px;
-    }
-  }
-  
-  @media (min-width: 1440px) {
-    .container-responsive {
-      max-width: 1200px;
-    }
-  }
-  
-  /* Touch target utilities */
-  .touch-target {
-    min-height: 44px;
-    min-width: 44px;
-  }
-  
-  @media (max-width: 767px) {
-    .touch-target {
-      min-height: 48px;
-      min-width: 48px;
-    }
-  }
-  
   /* Text clamp utilities */
   .line-clamp-1 {
     overflow: hidden;
@@ -279,51 +110,5 @@
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
-  }
-  
-  /* Screen reader only utility */
-  .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
-  
-  /* Skip link utility */
-  .skip-link {
-    position: absolute;
-    top: -40px;
-    left: 6px;
-    background: var(--color-primary);
-    color: white;
-    padding: 8px;
-    text-decoration: none;
-    z-index: 1000;
-  }
-  
-  .skip-link:focus {
-    top: 6px;
-  }
-}
-
-/* Responsive Typography Adjustments */
-@media (max-width: 767px) {
-  .text-h1 {
-    font-size: 1.75rem; /* 28px */
-  }
-  
-  .text-h2 {
-    font-size: 1.375rem; /* 22px */
-  }
-}
-
-@media (min-width: 1440px) {
-  .text-body {
-    font-size: 1.125rem; /* 18px */
   }
 }
