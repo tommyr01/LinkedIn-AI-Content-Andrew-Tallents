@@ -248,7 +248,6 @@ export function ProspectResearchCard({
               <Button
                 onClick={handleAddToConnections}
                 disabled={isAddingToConnections}
-                className="bg-blue-600 hover:bg-blue-700"
               >
                 <UserPlus className="h-4 w-4 mr-2" />
                 {isAddingToConnections ? 'Adding...' : 'Add to Connections'}
