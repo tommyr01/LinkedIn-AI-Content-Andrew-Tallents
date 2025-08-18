@@ -190,7 +190,7 @@ Please provide optimization suggestions in JSON format:
 Focus on Andrew's authentic voice: vulnerable leadership stories, CEO coaching insights, and practical wisdom.`
 
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
+        model: 'gpt-4o',
         messages: [{ role: 'user', content: optimizationPrompt }],
         temperature: 0.3,
         max_tokens: 800
@@ -254,7 +254,7 @@ Return as JSON:
 }`
 
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
+        model: 'gpt-4o',
         messages: [{ role: 'user', content: voicePrompt }],
         temperature: 0.2,
         max_tokens: 600
@@ -463,7 +463,7 @@ Return JSON:
 }`
 
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
+        model: 'gpt-4o',
         messages: [{ role: 'user', content: predictionPrompt }],
         temperature: 0.3,
         max_tokens: 400

@@ -47,7 +47,7 @@ const parseConfig = () => {
       },
       openai: {
         apiKey: validatedConfig.OPENAI_API_KEY,
-        model: 'gpt-4o-mini' // Faster, more reliable model for testing
+        model: 'gpt-4o-mini' // Balanced speed/cost for content generation
       },
       research: {
         firecrawl: {

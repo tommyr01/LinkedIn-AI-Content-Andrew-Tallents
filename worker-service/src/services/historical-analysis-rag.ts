@@ -258,7 +258,7 @@ ${examples.slice(0, 10).map((ex, i) => `${i + 1}. ${ex}`).join('\n')}
 Return only the top 3 most common patterns as a simple list, one per line.`
 
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-3.5-turbo',
+        model: 'gpt-4o-mini',
         messages: [{ role: 'user', content: prompt }],
         max_tokens: 200,
         temperature: 0.3

@@ -400,7 +400,7 @@ Return as JSON:
 }`
 
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
+        model: 'gpt-4o',
         messages: [{ role: 'user', content: analysisPrompt }],
         temperature: 0.3,
         max_tokens: 500

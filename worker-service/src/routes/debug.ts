@@ -118,7 +118,7 @@ router.get('/openai', async (req, res) => {
     })
     
     const completion = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
+      model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: 'You are a test assistant.' },
         { role: 'user', content: 'Say "OpenAI connection test successful"' }
