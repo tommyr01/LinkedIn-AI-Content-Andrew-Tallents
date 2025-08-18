@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -16,8 +16,17 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🔄 Starting bulk posts sync for all connections...')
 
-    // Get all connections from Supabase
-    const { data: connections, error } = await supabase
+    // Check if supabaseAdmin is available
+    if (!supabaseAdmin) {
+      console.error('❌ Supabase admin client not available - check SUPABASE_SERVICE_ROLE_KEY')
+      return NextResponse.json({ 
+        error: 'Server configuration error',
+        details: 'Admin access required for bulk operations' 
+      }, { status: 500 })
+    }
+
+    // Get all connections from Supabase using admin client
+    const { data: connections, error } = await supabaseAdmin
       .from('connections')
       .select('id, linkedin_username, name, last_posts_sync')
       .not('linkedin_username', 'is', null)
@@ -100,7 +109,7 @@ export async function POST(request: NextRequest) {
             totalNewPosts += newPosts
             
             // Update last sync time
-            await supabase
+            await supabaseAdmin
               .from('connections')
               .update({ last_posts_sync: new Date().toISOString() })
               .eq('id', connection.id)
@@ -191,8 +200,16 @@ export async function POST(request: NextRequest) {
 // GET endpoint for checking bulk sync status
 export async function GET() {
   try {
+    // Check if supabaseAdmin is available
+    if (!supabaseAdmin) {
+      return NextResponse.json({ 
+        error: 'Server configuration error',
+        details: 'Admin access required' 
+      }, { status: 500 })
+    }
+
     // Get some stats about recent syncs
-    const { data: connections, error } = await supabase
+    const { data: connections, error } = await supabaseAdmin
       .from('connections')
       .select('id, name, linkedin_username, last_posts_sync')
       .not('linkedin_username', 'is', null)
