@@ -38,34 +38,46 @@ export default function ContentPage() {
         <Card 
           className={`cursor-pointer transition-all duration-200 ${
             activeGenerator === 'performance' 
-              ? 'border-2 border-blue-500 shadow-md bg-blue-50' 
-              : 'border hover:border-gray-300'
+              ? 'border-2 border-amber-500 shadow-md bg-gradient-to-br from-amber-500/20 to-orange-500/20' 
+              : 'border border-gray-700 bg-gray-800 hover:border-gray-600 hover:bg-gray-750'
           }`}
           onClick={() => setActiveGenerator('performance')}
         >
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Brain className="h-5 w-5 text-blue-600" />
+            <CardTitle className={`flex items-center gap-2 ${
+              activeGenerator === 'performance' ? 'text-white' : 'text-white'
+            }`}>
+              <Brain className={`h-5 w-5 ${
+                activeGenerator === 'performance' ? 'text-white' : 'text-blue-400'
+              }`} />
               Performance-Driven Generator
-              <Badge variant="outline" className="bg-green-50 text-green-700 ml-auto">
+              <Badge variant="outline" className="bg-green-500 text-white border-green-400 ml-auto">
                 Recommended
               </Badge>
             </CardTitle>
-            <CardDescription>
+            <CardDescription className={
+              activeGenerator === 'performance' ? 'text-gray-200' : 'text-gray-400'
+            }>
               Strategic content variants using Andrew's proven patterns, engagement optimization, and experimental approaches
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-3 gap-3 text-xs">
-              <div className="flex items-center gap-1 text-amber-600">
+              <div className={`flex items-center gap-1 ${
+                activeGenerator === 'performance' ? 'text-amber-300' : 'text-amber-500'
+              }`}>
                 <BarChart3 className="h-3 w-3" />
                 Performance Patterns
               </div>
-              <div className="flex items-center gap-1 text-blue-600">
+              <div className={`flex items-center gap-1 ${
+                activeGenerator === 'performance' ? 'text-blue-300' : 'text-blue-500'
+              }`}>
                 <TrendingUp className="h-3 w-3" />
                 Engagement Focus
               </div>
-              <div className="flex items-center gap-1 text-purple-600">
+              <div className={`flex items-center gap-1 ${
+                activeGenerator === 'performance' ? 'text-purple-300' : 'text-purple-500'
+              }`}>
                 <Brain className="h-3 w-3" />
                 Experimental
               </div>
@@ -76,25 +88,25 @@ export default function ContentPage() {
         <Card 
           className={`cursor-pointer transition-all duration-200 ${
             activeGenerator === 'basic' 
-              ? 'border-2 border-gray-500 shadow-md bg-gray-50' 
-              : 'border hover:border-gray-300'
+              ? 'border-2 border-gray-500 shadow-md bg-gray-700' 
+              : 'border border-gray-700 bg-gray-800 hover:border-gray-600 hover:bg-gray-750'
           }`}
           onClick={() => setActiveGenerator('basic')}
         >
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-gray-600" />
+            <CardTitle className="flex items-center gap-2 text-white">
+              <Sparkles className="h-5 w-5 text-gray-400" />
               Basic Generator
-              <Badge variant="outline" className="bg-gray-100 text-gray-600 ml-auto">
+              <Badge variant="outline" className="bg-gray-600 text-gray-300 border-gray-500 ml-auto">
                 Legacy
               </Badge>
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-gray-400">
               Simple content generation with basic AI assistance and voice matching
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-3 text-xs text-gray-600">
+            <div className="grid grid-cols-2 gap-3 text-xs text-gray-400">
               <div className="flex items-center gap-1">
                 <Zap className="h-3 w-3" />
                 Basic AI Generation
