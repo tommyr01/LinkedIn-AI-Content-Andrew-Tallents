@@ -331,54 +331,74 @@ export function PerformanceContentGenerator({ onContentGenerated }: PerformanceC
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="generator" className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4" />
-            Generator
-          </TabsTrigger>
-          <TabsTrigger value="progress" disabled={!currentJob}>
-            <RefreshCw className="h-4 w-4" />
-            Progress
-          </TabsTrigger>
-          <TabsTrigger value="results" disabled={jobDrafts.length === 0}>
-            <BarChart3 className="h-4 w-4" />
-            Results
-          </TabsTrigger>
-          <TabsTrigger value="analytics">
-            <TrendingUp className="h-4 w-4" />
-            Analytics
-          </TabsTrigger>
-        </TabsList>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50/20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header Section */}
+        <div className="mb-12 text-center">
+          <div className="flex items-center justify-center mb-6">
+            <div className="p-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl">
+              <Brain className="h-8 w-8 text-white" />
+            </div>
+          </div>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent mb-4">
+            Strategic Content Generator
+          </h1>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+            AI-powered content creation with performance intelligence and Andrew's authentic voice
+          </p>
+        </div>
 
-        <TabsContent value="generator" className="space-y-6">
-          <div className="grid lg:grid-cols-2 gap-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
+          <div className="flex justify-center">
+            <TabsList className="grid w-full max-w-2xl grid-cols-4 h-14 p-1 bg-white shadow-lg border-0">
+              <TabsTrigger value="generator" className="flex items-center gap-2 text-sm font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-lg transition-all duration-200">
+                <Sparkles className="h-4 w-4" />
+                Generator
+              </TabsTrigger>
+              <TabsTrigger value="progress" disabled={!currentJob} className="flex items-center gap-2 text-sm font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-lg transition-all duration-200">
+                <RefreshCw className="h-4 w-4" />
+                Progress
+              </TabsTrigger>
+              <TabsTrigger value="results" disabled={jobDrafts.length === 0} className="flex items-center gap-2 text-sm font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-lg transition-all duration-200">
+                <BarChart3 className="h-4 w-4" />
+                Results
+              </TabsTrigger>
+              <TabsTrigger value="analytics" className="flex items-center gap-2 text-sm font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-lg transition-all duration-200">
+                <TrendingUp className="h-4 w-4" />
+                Analytics
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+        <TabsContent value="generator" className="space-y-8">
+          <div className="grid lg:grid-cols-2 gap-8">
             {/* Content Input */}
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Target className="h-5 w-5" />
+            <div className="space-y-8">
+              <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+                <CardHeader className="pb-6">
+                  <CardTitle className="flex items-center gap-3 text-xl">
+                    <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl">
+                      <Target className="h-5 w-5 text-white" />
+                    </div>
                     Content Strategy
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-base text-gray-600">
                     Define your content goals and strategic approach
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="intent">Content Intent</Label>
+                <CardContent className="space-y-6">
+                  <div className="space-y-3">
+                    <Label htmlFor="intent" className="text-sm font-semibold text-gray-700">Content Intent</Label>
                     <Select value={selectedIntent} onValueChange={setSelectedIntent}>
-                      <SelectTrigger>
+                      <SelectTrigger className="h-12 border-gray-200 bg-gray-50/50 hover:bg-gray-50 transition-colors">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         {CONTENT_INTENTS.map((intent) => (
-                          <SelectItem key={intent.value} value={intent.value}>
+                          <SelectItem key={intent.value} value={intent.value} className="p-4">
                             <div>
-                              <div className="font-medium">{intent.label}</div>
-                              <div className="text-sm text-muted-foreground">{intent.description}</div>
+                              <div className="font-medium text-gray-900">{intent.label}</div>
+                              <div className="text-sm text-gray-500 mt-1">{intent.description}</div>
                             </div>
                           </SelectItem>
                         ))}
@@ -386,13 +406,13 @@ export function PerformanceContentGenerator({ onContentGenerated }: PerformanceC
                     </Select>
                   </div>
                   
-                  <div className="space-y-2">
-                    <Label htmlFor="topic">Topic or Key Message</Label>
+                  <div className="space-y-3">
+                    <Label htmlFor="topic" className="text-sm font-semibold text-gray-700">Topic or Key Message</Label>
                     <Textarea
                       id="topic"
                       value={topic}
                       onChange={(e) => setTopic(e.target.value)}
-                      className="min-h-[120px]"
+                      className="min-h-[140px] border-gray-200 bg-gray-50/50 hover:bg-gray-50 transition-colors text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500/20"
                       placeholder="Enter your topic, idea, or key message for the LinkedIn post..."
                       disabled={isGenerating}
                     />
@@ -400,23 +420,26 @@ export function PerformanceContentGenerator({ onContentGenerated }: PerformanceC
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Zap className="h-5 w-5" />
+              <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+                <CardHeader className="pb-6">
+                  <CardTitle className="flex items-center gap-3 text-xl">
+                    <div className="p-2 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-xl">
+                      <Zap className="h-5 w-5 text-white" />
+                    </div>
                     Voice Guidelines
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-base text-gray-600">
                     Maintain Andrew's authentic voice and tone
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-6">
                   <div className="flex justify-end">
                     <Button 
                       onClick={handleSaveVoiceGuidelines} 
                       variant="outline" 
                       size="sm"
                       disabled={isSavingVoice || isGenerating}
+                      className="border-gray-300 hover:border-purple-500 hover:text-purple-600"
                     >
                       {isSavingVoice ? 'Saving...' : 'Save Guidelines'}
                     </Button>
@@ -424,7 +447,7 @@ export function PerformanceContentGenerator({ onContentGenerated }: PerformanceC
                   <Textarea
                     value={voiceGuidelines}
                     onChange={(e) => setVoiceGuidelines(e.target.value)}
-                    className="min-h-[200px]"
+                    className="min-h-[220px] border-gray-200 bg-gray-50/50 hover:bg-gray-50 transition-colors text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:ring-purple-500/20"
                     placeholder="Enter Andrew's voice guidelines, tone preferences, and style notes..."
                     disabled={isGenerating}
                   />
@@ -433,18 +456,20 @@ export function PerformanceContentGenerator({ onContentGenerated }: PerformanceC
             </div>
 
             {/* Strategic Variants Selection */}
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Brain className="h-5 w-5" />
+            <div className="space-y-8">
+              <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+                <CardHeader className="pb-6">
+                  <CardTitle className="flex items-center gap-3 text-xl">
+                    <div className="p-2 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl">
+                      <Brain className="h-5 w-5 text-white" />
+                    </div>
                     Strategic Variants
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-base text-gray-600">
                     Choose which content strategies to generate
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-6">
                   {STRATEGIC_VARIANTS.map((variant) => {
                     const Icon = variant.icon
                     const isSelected = selectedVariants.includes(variant.type)
@@ -452,47 +477,53 @@ export function PerformanceContentGenerator({ onContentGenerated }: PerformanceC
                     return (
                       <Card 
                         key={variant.type} 
-                        className={`cursor-pointer transition-all duration-200 ${
+                        className={`cursor-pointer transition-all duration-300 hover:shadow-lg ${
                           isSelected 
-                            ? `border-2 ${variant.color} shadow-md` 
-                            : 'border hover:border-gray-300'
+                            ? `border-2 border-blue-500 shadow-lg bg-gradient-to-r from-blue-50/80 to-indigo-50/80` 
+                            : 'border border-gray-200 hover:border-gray-300 bg-white/60'
                         }`}
                         onClick={() => toggleVariant(variant.type)}
                       >
-                        <CardContent className="p-4">
-                          <div className="flex items-start gap-3">
-                            <div className={`p-2 rounded-lg ${
-                              isSelected ? variant.color : 'bg-gray-100'
+                        <CardContent className="p-6">
+                          <div className="flex items-start gap-4">
+                            <div className={`p-3 rounded-xl transition-all duration-300 ${
+                              isSelected ? 'bg-gradient-to-r from-blue-500 to-indigo-500' : 'bg-gray-100'
                             }`}>
-                              <Icon className={`h-5 w-5 ${
-                                isSelected ? variant.color.split(' ')[0] : 'text-gray-600'
+                              <Icon className={`h-6 w-6 ${
+                                isSelected ? 'text-white' : 'text-gray-600'
                               }`} />
                             </div>
                             
                             <div className="flex-1">
-                              <div className="flex items-center justify-between mb-2">
-                                <h3 className="font-semibold">{variant.name}</h3>
+                              <div className="flex items-center justify-between mb-3">
+                                <h3 className="font-bold text-lg text-gray-900">{variant.name}</h3>
                                 {isSelected && (
-                                  <CheckCircle className="h-4 w-4 text-green-600" />
+                                  <div className="p-1 bg-green-500 rounded-full">
+                                    <CheckCircle className="h-4 w-4 text-white" />
+                                  </div>
                                 )}
                               </div>
                               
-                              <p className="text-sm text-muted-foreground mb-3">
+                              <p className="text-gray-600 mb-4 leading-relaxed">
                                 {variant.description}
                               </p>
                               
-                              <div className="grid grid-cols-1 gap-2 text-xs">
-                                <div className="flex justify-between">
-                                  <span className="font-medium">Focus:</span>
-                                  <span className={variant.color.split(' ')[0]}>
-                                    {variant.focus}
-                                  </span>
+                              <div className="grid grid-cols-1 gap-3">
+                                <div className="p-3 bg-gray-50/80 rounded-lg">
+                                  <div className="flex justify-between items-center">
+                                    <span className="font-semibold text-sm text-gray-700">Focus:</span>
+                                    <span className="text-sm font-medium text-blue-600">
+                                      {variant.focus}
+                                    </span>
+                                  </div>
                                 </div>
-                                <div className="flex justify-between">
-                                  <span className="font-medium">Expected:</span>
-                                  <span className="text-muted-foreground">
-                                    {variant.expectedOutcome}
-                                  </span>
+                                <div className="p-3 bg-gray-50/80 rounded-lg">
+                                  <div className="flex justify-between items-center">
+                                    <span className="font-semibold text-sm text-gray-700">Expected:</span>
+                                    <span className="text-sm text-gray-600">
+                                      {variant.expectedOutcome}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -504,45 +535,49 @@ export function PerformanceContentGenerator({ onContentGenerated }: PerformanceC
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Eye className="h-5 w-5" />
+              <Card className="shadow-xl border-0 bg-gradient-to-br from-green-50 to-blue-50 backdrop-blur-sm">
+                <CardHeader className="pb-6">
+                  <CardTitle className="flex items-center gap-3 text-xl">
+                    <div className="p-2 bg-gradient-to-r from-green-500 to-blue-500 rounded-xl">
+                      <Eye className="h-5 w-5 text-white" />
+                    </div>
                     Generation Preview
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-3 text-sm">
-                    <div className="flex justify-between">
-                      <span className="font-medium">Selected Variants:</span>
-                      <Badge variant="outline">{selectedVariants.length} variants</Badge>
+                <CardContent className="space-y-6">
+                  <div className="grid gap-4">
+                    <div className="flex justify-between items-center p-4 bg-white/60 rounded-lg">
+                      <span className="font-semibold text-gray-700">Selected Variants:</span>
+                      <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 px-3 py-1">
+                        {selectedVariants.length} variants
+                      </Badge>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="font-medium">Content Intent:</span>
-                      <span className="text-muted-foreground">
+                    <div className="flex justify-between items-center p-4 bg-white/60 rounded-lg">
+                      <span className="font-semibold text-gray-700">Content Intent:</span>
+                      <span className="text-gray-600 font-medium">
                         {CONTENT_INTENTS.find(i => i.value === selectedIntent)?.label}
                       </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="font-medium">Platform:</span>
-                      <span className="text-muted-foreground">LinkedIn</span>
+                    <div className="flex justify-between items-center p-4 bg-white/60 rounded-lg">
+                      <span className="font-semibold text-gray-700">Platform:</span>
+                      <span className="text-gray-600 font-medium">LinkedIn</span>
                     </div>
                   </div>
 
                   <Button 
                     onClick={handleGenerate}
                     disabled={isGenerating || !topic.trim() || selectedVariants.length === 0}
-                    className="w-full mt-4"
+                    className="w-full h-14 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold text-base shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02]"
                     size="lg"
                   >
                     {isGenerating ? (
                       <>
-                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        <RefreshCw className="h-5 w-5 mr-3 animate-spin" />
                         Generating Strategic Content...
                       </>
                     ) : (
                       <>
-                        <Sparkles className="h-4 w-4 mr-2" />
+                        <Sparkles className="h-5 w-5 mr-3" />
                         Generate {selectedVariants.length} Strategic Variants
                       </>
                     )}
@@ -553,85 +588,99 @@ export function PerformanceContentGenerator({ onContentGenerated }: PerformanceC
           </div>
         </TabsContent>
 
-        <TabsContent value="progress">
+        <TabsContent value="progress" className="space-y-8">
           {currentJob ? (
-            <Card>
-              <CardHeader>
+            <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader className="pb-8">
                 <CardTitle className="flex items-center justify-between">
-                  <span className="flex items-center gap-2">
+                  <span className="flex items-center gap-3 text-2xl">
                     {getStatusIcon(currentJob.status)}
                     Performance Content Generation
                   </span>
-                  <Badge variant="outline" className={getStatusColor(currentJob.status)}>
+                  <Badge 
+                    className={`px-4 py-2 text-sm font-semibold ${
+                      currentJob.status === 'completed' ? 'bg-green-100 text-green-800' :
+                      currentJob.status === 'failed' ? 'bg-red-100 text-red-800' :
+                      currentJob.status === 'processing' ? 'bg-blue-100 text-blue-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}
+                  >
                     {currentJob.status.toUpperCase()}
                   </Badge>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span>Overall Progress</span>
-                    <span>{currentJob.progress}%</span>
+              <CardContent className="space-y-8">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-semibold text-gray-700">Overall Progress</span>
+                    <span className="text-2xl font-bold text-blue-600">{currentJob.progress}%</span>
                   </div>
-                  <Progress value={currentJob.progress} className="w-full h-2" />
+                  <Progress value={currentJob.progress} className="w-full h-3 bg-gray-200" />
                 </div>
                 
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <span className="font-medium block">Topic:</span>
-                    <p className="text-muted-foreground mt-1">{currentJob.topic}</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+                    <span className="font-bold text-blue-800 block mb-2">Topic:</span>
+                    <p className="text-blue-700 leading-relaxed">{currentJob.topic}</p>
                   </div>
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <span className="font-medium block">Intent:</span>
-                    <p className="text-muted-foreground mt-1">
+                  <div className="p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-200">
+                    <span className="font-bold text-green-800 block mb-2">Intent:</span>
+                    <p className="text-green-700">
                       {CONTENT_INTENTS.find(i => i.value === selectedIntent)?.label}
                     </p>
                   </div>
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <span className="font-medium block">Variants:</span>
-                    <p className="text-muted-foreground mt-1">{selectedVariants.length} strategies</p>
+                  <div className="p-6 bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl border border-purple-200">
+                    <span className="font-bold text-purple-800 block mb-2">Variants:</span>
+                    <p className="text-purple-700 text-xl font-bold">{selectedVariants.length} strategies</p>
                   </div>
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <span className="font-medium block">Platform:</span>
-                    <p className="text-muted-foreground mt-1">LinkedIn</p>
+                  <div className="p-6 bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl border border-orange-200">
+                    <span className="font-bold text-orange-800 block mb-2">Platform:</span>
+                    <p className="text-orange-700 font-semibold">LinkedIn</p>
                   </div>
                 </div>
 
                 {currentJob.error && (
-                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                    <p className="text-red-800">{currentJob.error}</p>
+                  <div className="p-6 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <XCircle className="h-6 w-6 text-red-600" />
+                      <p className="text-red-800 font-semibold text-lg">{currentJob.error}</p>
+                    </div>
                   </div>
                 )}
               </CardContent>
             </Card>
           ) : (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">No active generation job. Start generating content to see progress.</p>
+            <div className="text-center py-20">
+              <div className="p-4 bg-gray-100 rounded-full w-16 h-16 mx-auto mb-6 flex items-center justify-center">
+                <Clock className="h-8 w-8 text-gray-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-700 mb-2">No Active Generation</h3>
+              <p className="text-gray-500 text-lg">Start generating content to see progress here.</p>
             </div>
           )}
         </TabsContent>
 
-        <TabsContent value="results" className="space-y-6">
+        <TabsContent value="results" className="space-y-8">
           {jobDrafts.length > 0 ? (
             <>
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-2xl font-bold">Strategic Content Variants</h3>
-                  <p className="text-muted-foreground">
-                    {jobDrafts.length} performance-optimized variations generated
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <Badge variant="outline" className="bg-green-50 text-green-700">
+              <div className="text-center mb-12">
+                <h3 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent mb-4">
+                  Strategic Content Variants
+                </h3>
+                <p className="text-xl text-gray-600 mb-6">
+                  {jobDrafts.length} performance-optimized variations generated
+                </p>
+                <div className="flex justify-center gap-4">
+                  <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 text-sm font-semibold">
                     {jobDrafts.filter(d => d.content.estimated_voice_score >= 85).length} High Voice Match
                   </Badge>
-                  <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                  <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-4 py-2 text-sm font-semibold">
                     {jobDrafts.filter(d => d.metadata.historical_context_used).length} Using Historical Data
                   </Badge>
                 </div>
               </div>
 
-              <div className="grid gap-6">
+              <div className="grid gap-8">
                 {jobDrafts.map((draft, index) => {
                   const variant = STRATEGIC_VARIANTS.find(v => 
                     draft.agent_name.toLowerCase().includes(v.type)
@@ -640,36 +689,52 @@ export function PerformanceContentGenerator({ onContentGenerated }: PerformanceC
                   const stats = getVariantStats(draft)
                   
                   return (
-                    <Card key={draft.id} className="overflow-hidden">
-                      <CardHeader className={`border-l-4 ${variant?.color || 'border-gray-300'}`}>
-                        <CardTitle className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-lg ${variant?.color || 'bg-gray-100'}`}>
-                              <Icon className={`h-5 w-5 ${variant?.color.split(' ')[0] || 'text-gray-600'}`} />
+                    <Card key={draft.id} className="overflow-hidden shadow-xl border-0 bg-white/90 backdrop-blur-sm">
+                      <CardHeader className={`border-l-4 pb-6 ${
+                        variant?.type === 'performance' ? 'border-amber-500 bg-gradient-to-r from-amber-50/80 to-orange-50/80' :
+                        variant?.type === 'engagement' ? 'border-blue-500 bg-gradient-to-r from-blue-50/80 to-cyan-50/80' :
+                        variant?.type === 'experimental' ? 'border-purple-500 bg-gradient-to-r from-purple-50/80 to-violet-50/80' :
+                        'border-gray-300 bg-gray-50/80'
+                      }`}>
+                        <CardTitle className="flex items-start justify-between gap-4">
+                          <div className="flex items-start gap-4">
+                            <div className={`p-3 rounded-xl ${
+                              variant?.type === 'performance' ? 'bg-gradient-to-r from-amber-500 to-orange-500' :
+                              variant?.type === 'engagement' ? 'bg-gradient-to-r from-blue-500 to-cyan-500' :
+                              variant?.type === 'experimental' ? 'bg-gradient-to-r from-purple-500 to-violet-500' :
+                              'bg-gray-500'
+                            }`}>
+                              <Icon className="h-6 w-6 text-white" />
                             </div>
                             <div>
-                              <h4 className="text-lg font-semibold">
+                              <h4 className="text-xl font-bold text-gray-900 mb-2">
                                 {variant?.name || draft.agent_name.replace('_', ' ')}
                               </h4>
-                              <p className="text-sm text-muted-foreground font-normal">
+                              <p className="text-gray-600 font-medium">
                                 Variant {draft.variant_number} • {draft.content.approach}
                               </p>
                             </div>
                           </div>
                           
-                          <div className="flex items-center gap-2">
-                            {stats.map((stat, statIndex) => (
-                              <Badge key={statIndex} variant="outline" className={stat.color}>
-                                {stat.label}: {stat.value}
-                              </Badge>
-                            ))}
+                          <div className="flex flex-col items-end gap-3">
+                            <div className="flex flex-wrap gap-2 justify-end">
+                              {stats.map((stat, statIndex) => (
+                                <Badge key={statIndex} className={`${
+                                  stat.color.includes('green') ? 'bg-green-100 text-green-800' :
+                                  stat.color.includes('blue') ? 'bg-blue-100 text-blue-800' :
+                                  stat.color.includes('purple') ? 'bg-purple-100 text-purple-800' :
+                                  'bg-gray-100 text-gray-800'
+                                } px-3 py-1 font-semibold`}>
+                                  {stat.label}: {stat.value}
+                                </Badge>
+                              ))}
+                            </div>
                             <Button
-                              variant="outline"
-                              size="sm"
+                              className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold px-6 py-2 shadow-lg transition-all duration-300 hover:shadow-xl"
                               onClick={() => handleCopyContent(draft.content.body)}
                             >
-                              <Copy className="h-4 w-4 mr-1" />
-                              Copy
+                              <Copy className="h-4 w-4 mr-2" />
+                              Copy Content
                             </Button>
                           </div>
                         </CardTitle>
@@ -685,43 +750,44 @@ export function PerformanceContentGenerator({ onContentGenerated }: PerformanceC
                         )}
                       </CardHeader>
                       
-                      <CardContent className="space-y-4">
-                        <div className="prose prose-sm max-w-none">
-                          <div className="whitespace-pre-wrap bg-gray-50 rounded-lg p-4 text-sm leading-relaxed">
+                      <CardContent className="space-y-6 pt-6">
+                        <div className="prose prose-base max-w-none">
+                          <div className="whitespace-pre-wrap bg-white rounded-xl p-6 border border-gray-200 text-gray-900 leading-relaxed text-base shadow-sm">
                             {draft.content.body}
                           </div>
                         </div>
                         
                         {/* Performance Insights */}
                         {draft.content.performance_prediction && (
-                          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
-                            <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
-                              <BarChart3 className="h-4 w-4 text-blue-600" />
+                          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200 shadow-lg">
+                            <h4 className="font-bold text-base mb-4 flex items-center gap-3 text-blue-800">
+                              <BarChart3 className="h-5 w-5" />
                               Performance Insights
                             </h4>
                             
-                            <div className="grid grid-cols-2 gap-4 mb-3">
-                              <div className="text-center p-3 bg-white rounded-lg">
-                                <div className="text-2xl font-bold text-green-600">
+                            <div className="grid grid-cols-2 gap-6 mb-6">
+                              <div className="text-center p-4 bg-white rounded-xl shadow-sm">
+                                <div className="text-3xl font-bold text-green-600 mb-2">
                                   {draft.content.performance_prediction.predictedEngagement}
                                 </div>
-                                <div className="text-xs text-muted-foreground">Predicted Engagement</div>
+                                <div className="text-sm font-semibold text-gray-600">Predicted Engagement</div>
                               </div>
-                              <div className="text-center p-3 bg-white rounded-lg">
-                                <div className="text-2xl font-bold text-blue-600">
+                              <div className="text-center p-4 bg-white rounded-xl shadow-sm">
+                                <div className="text-3xl font-bold text-blue-600 mb-2">
                                   {draft.content.performance_prediction.confidenceScore}%
                                 </div>
-                                <div className="text-xs text-muted-foreground">Confidence Score</div>
+                                <div className="text-sm font-semibold text-gray-600">Confidence Score</div>
                               </div>
                             </div>
                             
                             {draft.content.performance_prediction.strengthFactors.length > 0 && (
-                              <div className="mb-3">
-                                <span className="font-medium text-xs text-green-700">Strengths:</span>
-                                <ul className="text-xs mt-1 space-y-1">
+                              <div className="mb-4">
+                                <span className="font-bold text-sm text-green-700 mb-2 block">Strengths:</span>
+                                <ul className="text-sm space-y-2">
                                   {draft.content.performance_prediction.strengthFactors.map((factor, i) => (
-                                    <li key={i} className="text-green-700 flex items-center gap-2">
-                                      <CheckCircle className="h-3 w-3" /> {factor}
+                                    <li key={i} className="text-green-700 flex items-start gap-3">
+                                      <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" /> 
+                                      <span>{factor}</span>
                                     </li>
                                   ))}
                                 </ul>
@@ -730,11 +796,12 @@ export function PerformanceContentGenerator({ onContentGenerated }: PerformanceC
                             
                             {draft.content.performance_prediction.improvementSuggestions.length > 0 && (
                               <div>
-                                <span className="font-medium text-xs text-amber-700">Improvement Opportunities:</span>
-                                <ul className="text-xs mt-1 space-y-1">
+                                <span className="font-bold text-sm text-amber-700 mb-2 block">Improvement Opportunities:</span>
+                                <ul className="text-sm space-y-2">
                                   {draft.content.performance_prediction.improvementSuggestions.map((suggestion, i) => (
-                                    <li key={i} className="text-amber-700 flex items-center gap-2">
-                                      <TrendingUp className="h-3 w-3" /> {suggestion}
+                                    <li key={i} className="text-amber-700 flex items-start gap-3">
+                                      <TrendingUp className="h-4 w-4 mt-0.5 flex-shrink-0" /> 
+                                      <span>{suggestion}</span>
                                     </li>
                                   ))}
                                 </ul>
@@ -745,34 +812,39 @@ export function PerformanceContentGenerator({ onContentGenerated }: PerformanceC
                         
                         {/* Historical Context */}
                         {(draft.metadata.similar_posts_analyzed && draft.metadata.similar_posts_analyzed > 0) && (
-                          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4 border border-purple-200">
-                            <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
-                              <Users className="h-4 w-4 text-purple-600" />
+                          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200 shadow-lg">
+                            <h4 className="font-bold text-base mb-4 flex items-center gap-3 text-purple-800">
+                              <Users className="h-5 w-5" />
                               Historical Intelligence
                             </h4>
-                            <div className="grid grid-cols-2 gap-4 text-xs">
-                              <div>
-                                <span className="font-medium">Similar posts analyzed:</span>
-                                <p className="text-purple-700 font-semibold">{draft.metadata.similar_posts_analyzed}</p>
+                            <div className="grid grid-cols-2 gap-6 mb-4">
+                              <div className="p-4 bg-white/60 rounded-xl">
+                                <span className="font-semibold text-gray-700 block mb-2">Similar posts analyzed:</span>
+                                <p className="text-2xl font-bold text-purple-700">{draft.metadata.similar_posts_analyzed}</p>
                               </div>
-                              <div>
-                                <span className="font-medium">Top performer reference:</span>
-                                <p className="text-purple-700 font-semibold">{draft.metadata.top_performer_score || 0} score</p>
+                              <div className="p-4 bg-white/60 rounded-xl">
+                                <span className="font-semibold text-gray-700 block mb-2">Top performer reference:</span>
+                                <p className="text-2xl font-bold text-purple-700">{draft.metadata.top_performer_score || 0} score</p>
                               </div>
                             </div>
-                            <p className="text-purple-700 text-xs mt-2">
-                              This variation leverages patterns from Andrew's highest-performing similar content.
-                            </p>
+                            <div className="p-4 bg-white/40 rounded-xl">
+                              <p className="text-purple-800 font-medium">
+                                This variation leverages patterns from Andrew's highest-performing similar content.
+                              </p>
+                            </div>
                           </div>
                         )}
                         
                         {draft.content.hashtags.length > 0 && (
-                          <div className="flex flex-wrap gap-2">
-                            {draft.content.hashtags.map((tag, tagIndex) => (
-                              <Badge key={tagIndex} variant="secondary" className="text-xs">
-                                {tag}
-                              </Badge>
-                            ))}
+                          <div className="space-y-3">
+                            <h5 className="font-semibold text-gray-700">Recommended Hashtags:</h5>
+                            <div className="flex flex-wrap gap-3">
+                              {draft.content.hashtags.map((tag, tagIndex) => (
+                                <Badge key={tagIndex} className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 text-sm font-medium transition-colors">
+                                  {tag}
+                                </Badge>
+                              ))}
+                            </div>
                           </div>
                         )}
                       </CardContent>
@@ -782,33 +854,69 @@ export function PerformanceContentGenerator({ onContentGenerated }: PerformanceC
               </div>
             </>
           ) : (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">No content generated yet. Use the generator to create strategic variants.</p>
+            <div className="text-center py-20">
+              <div className="p-4 bg-gray-100 rounded-full w-16 h-16 mx-auto mb-6 flex items-center justify-center">
+                <BarChart3 className="h-8 w-8 text-gray-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-700 mb-2">No Content Generated</h3>
+              <p className="text-gray-500 text-lg">Use the generator to create strategic variants and see results here.</p>
             </div>
           )}
         </TabsContent>
 
-        <TabsContent value="analytics" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
+        <TabsContent value="analytics" className="space-y-8">
+          <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+            <CardHeader className="pb-8">
+              <CardTitle className="flex items-center gap-3 text-2xl">
+                <div className="p-2 bg-gradient-to-r from-green-500 to-blue-500 rounded-xl">
+                  <TrendingUp className="h-6 w-6 text-white" />
+                </div>
                 Performance Analytics Dashboard
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-lg text-gray-600">
                 Track content performance and optimize Andrew's voice evolution
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-12 text-muted-foreground">
-                <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Performance analytics will appear here after content is posted and tracked.</p>
-                <p className="text-sm mt-2">Coming soon: Real-time engagement tracking and voice evolution insights.</p>
+              <div className="text-center py-20">
+                <div className="p-6 bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl w-24 h-24 mx-auto mb-8 flex items-center justify-center">
+                  <BarChart3 className="h-12 w-12 text-blue-600" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-800 mb-4">Analytics Coming Soon</h3>
+                <p className="text-lg text-gray-600 mb-2">Performance analytics will appear here after content is posted and tracked.</p>
+                <p className="text-gray-500">Real-time engagement tracking and voice evolution insights in development.</p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12 max-w-4xl mx-auto">
+                  <div className="p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-200">
+                    <div className="p-3 bg-green-500 rounded-xl w-fit mx-auto mb-4">
+                      <Eye className="h-6 w-6 text-white" />
+                    </div>
+                    <h4 className="font-bold text-green-800 mb-2">Engagement Tracking</h4>
+                    <p className="text-sm text-green-700">Monitor likes, comments, and shares in real-time</p>
+                  </div>
+                  
+                  <div className="p-6 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl border border-blue-200">
+                    <div className="p-3 bg-blue-500 rounded-xl w-fit mx-auto mb-4">
+                      <Brain className="h-6 w-6 text-white" />
+                    </div>
+                    <h4 className="font-bold text-blue-800 mb-2">Voice Evolution</h4>
+                    <p className="text-sm text-blue-700">Track how Andrew's voice adapts and improves</p>
+                  </div>
+                  
+                  <div className="p-6 bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl border border-purple-200">
+                    <div className="p-3 bg-purple-500 rounded-xl w-fit mx-auto mb-4">
+                      <Trophy className="h-6 w-6 text-white" />
+                    </div>
+                    <h4 className="font-bold text-purple-800 mb-2">Performance Insights</h4>
+                    <p className="text-sm text-purple-700">Discover what makes content successful</p>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
-      </Tabs>
+        </Tabs>
+      </div>
     </div>
   )
 }
