@@ -8,6 +8,13 @@
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",
     "test": "vitest",
+    "test:unit": "vitest run tests/services tests/helpers",
+    "test:integration": "vitest run tests/routes tests/database",
+    "test:e2e": "vitest run tests/integration tests/workers", 
+    "test:performance": "vitest run tests/performance",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
+    "test:comprehensive": "tsx tests/test-runner.ts",
     "lint": "eslint src --ext .ts,.tsx",
     "type-check": "tsc --noEmit",
     "postinstall": "npm run build"

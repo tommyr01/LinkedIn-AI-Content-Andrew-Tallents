@@ -423,7 +423,7 @@ export function InfluencerPostsTable({ posts, onRefresh, isLoading = false }: In
                     className={`cursor-pointer transition-colors ${
                       selectedComment?.id === comment.id
                         ? "border-primary bg-primary/5"
-                        : "hover:bg-muted/50"
+                        : "hover:bg-card/30"
                     }`}
                     onClick={() => handleSelectComment(comment)}
                   >

@@ -107,10 +107,64 @@ export default function NetworkPage() {
     }
   }
 
-  const handleRefresh = () => {
-    loadConnections(true)
+  const handleRefresh = async () => {
     if (activeTab === 'posts') {
-      loadConnectionPosts(true)
+      // Bulk sync posts from all connections
+      await handleBulkPostsSync()
+    } else {
+      // Just refresh connections list
+      loadConnections(true)
+    }
+  }
+
+  const handleBulkPostsSync = async () => {
+    try {
+      setIsLoadingPosts(true)
+      
+      toast.info('Starting bulk sync of posts from all connections...')
+      console.log('🚀 Starting bulk posts sync...')
+
+      const response = await fetch('/api/connections/posts/sync-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Bulk sync failed')
+      }
+
+      const result = await response.json()
+      console.log('✅ Bulk sync completed:', result.data)
+
+      if (result.success) {
+        const { processed, newPosts, errors, skipped } = result.data
+        
+        // Show detailed success message
+        if (newPosts > 0) {
+          toast.success(`Successfully synced ${newPosts} new posts from ${processed} connections!`)
+        } else if (processed > 0) {
+          toast.info(`Checked ${processed} connections - no new posts found`)
+        } else {
+          toast.info(`All ${skipped} connections were recently synced - no sync needed`)
+        }
+
+        if (errors > 0) {
+          toast.warning(`Note: ${errors} connections had sync errors`)
+        }
+
+        // Refresh the posts table to show new data
+        await loadConnectionPosts(false)
+        
+      } else {
+        throw new Error(result.error || 'Unknown error')
+      }
+
+    } catch (error: any) {
+      console.error('💥 Bulk sync error:', error)
+      toast.error(`Bulk sync failed: ${error.message}`)
+    } finally {
+      setIsLoadingPosts(false)
     }
   }
 
@@ -225,7 +279,10 @@ export default function NetworkPage() {
             disabled={isLoading || isLoadingPosts}
           >
             <RefreshCw className={`mr-2 h-4 w-4 ${(isLoading || isLoadingPosts) ? 'animate-spin' : ''}`} />
-            {(isLoading || isLoadingPosts) ? 'Refreshing...' : 'Refresh'}
+            {(isLoading || isLoadingPosts) 
+              ? (activeTab === 'posts' ? 'Syncing Posts...' : 'Refreshing...') 
+              : (activeTab === 'posts' ? 'Sync New Posts' : 'Refresh')
+            }
           </Button>
           <Button onClick={() => setAddOpen(true)}>
             <UserPlus className="mr-2 h-4 w-4" />

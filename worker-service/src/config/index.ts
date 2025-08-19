@@ -12,9 +12,9 @@ const configSchema = z.object({
   OPENAI_API_KEY: z.string().min(1, 'OPENAI_API_KEY is required'),
   FIRECRAWL_API_KEY: z.string().min(1, 'FIRECRAWL_API_KEY is required'),
   PERPLEXITY_API_KEY: z.string().optional(), // Optional since Perplexity is disabled
-  LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
+  LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('debug'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  WORKER_CONCURRENCY: z.string().transform(Number).pipe(z.number().min(1).max(10)).default('3'),
+  WORKER_CONCURRENCY: z.string().transform(Number).pipe(z.number().min(1).max(10)).default('1'),
   MAX_JOB_ATTEMPTS: z.string().transform(Number).pipe(z.number().min(1).max(5)).default('3'),
   RAPIDAPI_KEY: z.string().optional()
 })
@@ -47,7 +47,7 @@ const parseConfig = () => {
       },
       openai: {
         apiKey: validatedConfig.OPENAI_API_KEY,
-        model: 'gpt-4-turbo-preview'
+        model: 'gpt-4o-mini' // Balanced speed/cost for content generation
       },
       research: {
         firecrawl: {

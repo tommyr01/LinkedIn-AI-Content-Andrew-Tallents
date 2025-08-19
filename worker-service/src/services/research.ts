@@ -2,6 +2,8 @@ import { createHash } from 'crypto'
 import { appConfig } from '../config'
 import logger from '../lib/logger'
 import { supabaseService } from './supabase'
+import { historicalAnalysisService } from './historical-analysis'
+import { performanceInsightsService } from './performance-insights'
 import type { ResearchResult } from '../types'
 
 export class ResearchService {
@@ -191,6 +193,7 @@ export class ResearchService {
       details: string
       relevance: string
     }
+    historicalInsights?: any
   }> {
     const startTime = Date.now()
     logger.info({ topic }, 'Starting enhanced Firecrawl research')
@@ -302,17 +305,50 @@ ${allNewsContent}`
 
       const responseContent = completion.choices[0]?.message?.content || ''
       
-      // Add debug logging for the raw response
-      logger.debug({ 
+      // SURGICAL LOGGING: Capture exact OpenAI response
+      logger.error({ 
         responseLength: responseContent.length,
-        responsePreview: responseContent.substring(0, 200) + '...'
-      }, 'Raw OpenAI response received')
+        responsePreview: responseContent.substring(0, 500) + '...',
+        fullResponse: responseContent
+      }, 'SURGICAL DEBUG - RAW OPENAI RESPONSE FOR RESEARCH')
       
       // Robust JSON parsing with fallback handling
       let researchData
       try {
         // Try direct JSON parsing first
         researchData = JSON.parse(responseContent)
+        logger.error({ 
+          parsedDataType: typeof researchData,
+          parsedDataKeys: Object.keys(researchData),
+          idea1Type: typeof researchData.idea_1,
+          idea1Value: researchData.idea_1
+        }, 'SURGICAL DEBUG - PARSED RESEARCH DATA STRUCTURE')
+        
+        // CRITICAL FIX: Validate and auto-correct structure if OpenAI returns strings instead of objects
+        if (researchData && (typeof researchData.idea_1 === 'string' || typeof researchData.idea_2 === 'string' || typeof researchData.idea_3 === 'string')) {
+          logger.error({
+            idea1Type: typeof researchData.idea_1,
+            idea2Type: typeof researchData.idea_2,
+            idea3Type: typeof researchData.idea_3
+          }, 'RESEARCH SERVICE FIX: OpenAI returned strings instead of objects - auto-correcting structure')
+          
+          // Convert string ideas to proper objects
+          const fixIdea = (ideaString: string, ideaNumber: number) => ({
+            concise_summary: `Research insight ${ideaNumber} on ${topic}`,
+            angle_approach: `How this ${topic} development reveals key leadership challenges for UK executives`,
+            details: typeof ideaString === 'string' ? ideaString.substring(0, 200) + '...' : 'Key insights from recent research',
+            relevance: `This topic directly impacts UK CEOs and Founders who are struggling with self-leadership challenges as their businesses grow.`
+          })
+          
+          researchData = {
+            idea_1: typeof researchData.idea_1 === 'string' ? fixIdea(researchData.idea_1, 1) : researchData.idea_1,
+            idea_2: typeof researchData.idea_2 === 'string' ? fixIdea(researchData.idea_2, 2) : researchData.idea_2,
+            idea_3: typeof researchData.idea_3 === 'string' ? fixIdea(researchData.idea_3, 3) : researchData.idea_3
+          }
+          
+          logger.info('Research data structure auto-corrected successfully - DEPLOYMENT TIMESTAMP: ' + new Date().toISOString())
+        }
+        
       } catch (parseError) {
         logger.warn({ parseError }, 'Direct JSON parsing failed, trying extraction methods')
         
@@ -361,13 +397,40 @@ ${allNewsContent}`
         researchData = this.ensureRequiredIdeas(researchData, topic)
       }
 
+      // NEW: Add historical analysis
+      let historicalInsights = null
+      try {
+        logger.info({ topic }, 'Starting historical analysis for enhanced Firecrawl research')
+        historicalInsights = await historicalAnalysisService.generateHistoricalInsights(topic)
+        
+        if (historicalInsights.relatedPosts.length > 0) {
+          // Enhance insights with performance data
+          const enhancedInsights = await performanceInsightsService.generateEnhancedInsights(historicalInsights)
+          historicalInsights = enhancedInsights
+          
+          logger.info({ 
+            relatedPosts: historicalInsights.relatedPosts.length,
+            topPerformers: historicalInsights.topPerformers.length,
+            avgEngagement: historicalInsights.performanceContext.avgEngagement
+          }, 'Historical analysis completed for enhanced research')
+        } else {
+          logger.info('No related historical posts found for topic in enhanced research')
+        }
+      } catch (error) {
+        logger.warn({ error: error instanceof Error ? error.message : String(error) }, 'Historical analysis failed in enhanced research, continuing without it')
+      }
+
       const totalTime = Date.now() - startTime
       logger.info({ 
         totalTimeMs: totalTime,
-        ideasFound: 3 
+        ideasFound: 3,
+        hasHistoricalInsights: !!historicalInsights
       }, 'Enhanced Firecrawl research completed')
 
-      return researchData
+      return {
+        ...researchData,
+        historicalInsights
+      }
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
@@ -423,6 +486,7 @@ ${allNewsContent}`
     results: ResearchResult[]
     summary: string
     keyInsights: string[]
+    historicalInsights?: any
   }> {
     const startTime = Date.now()
     logger.info({ topic, platform }, 'Starting comprehensive research')
@@ -469,17 +533,42 @@ ${allNewsContent}`
       const summary = this.generateSummary(rankedResults, topic)
       const keyInsights = this.extractKeyInsights(rankedResults)
 
+      // NEW: Add historical analysis
+      let historicalInsights = null
+      try {
+        logger.info({ topic }, 'Starting historical analysis for enhanced research')
+        historicalInsights = await historicalAnalysisService.generateHistoricalInsights(topic)
+        
+        if (historicalInsights.relatedPosts.length > 0) {
+          // Enhance insights with performance data
+          const enhancedInsights = await performanceInsightsService.generateEnhancedInsights(historicalInsights)
+          historicalInsights = enhancedInsights
+          
+          logger.info({ 
+            relatedPosts: historicalInsights.relatedPosts.length,
+            topPerformers: historicalInsights.topPerformers.length,
+            avgEngagement: historicalInsights.performanceContext.avgEngagement
+          }, 'Historical analysis completed successfully')
+        } else {
+          logger.info('No related historical posts found for topic')
+        }
+      } catch (error) {
+        logger.warn({ error: error instanceof Error ? error.message : String(error) }, 'Historical analysis failed, continuing without it')
+      }
+
       const totalTime = Date.now() - startTime
       logger.info({ 
         topic, 
         resultCount: rankedResults.length, 
+        hasHistoricalInsights: !!historicalInsights,
         totalTimeMs: totalTime 
       }, 'Comprehensive research completed')
 
       return {
         results: rankedResults,
         summary,
-        keyInsights
+        keyInsights,
+        historicalInsights
       }
 
     } catch (error) {
@@ -487,7 +576,8 @@ ${allNewsContent}`
       return {
         results: [],
         summary: `Research unavailable for topic: ${topic}`,
-        keyInsights: []
+        keyInsights: [],
+        historicalInsights: null
       }
     }
   }
