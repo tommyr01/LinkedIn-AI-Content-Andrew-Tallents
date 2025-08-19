@@ -6,6 +6,8 @@ import ContentGenerationWorker from './workers/content-generation'
 import { supabaseService } from './services/supabase'
 import { debugHandler, testJobHandler } from './api/debug'
 import debugRouter from './routes/debug'
+import performanceRouter from './routes/performance'
+import strategicVariantsRouter from './routes/strategic-variants'
 
 class WorkerService {
   private contentWorker: ContentGenerationWorker | null = null
@@ -22,6 +24,13 @@ class WorkerService {
     this.app.get('/debug', debugHandler)
     this.app.post('/debug/test-job', testJobHandler)
     this.app.use('/debug', debugRouter)
+    
+    // Performance-driven enhancement endpoints (Phase 1)
+    this.app.use('/api/performance', performanceRouter)
+    
+    // Strategic variants endpoints (Phase 2)
+    this.app.use('/api/content', strategicVariantsRouter)
+    
     this.app.get('/health', async (req, res) => {
       const health = await this.getStatus()
       res.json(health)
