@@ -479,12 +479,12 @@ export function PerformanceContentGenerator({ onContentGenerated }: PerformanceC
                         key={variant.type} 
                         className={`cursor-pointer transition-all duration-300 hover:shadow-lg ${
                           isSelected 
-                            ? `border-2 border-blue-500 shadow-lg bg-gradient-to-r from-blue-50/80 to-indigo-50/80` 
-                            : 'border border-gray-200 hover:border-gray-300 bg-white/60'
+                            ? `border-2 border-blue-500 shadow-lg bg-gradient-to-r from-blue-900/40 to-indigo-900/40 text-white` 
+                            : 'border border-gray-700 hover:border-gray-600 bg-gray-800 hover:bg-gray-750'
                         }`}
                         onClick={() => toggleVariant(variant.type)}
                       >
-                        <CardContent className="p-6">
+                        <CardContent className="p-6 text-white">
                           <div className="flex items-start gap-4">
                             <div className={`p-3 rounded-xl transition-all duration-300 ${
                               isSelected ? 'bg-gradient-to-r from-blue-500 to-indigo-500' : 'bg-gray-100'
@@ -546,21 +546,21 @@ export function PerformanceContentGenerator({ onContentGenerated }: PerformanceC
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="grid gap-4">
-                    <div className="flex justify-between items-center p-4 bg-white/60 rounded-lg">
-                      <span className="font-semibold text-gray-700">Selected Variants:</span>
+                    <div className="flex justify-between items-center p-4 bg-gray-800 rounded-lg">
+                      <span className="font-semibold text-white">Selected Variants:</span>
                       <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 px-3 py-1">
                         {selectedVariants.length} variants
                       </Badge>
                     </div>
-                    <div className="flex justify-between items-center p-4 bg-white/60 rounded-lg">
-                      <span className="font-semibold text-gray-700">Content Intent:</span>
-                      <span className="text-gray-600 font-medium">
+                    <div className="flex justify-between items-center p-4 bg-gray-800 rounded-lg">
+                      <span className="font-semibold text-white">Content Intent:</span>
+                      <span className="text-gray-300 font-medium">
                         {CONTENT_INTENTS.find(i => i.value === selectedIntent)?.label}
                       </span>
                     </div>
-                    <div className="flex justify-between items-center p-4 bg-white/60 rounded-lg">
-                      <span className="font-semibold text-gray-700">Platform:</span>
-                      <span className="text-gray-600 font-medium">LinkedIn</span>
+                    <div className="flex justify-between items-center p-4 bg-gray-800 rounded-lg">
+                      <span className="font-semibold text-white">Platform:</span>
+                      <span className="text-gray-300 font-medium">LinkedIn</span>
                     </div>
                   </div>
 
@@ -818,12 +818,12 @@ export function PerformanceContentGenerator({ onContentGenerated }: PerformanceC
                               Historical Intelligence
                             </h4>
                             <div className="grid grid-cols-2 gap-6 mb-4">
-                              <div className="p-4 bg-white/60 rounded-xl">
-                                <span className="font-semibold text-gray-700 block mb-2">Similar posts analyzed:</span>
+                              <div className="p-4 bg-gray-800 rounded-xl">
+                                <span className="font-semibold text-white block mb-2">Similar posts analyzed:</span>
                                 <p className="text-2xl font-bold text-purple-700">{draft.metadata.similar_posts_analyzed}</p>
                               </div>
-                              <div className="p-4 bg-white/60 rounded-xl">
-                                <span className="font-semibold text-gray-700 block mb-2">Top performer reference:</span>
+                              <div className="p-4 bg-gray-800 rounded-xl">
+                                <span className="font-semibold text-white block mb-2">Top performer reference:</span>
                                 <p className="text-2xl font-bold text-purple-700">{draft.metadata.top_performer_score || 0} score</p>
                               </div>
                             </div>
