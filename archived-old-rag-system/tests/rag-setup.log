@@ -1,0 +1,231 @@
+
+============================================================
+RAG SYSTEM SETUP PROGRESS
+============================================================
+1. ⏳ Database Schema Validation 
+2. ⏳ Data Processing 
+3. ⏳ Embedding Generation 
+4. ⏳ System Optimization 
+5. ⏳ Functionality Testing 
+6. ⏳ Performance Validation 
+============================================================
+
+[14:24:18] [32mINFO[39m: [36mStarting RAG system setup[39m
+    options: {
+      "skipSchemaCheck": false,
+      "skipDataProcessing": false,
+      "batchSize": 5,
+      "testAfterSetup": false
+    }
+[14:24:18] [32mINFO[39m: [36mStarting setup step[39m
+    stepName: "Database Schema Validation"
+[14:24:18] [32mINFO[39m: [36mValidating RAG database schema[39m
+[14:24:19] [32mINFO[39m: [36mSetup step completed[39m
+    stepName: "Database Schema Validation"
+    duration: 434
+    details: {
+      "migrationExists": true,
+      "tableChecks": [
+        {
+          "table": "voice_content_chunks",
+          "exists": true,
+          "recordCount": 1
+        },
+        {
+          "table": "voice_pattern_library",
+          "exists": true,
+          "recordCount": 1
+        },
+        {
+          "table": "chunk_retrieval_analytics",
+          "exists": true,
+          "recordCount": 0
+        }
+      ],
+      "schemaValid": true
+    }
+[14:24:19] [32mINFO[39m: [36mStarting setup step[39m
+    stepName: "Data Processing"
+[14:24:19] [32mINFO[39m: [36mProcessing existing transcript data into RAG chunks[39m
+    batchSize: 5
+[14:24:19] [32mINFO[39m: [36mExisting chunks found, processing only new segments[39m
+[14:24:19] [32mINFO[39m: [36mStarting RAG data processing for all transcript segments[39m
+    batchSize: 5
+    skipExisting: true
+[14:24:19] [32mINFO[39m: [36mFound segments to process[39m
+    totalSegments: 70
+[14:24:19] [32mINFO[39m: [36mProcessing batch[39m
+    batchNumber: 1
+    totalBatches: 14
+    batchSize: 5
+[14:25:43] [32mINFO[39m: [36mProcessing batch[39m
+    batchNumber: 2
+    totalBatches: 14
+    batchSize: 5
+[14:27:28] [32mINFO[39m: [36mProcessing batch[39m
+    batchNumber: 3
+    totalBatches: 14
+    batchSize: 5
+[14:28:50] [32mINFO[39m: [36mProcessing batch[39m
+    batchNumber: 4
+    totalBatches: 14
+    batchSize: 5
+[14:29:24] [31mERROR[39m: [36mFailed to save patterns to database[39m
+    error: {}
+[14:29:24] [31mERROR[39m: [36mFailed to process segment in batch[39m
+    segmentId: "91e95d97-374c-4ddc-9b2f-aef363131d51"
+    error: "Failed to insert patterns: new row for relation \"voice_pattern_library\" violates check constraint \"voice_pattern_library_pattern_type_check\""
+[14:30:14] [32mINFO[39m: [36mProcessing batch[39m
+    batchNumber: 5
+    totalBatches: 14
+    batchSize: 5
+[14:31:32] [32mINFO[39m: [36mProcessing batch[39m
+    batchNumber: 6
+    totalBatches: 14
+    batchSize: 5
+[14:33:01] [32mINFO[39m: [36mProcessing batch[39m
+    batchNumber: 7
+    totalBatches: 14
+    batchSize: 5
+[14:34:45] [32mINFO[39m: [36mProcessing batch[39m
+    batchNumber: 8
+    totalBatches: 14
+    batchSize: 5
+[14:36:23] [32mINFO[39m: [36mProcessing batch[39m
+    batchNumber: 9
+    totalBatches: 14
+    batchSize: 5
+[14:37:21] [31mERROR[39m: [36mFailed to save patterns to database[39m
+    error: {}
+[14:37:21] [31mERROR[39m: [36mFailed to process segment in batch[39m
+    segmentId: "7c4389b8-d417-4ef8-b2bd-8fe3dcb0cb3c"
+    error: "Failed to insert patterns: new row for relation \"voice_pattern_library\" violates check constraint \"voice_pattern_library_pattern_type_check\""
+[14:37:41] [32mINFO[39m: [36mProcessing batch[39m
+    batchNumber: 10
+    totalBatches: 14
+    batchSize: 5
+[14:39:08] [32mINFO[39m: [36mProcessing batch[39m
+    batchNumber: 11
+    totalBatches: 14
+    batchSize: 5
+[14:40:15] [32mINFO[39m: [36mProcessing batch[39m
+    batchNumber: 12
+    totalBatches: 14
+    batchSize: 5
+[14:41:21] [32mINFO[39m: [36mProcessing batch[39m
+    batchNumber: 13
+    totalBatches: 14
+    batchSize: 5
+[14:42:32] [32mINFO[39m: [36mProcessing batch[39m
+    batchNumber: 14
+    totalBatches: 14
+    batchSize: 5
+[14:44:07] [31mERROR[39m: [36mFailed to save chunks to database[39m
+    segmentId: "c5ab3dac-677e-4662-9918-28e8615b3184"
+    error: {}
+[14:44:07] [31mERROR[39m: [36mFailed to process segment in batch[39m
+    segmentId: "c5ab3dac-677e-4662-9918-28e8615b3184"
+    error: "Failed to insert chunks: new row for relation \"voice_content_chunks\" violates check constraint \"voice_content_chunks_token_count_check\""
+[14:44:40] [31mERROR[39m: [36mFailed to save chunks to database[39m
+    segmentId: "2f5d5460-a2d2-4486-b7c5-abb3a8a16f37"
+    error: {}
+[14:44:40] [31mERROR[39m: [36mFailed to process segment in batch[39m
+    segmentId: "2f5d5460-a2d2-4486-b7c5-abb3a8a16f37"
+    error: "Failed to insert chunks: new row for relation \"voice_content_chunks\" violates check constraint \"voice_content_chunks_token_count_check\""
+
+============================================================
+RAG SYSTEM SETUP PROGRESS
+============================================================
+1. ✅ Database Schema Validation (434ms)
+2. ✅ Data Processing (1221903ms)
+3. ✅ Embedding Generation 
+4. ✅ System Optimization (203ms)
+5. ✅ Functionality Testing 
+6. ✅ Performance Validation 
+============================================================
+
+
+============================================================
+RAG System Setup COMPLETED: 6/6 steps successful (1223s)
+============================================================
+🎉 RAG System is ready for use!
+
+Next steps:
+1. Test the system with: npm run test:rag
+2. Generate content using the RAG-enhanced voice learning
+3. Monitor system performance and optimize as needed
+============================================================
+
+[14:44:41] [32mINFO[39m: [36mRAG data processing completed[39m
+    segmentsProcessed: 66
+    chunksCreated: 40
+    patternsExtracted: 201
+    embeddingsGenerated: 442
+    errors: 4
+    processingTime: 1221827
+[14:44:41] [33mWARN[39m: [36mSome segments failed to process[39m
+    errors: 4
+    processed: 66
+[14:44:41] [32mINFO[39m: [36mSetup step completed[39m
+    stepName: "Data Processing"
+    duration: 1221903
+    details: {
+      "hadExistingChunks": true,
+      "processingStats": {
+        "segmentsProcessed": 66,
+        "chunksCreated": 40,
+        "patternsExtracted": 201,
+        "embeddingsGenerated": 442,
+        "errors": 4,
+        "processingTime": 1221827
+      },
+      "success": true
+    }
+[14:44:41] [32mINFO[39m: [36mSetup step skipped[39m
+    stepName: "Embedding Generation"
+    reason: "Embeddings generated during data processing"
+[14:44:41] [32mINFO[39m: [36mStarting setup step[39m
+    stepName: "System Optimization"
+[14:44:41] [32mINFO[39m: [36mOptimizing RAG system performance[39m
+[14:44:41] [32mINFO[39m: [36mStarting RAG system maintenance[39m
+[14:44:41] [32mINFO[39m: [36mRAG system maintenance completed[39m
+    chunksUpdated: 0
+    analyticsDeleted: 0
+    patternsOptimized: 0
+[14:44:41] [32mINFO[39m: [36mSetup step completed[39m
+    stepName: "System Optimization"
+    duration: 203
+    details: {
+      "maintenance": {
+        "chunksUpdated": 0,
+        "analyticsDeleted": 0,
+        "patternsOptimized": 0,
+        "maintenanceSuccess": true
+      },
+      "systemStats": {
+        "totalChunks": 133,
+        "totalPatterns": 165,
+        "avgChunkQuality": 0.644812030075188,
+        "avgPatternEffectiveness": 0,
+        "retrievalStats": {
+          "andrewChunks": 133,
+          "highQualityChunks": 50,
+          "highEngagementPatterns": 0,
+          "effectivePatterns": 0
+        },
+        "systemHealth": "poor"
+      },
+      "optimizationSuccess": true
+    }
+[14:44:41] [32mINFO[39m: [36mSetup step skipped[39m
+    stepName: "Functionality Testing"
+    reason: "Testing skipped by user"
+[14:44:41] [32mINFO[39m: [36mSetup step skipped[39m
+    stepName: "Performance Validation"
+    reason: "Performance validation skipped by user"
+[14:44:41] [32mINFO[39m: [36mRAG system setup completed[39m
+    success: true
+    successfulSteps: 6
+    failedSteps: 0
+    totalDuration: 1222543
+    summary: "RAG System Setup COMPLETED: 6/6 steps successful (1223s)"

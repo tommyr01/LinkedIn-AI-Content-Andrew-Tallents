@@ -4,7 +4,7 @@ import logger from '../lib/logger'
 import type { ContentJob, ContentDraft, ResearchCache, AIAgentResult } from '../types'
 
 export class SupabaseService {
-  private client
+  public client
   
   constructor() {
     this.client = createClient(
@@ -303,6 +303,68 @@ export class SupabaseService {
     } catch (error) {
       logger.error({ error }, 'Error getting cache stats')
       return null
+    }
+  }
+
+  async clearCacheByHash(queryHash: string): Promise<boolean> {
+    try {
+      const { error } = await this.client
+        .from('research_cache')
+        .delete()
+        .eq('query_hash', queryHash)
+
+      if (error) {
+        logger.error({ error, queryHash }, 'Failed to clear cache by hash')
+        return false
+      }
+
+      logger.info({ queryHash }, 'Cache entry cleared by hash')
+      return true
+    } catch (error) {
+      logger.error({ error, queryHash }, 'Error clearing cache by hash')
+      return false
+    }
+  }
+
+  async clearCacheByPattern(pattern: string): Promise<number> {
+    try {
+      const { data, error } = await this.client
+        .from('research_cache')
+        .delete()
+        .like('query_text', `%${pattern}%`)
+        .select('id')
+
+      if (error) {
+        logger.error({ error, pattern }, 'Failed to clear cache by pattern')
+        return 0
+      }
+
+      const deletedCount = data ? data.length : 0
+      logger.info({ pattern, deletedCount }, 'Cache entries cleared by pattern')
+      return deletedCount
+    } catch (error) {
+      logger.error({ error, pattern }, 'Error clearing cache by pattern')
+      return 0
+    }
+  }
+
+  async getAllCacheEntries(limit: number = 50): Promise<any[]> {
+    try {
+      const { data, error } = await this.client
+        .from('research_cache')
+        .select('query_hash, source, query_text, created_at, expires_at, hit_count')
+        .order('created_at', { ascending: false })
+        .limit(limit)
+
+      if (error) {
+        logger.error({ error }, 'Failed to get cache entries')
+        return []
+      }
+
+      return data || []
+    } catch (error) {
+      logger.error({ error }, 'Error getting cache entries')
+      return []
     }
   }
 
@@ -741,6 +803,558 @@ export class SupabaseService {
     } catch (error) {
       logger.error({ error }, 'Error cleaning up expired insights')
       return 0
+    }
+  }
+
+  // ==========================================
+  // PODCAST VOICE LEARNING METHODS
+  // ==========================================
+
+  async insertPodcastEpisode(data: {
+    title: string
+    guest_name?: string | null
+    episode_date?: string | null
+    duration_minutes?: number
+    source_url?: string
+    transcript_raw: string
+  }): Promise<any> {
+    try {
+      const { data: episode, error } = await this.client
+        .from('podcast_episodes')
+        .insert({
+          title: data.title,
+          guest_name: data.guest_name,
+          episode_date: data.episode_date,
+          duration_minutes: data.duration_minutes,
+          source_url: data.source_url,
+          transcript_raw: data.transcript_raw
+        })
+        .select()
+        .single()
+
+      if (error) {
+        logger.error({ error, title: data.title }, 'Failed to insert podcast episode')
+        return null
+      }
+
+      logger.debug({ episodeId: episode.id, title: data.title }, 'Podcast episode inserted')
+      return episode
+    } catch (error) {
+      logger.error({ error, title: data.title }, 'Error inserting podcast episode')
+      return null
+    }
+  }
+
+  async insertTranscriptSegment(data: {
+    episode_id: string
+    speaker: string
+    segment_text: string
+    timestamp_start?: string
+    timestamp_end?: string
+    segment_order: number
+    word_count: number
+  }): Promise<any> {
+    try {
+      const { data: segment, error } = await this.client
+        .from('transcript_segments')
+        .insert(data)
+        .select()
+        .single()
+
+      if (error) {
+        logger.error({ error, episode_id: data.episode_id }, 'Failed to insert transcript segment')
+        return null
+      }
+
+      return segment
+    } catch (error) {
+      logger.error({ error, episode_id: data.episode_id }, 'Error inserting transcript segment')
+      return null
+    }
+  }
+
+  async insertVoicePattern(data: {
+    segment_id: string
+    pattern_type: string
+    pattern_text: string
+    confidence_score: number
+    usage_context: string
+    emotional_tone: string
+    authenticity_indicators: string[]
+  }): Promise<any> {
+    try {
+      const { data: pattern, error } = await this.client
+        .from('voice_patterns')
+        .insert(data)
+        .select()
+        .single()
+
+      if (error) {
+        logger.error({ error, segment_id: data.segment_id }, 'Failed to insert voice pattern')
+        return null
+      }
+
+      return pattern
+    } catch (error) {
+      logger.error({ error, segment_id: data.segment_id }, 'Error inserting voice pattern')
+      return null
+    }
+  }
+
+  async getAndrewVoicePatterns(patternTypes?: string[]): Promise<any[]> {
+    try {
+      let query = this.client
+        .from('voice_patterns')
+        .select(`
+          *,
+          transcript_segments!inner(
+            speaker,
+            segment_text,
+            podcast_episodes(title, guest_name)
+          )
+        `)
+        .eq('transcript_segments.speaker', 'andrew')
+
+      if (patternTypes && patternTypes.length > 0) {
+        query = query.in('pattern_type', patternTypes)
+      }
+
+      const { data, error } = await query
+        .order('confidence_score', { ascending: false })
+        .limit(100)
+
+      if (error) {
+        logger.error({ error }, 'Failed to get Andrew voice patterns')
+        return []
+      }
+
+      return data || []
+    } catch (error) {
+      logger.error({ error }, 'Error getting Andrew voice patterns')
+      return []
+    }
+  }
+
+  async getAndrewTranscriptSegments(limit: number = 50): Promise<any[]> {
+    try {
+      const { data, error } = await this.client
+        .from('transcript_segments')
+        .select(`
+          *,
+          podcast_episodes(title, guest_name)
+        `)
+        .eq('speaker', 'andrew')
+        .order('created_at', { ascending: false })
+        .limit(limit)
+
+      if (error) {
+        logger.error({ error }, 'Failed to get Andrew transcript segments')
+        return []
+      }
+
+      return data || []
+    } catch (error) {
+      logger.error({ error }, 'Error getting Andrew transcript segments')
+      return []
+    }
+  }
+
+  async searchAndrewVoiceContent(query: string, limit: number = 20): Promise<any[]> {
+    try {
+      const { data, error } = await this.client
+        .from('transcript_segments')
+        .select(`
+          *,
+          podcast_episodes(title, guest_name),
+          voice_patterns(pattern_type, confidence_score, emotional_tone)
+        `)
+        .eq('speaker', 'andrew')
+        .textSearch('segment_text', query)
+        .order('created_at', { ascending: false })
+        .limit(limit)
+
+      if (error) {
+        logger.error({ error, query }, 'Failed to search Andrew voice content')
+        return []
+      }
+
+      return data || []
+    } catch (error) {
+      logger.error({ error, query }, 'Error searching Andrew voice content')
+      return []
+    }
+  }
+
+  // ==========================================
+  // PHASE 1: RAG VOICE LEARNING INTEGRATION
+  // ==========================================
+
+  // Voice Chunks Methods
+  async getVoiceChunk(chunkId: string): Promise<any> {
+    try {
+      const { data, error } = await this.client
+        .from('voice_chunks')
+        .select('*')
+        .eq('id', chunkId)
+        .single()
+
+      if (error) {
+        logger.error({ error, chunkId }, 'Failed to get voice chunk')
+        return null
+      }
+
+      return data
+    } catch (error) {
+      logger.error({ error, chunkId }, 'Error getting voice chunk')
+      return null
+    }
+  }
+
+  async searchVoiceChunksByContent(
+    query: string,
+    similarityThreshold: number = 0.70,
+    limit: number = 10,
+    patternTypes?: string[]
+  ): Promise<any[]> {
+    try {
+      // For text-based search as fallback when embeddings aren't available
+      let queryBuilder = this.client
+        .from('voice_chunks')
+        .select('*')
+        .textSearch('content', query)
+        .order('confidence_score', { ascending: false })
+        .limit(limit)
+
+      if (patternTypes && patternTypes.length > 0) {
+        queryBuilder = queryBuilder.in('voice_pattern_type', patternTypes)
+      }
+
+      const { data, error } = await queryBuilder
+
+      if (error) {
+        logger.error({ error, query }, 'Failed to search voice chunks by content')
+        return []
+      }
+
+      return data || []
+    } catch (error) {
+      logger.error({ error, query }, 'Error searching voice chunks by content')
+      return []
+    }
+  }
+
+  async getVoiceChunksByPattern(patternType: string, limit: number = 20): Promise<any[]> {
+    try {
+      const { data, error } = await this.client
+        .from('voice_chunks')
+        .select('*')
+        .eq('voice_pattern_type', patternType)
+        .order('confidence_score', { ascending: false })
+        .order('effectiveness_score', { ascending: false })
+        .limit(limit)
+
+      if (error) {
+        logger.error({ error, patternType }, 'Failed to get voice chunks by pattern')
+        return []
+      }
+
+      return data || []
+    } catch (error) {
+      logger.error({ error, patternType }, 'Error getting voice chunks by pattern')
+      return []
+    }
+  }
+
+  async updateVoiceChunkEffectiveness(chunkId: string, effectivenessScore: number): Promise<boolean> {
+    try {
+      const { error } = await this.client
+        .from('voice_chunks')
+        .update({
+          effectiveness_score: effectivenessScore,
+          usage_count: this.client.raw('usage_count + 1'),
+          last_used_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', chunkId)
+
+      if (error) {
+        logger.error({ error, chunkId }, 'Failed to update voice chunk effectiveness')
+        return false
+      }
+
+      return true
+    } catch (error) {
+      logger.error({ error, chunkId }, 'Error updating voice chunk effectiveness')
+      return false
+    }
+  }
+
+  // Voice Learning Context Methods
+  async saveVoiceLearningContext(data: {
+    job_id: string
+    generation_topic: string
+    content_type?: string
+    voice_chunks_used: string[]
+    chunks_retrieval_query: string
+    similarity_threshold?: number
+    chunks_retrieved_count: number
+    topic_match_score?: number
+    voice_authenticity_score?: number
+    content_enhancement_applied?: any
+  }): Promise<boolean> {
+    try {
+      const { error } = await this.client
+        .from('voice_learning_context')
+        .insert({
+          job_id: data.job_id,
+          generation_topic: data.generation_topic,
+          content_type: data.content_type || 'post',
+          voice_chunks_used: data.voice_chunks_used,
+          chunks_retrieval_query: data.chunks_retrieval_query,
+          similarity_threshold: data.similarity_threshold || 0.70,
+          chunks_retrieved_count: data.chunks_retrieved_count,
+          topic_match_score: data.topic_match_score || 0.00,
+          voice_authenticity_score: data.voice_authenticity_score || 0.00,
+          content_enhancement_applied: data.content_enhancement_applied || {}
+        })
+
+      if (error) {
+        logger.error({ error, jobId: data.job_id }, 'Failed to save voice learning context')
+        return false
+      }
+
+      logger.info({ jobId: data.job_id, chunksUsed: data.voice_chunks_used.length }, 'Voice learning context saved')
+      return true
+    } catch (error) {
+      logger.error({ error, jobId: data.job_id }, 'Error saving voice learning context')
+      return false
+    }
+  }
+
+  async updateVoiceLearningContextPerformance(
+    jobId: string,
+    contentPerformanceScore: number,
+    voiceContributionScore?: number,
+    wasEffective?: boolean,
+    feedbackNotes?: string
+  ): Promise<boolean> {
+    try {
+      const { error } = await this.client
+        .from('voice_learning_context')
+        .update({
+          content_performance_score: contentPerformanceScore,
+          voice_contribution_score: voiceContributionScore,
+          was_effective: wasEffective,
+          feedback_notes: feedbackNotes,
+          updated_at: new Date().toISOString()
+        })
+        .eq('job_id', jobId)
+
+      if (error) {
+        logger.error({ error, jobId }, 'Failed to update voice learning context performance')
+        return false
+      }
+
+      return true
+    } catch (error) {
+      logger.error({ error, jobId }, 'Error updating voice learning context performance')
+      return false
+    }
+  }
+
+  // Voice Pattern Cache Methods
+  async getVoicePatternCache(queryHash: string): Promise<any | null> {
+    try {
+      const { data, error } = await this.client
+        .from('voice_pattern_cache')
+        .select('*')
+        .eq('query_hash', queryHash)
+        .gt('expires_at', new Date().toISOString())
+        .single()
+
+      if (error || !data) {
+        return null
+      }
+
+      // Update access tracking
+      await this.client
+        .from('voice_pattern_cache')
+        .update({
+          hit_count: data.hit_count + 1,
+          last_accessed_at: new Date().toISOString()
+        })
+        .eq('id', data.id)
+
+      return data
+    } catch (error) {
+      logger.error({ error, queryHash }, 'Error getting voice pattern cache')
+      return null
+    }
+  }
+
+  async setVoicePatternCache(data: {
+    queryHash: string
+    queryTopic: string
+    patternTypes?: string[]
+    matchingChunks: string[]
+    patternAnalysis: any
+    authenticityBoosts: string[]
+    voiceRecommendations: string[]
+    chunkCount: number
+    avgConfidenceScore: number
+    expiresAt?: Date
+  }): Promise<boolean> {
+    try {
+      const { error } = await this.client
+        .from('voice_pattern_cache')
+        .upsert({
+          query_hash: data.queryHash,
+          query_topic: data.queryTopic,
+          pattern_types: data.patternTypes || [],
+          matching_chunks: data.matchingChunks,
+          pattern_analysis: data.patternAnalysis,
+          authenticity_boosts: data.authenticityBoosts,
+          voice_recommendations: data.voiceRecommendations,
+          chunk_count: data.chunkCount,
+          avg_confidence_score: data.avgConfidenceScore,
+          expires_at: data.expiresAt?.toISOString() || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+          hit_count: 0,
+          last_accessed_at: new Date().toISOString()
+        }, {
+          onConflict: 'query_hash'
+        })
+
+      if (error) {
+        logger.error({ error, queryHash: data.queryHash }, 'Failed to set voice pattern cache')
+        return false
+      }
+
+      return true
+    } catch (error) {
+      logger.error({ error, queryHash: data.queryHash }, 'Error setting voice pattern cache')
+      return false
+    }
+  }
+
+  async cleanupExpiredVoicePatternCache(): Promise<number> {
+    try {
+      const { data, error } = await this.client.rpc('cleanup_voice_pattern_cache')
+
+      if (error) {
+        logger.error({ error }, 'Failed to cleanup expired voice pattern cache')
+        return 0
+      }
+
+      logger.info({ deletedCount: data }, 'Cleaned up expired voice pattern cache entries')
+      return data || 0
+    } catch (error) {
+      logger.error({ error }, 'Error cleaning up expired voice pattern cache')
+      return 0
+    }
+  }
+
+  // Voice Learning Analytics Methods
+  async getVoiceLearningAnalytics(days: number = 7): Promise<any[]> {
+    try {
+      const startDate = new Date()
+      startDate.setDate(startDate.getDate() - days)
+
+      const { data, error } = await this.client
+        .from('voice_learning_analytics')
+        .select('*')
+        .gte('date_period', startDate.toISOString().split('T')[0])
+        .order('date_period', { ascending: false })
+
+      if (error) {
+        logger.error({ error, days }, 'Failed to get voice learning analytics')
+        return []
+      }
+
+      return data || []
+    } catch (error) {
+      logger.error({ error, days }, 'Error getting voice learning analytics')
+      return []
+    }
+  }
+
+  async updateVoiceLearningAnalytics(targetDate?: Date): Promise<boolean> {
+    try {
+      const dateToUpdate = targetDate || new Date()
+      const { error } = await this.client.rpc('update_voice_learning_analytics', {
+        target_date: dateToUpdate.toISOString().split('T')[0]
+      })
+
+      if (error) {
+        logger.error({ error, targetDate }, 'Failed to update voice learning analytics')
+        return false
+      }
+
+      logger.info({ targetDate }, 'Voice learning analytics updated')
+      return true
+    } catch (error) {
+      logger.error({ error, targetDate }, 'Error updating voice learning analytics')
+      return false
+    }
+  }
+
+  // Voice System Health Methods
+  async getVoiceSystemHealth(): Promise<{
+    totalChunks: number
+    avgConfidence: number
+    avgEffectiveness: number
+    patternDistribution: Record<string, number>
+    recentUsage: number
+    systemStatus: 'healthy' | 'warning' | 'error'
+  }> {
+    try {
+      const { data: chunks } = await this.client
+        .from('voice_chunks')
+        .select('voice_pattern_type, confidence_score, effectiveness_score, usage_count')
+
+      if (!chunks) {
+        return {
+          totalChunks: 0,
+          avgConfidence: 0,
+          avgEffectiveness: 0,
+          patternDistribution: {},
+          recentUsage: 0,
+          systemStatus: 'error'
+        }
+      }
+
+      const totalChunks = chunks.length
+      const avgConfidence = chunks.reduce((sum, c) => sum + c.confidence_score, 0) / totalChunks
+      const avgEffectiveness = chunks.reduce((sum, c) => sum + (c.effectiveness_score || 0), 0) / totalChunks
+      const recentUsage = chunks.reduce((sum, c) => sum + c.usage_count, 0)
+
+      const patternDistribution = chunks.reduce((acc, chunk) => {
+        if (chunk.voice_pattern_type) {
+          acc[chunk.voice_pattern_type] = (acc[chunk.voice_pattern_type] || 0) + 1
+        }
+        return acc
+      }, {} as Record<string, number>)
+
+      const systemStatus = totalChunks > 800 && avgConfidence > 0.6 ? 'healthy' : 
+                          totalChunks > 500 && avgConfidence > 0.4 ? 'warning' : 'error'
+
+      return {
+        totalChunks,
+        avgConfidence: Math.round(avgConfidence * 100) / 100,
+        avgEffectiveness: Math.round(avgEffectiveness * 100) / 100,
+        patternDistribution,
+        recentUsage,
+        systemStatus
+      }
+    } catch (error) {
+      logger.error({ error }, 'Error getting voice system health')
+      return {
+        totalChunks: 0,
+        avgConfidence: 0,
+        avgEffectiveness: 0,
+        patternDistribution: {},
+        recentUsage: 0,
+        systemStatus: 'error'
+      }
     }
   }
 

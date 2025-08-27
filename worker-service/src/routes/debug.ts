@@ -10,11 +10,106 @@ import { simpleAIAgentsService } from '../services/ai-agents-simple'
 import { vectorSimilarityService } from '../services/vector-similarity'
 import { ragHistoricalAnalysisService, type RAGHistoricalInsight } from '../services/historical-analysis-rag'
 import { embeddingsPopulatorService } from '../services/embeddings-populator'
+// import { voiceRAGSystem } from '../services/voice-rag-system' // ARCHIVED - old RAG system
+import { voiceLearningEnhanced } from '../services/voice-learning-enhanced'
 import { OpenAI } from 'openai'
 import { Redis } from 'ioredis'
 import type { HistoricalPost } from '../services/historical-analysis'
 
 const router = express.Router()
+
+// Test endpoint for research cache debugging
+router.post('/test-research-cache', async (req, res) => {
+  try {
+    const { topic } = req.body
+    
+    if (!topic) {
+      return res.status(400).json({ error: 'Topic is required' })
+    }
+    
+    logger.info({ topic }, 'Testing research cache for topic')
+    
+    // 1. Check current cache entries
+    const cacheEntries = await supabaseService.getAllCacheEntries(20)
+    
+    // 2. Clear cache for this topic
+    const clearResult = await researchService.clearCacheForTopic(topic)
+    
+    // 3. Run fresh research (should hit API, not cache)
+    const freshResearch = await researchService.enhancedFirecrawlResearch(topic)
+    
+    // 4. Run research again (should hit cache this time)
+    const cachedResearch = await researchService.enhancedFirecrawlResearch(topic)
+    
+    // 5. Get updated cache entries
+    const newCacheEntries = await supabaseService.getAllCacheEntries(10)
+    
+    res.json({
+      success: true,
+      topic,
+      clearResult,
+      research: {
+        fresh: {
+          idea1_summary: freshResearch.idea_1?.concise_summary || 'No summary',
+          idea2_summary: freshResearch.idea_2?.concise_summary || 'No summary', 
+          idea3_summary: freshResearch.idea_3?.concise_summary || 'No summary'
+        },
+        cached: {
+          idea1_summary: cachedResearch.idea_1?.concise_summary || 'No summary',
+          idea2_summary: cachedResearch.idea_2?.concise_summary || 'No summary',
+          idea3_summary: cachedResearch.idea_3?.concise_summary || 'No summary'
+        }
+      },
+      cache: {
+        before: cacheEntries,
+        after: newCacheEntries
+      }
+    })
+    
+  } catch (error) {
+    logger.error({ error }, 'Research cache test failed')
+    res.status(500).json({ error: 'Research cache test failed', details: error instanceof Error ? error.message : String(error) })
+  }
+})
+
+// Cache management endpoint
+router.post('/clear-research-cache/:topic', async (req, res) => {
+  try {
+    const { topic } = req.params
+    
+    logger.info({ topic }, 'Manually clearing research cache for topic')
+    
+    const result = await researchService.clearCacheForTopic(topic)
+    
+    res.json({
+      success: true,
+      topic,
+      result
+    })
+    
+  } catch (error) {
+    logger.error({ error }, 'Cache clearing failed')
+    res.status(500).json({ error: 'Cache clearing failed', details: error instanceof Error ? error.message : String(error) })
+  }
+})
+
+// Get all cache entries for debugging
+router.get('/research-cache-entries', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit as string) || 50
+    const entries = await supabaseService.getAllCacheEntries(limit)
+    
+    res.json({
+      success: true,
+      entries,
+      count: entries.length
+    })
+    
+  } catch (error) {
+    logger.error({ error }, 'Failed to get cache entries')
+    res.status(500).json({ error: 'Failed to get cache entries', details: error instanceof Error ? error.message : String(error) })
+  }
+})
 
 /**
  * Convert RAG insights to EnhancedInsight format for AI agents
@@ -1088,6 +1183,15 @@ router.get('/env', async (req, res) => {
     })
   }
 })
+
+// Test Voice RAG System endpoint - DISABLED (old RAG system archived)
+// router.post('/test-voice-rag', async (req, res) => {
+//   res.status(503).json({
+//     success: false,
+//     message: 'Voice RAG system has been archived',
+//     details: 'The old RAG system has been archived. Use the current voice learning system instead.'
+//   })
+// })
 
 // Clear Redis queue corruption - remove old/stuck jobs
 router.post('/clear-queue', async (req, res) => {
