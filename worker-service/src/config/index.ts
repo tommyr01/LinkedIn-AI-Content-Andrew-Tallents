@@ -5,6 +5,10 @@ import type { WorkerConfig } from '../types'
 // Load environment variables
 config()
 
+// Check if we're in a build environment
+const isBuildTime = process.env.VERCEL_ENV === 'production' || 
+                   process.env.NODE_ENV === 'production' && !process.env.REDIS_URL
+
 const configSchema = z.object({
   REDIS_URL: z.string().url('REDIS_URL must be a valid URL'),
   SUPABASE_URL: z.string().url('SUPABASE_URL must be a valid URL'),
@@ -21,6 +25,46 @@ const configSchema = z.object({
 })
 
 const parseConfig = () => {
+  // Skip validation during build time
+  if (isBuildTime) {
+    return {
+      redis: {
+        url: process.env.REDIS_URL || ''
+      },
+      supabase: {
+        url: process.env.SUPABASE_URL || '',
+        serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+      },
+      openai: {
+        apiKey: process.env.OPENAI_API_KEY || '',
+        model: 'gpt-4o-mini'
+      },
+      anthropic: {
+        apiKey: process.env.ANTHROPIC_API_KEY || '',
+        model: 'claude-3-5-sonnet-20241022'
+      },
+      research: {
+        firecrawl: {
+          apiKey: process.env.FIRECRAWL_API_KEY || ''
+        },
+        perplexity: {
+          apiKey: process.env.PERPLEXITY_API_KEY || ''
+        },
+        rapidapi: {
+          apiKey: process.env.RAPIDAPI_KEY || ''
+        }
+      },
+      worker: {
+        concurrency: 1,
+        maxJobAttempts: 3
+      },
+      logging: {
+        level: 'info' as const
+      },
+      environment: 'production'
+    } as WorkerConfig & { environment: string }
+  }
+
   try {
     const rawConfig = {
       REDIS_URL: process.env.REDIS_URL,
@@ -89,6 +133,16 @@ const parseConfig = () => {
   }
 }
 
-export const appConfig = parseConfig()
+// Lazy initialization - only validate when actually accessed
+let _appConfig: ReturnType<typeof parseConfig> | null = null
+
+export const appConfig = new Proxy({} as ReturnType<typeof parseConfig>, {
+  get(target, prop) {
+    if (!_appConfig) {
+      _appConfig = parseConfig()
+    }
+    return (_appConfig as any)[prop]
+  }
+})
 
 export default appConfig
