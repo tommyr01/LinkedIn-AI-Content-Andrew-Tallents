@@ -46,7 +46,7 @@ export default function MyPostsPage() {
     try {
       console.log('🔍 Loading Andrew\'s posts from database...')
       
-      const response = await fetch('/api/linkedin/posts/list?maxRecords=100&sortField=posted_at&sortDirection=desc&username=andrewtallents', {
+      const response = await fetch('/api/linkedin/posts/list?sortField=posted_at&sortDirection=desc&username=andrewtallents', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json'

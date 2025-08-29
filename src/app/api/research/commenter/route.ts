@@ -123,11 +123,35 @@ export async function POST(request: NextRequest) {
     // Calculate tenure months for display
     const tenureMonths = calculateTenureMonths(profileData)
     
+    // Transform the enhanced breakdown format to the old format expected by UI
+    const transformedBreakdown = {
+      roleMatch: enhancedProfile.icpScore.breakdown?.role?.score || 0,
+      companySize: enhancedProfile.icpScore.breakdown?.companySize?.score || 0,
+      industry: enhancedProfile.icpScore.breakdown?.industry?.score || 0,
+      tenure: enhancedProfile.icpScore.breakdown?.tenure?.score || 0,
+      careerTransition: enhancedProfile.icpScore.breakdown?.recentTransition?.score || 0,
+      leadership: enhancedProfile.icpScore.breakdown?.leadershipExperience?.score || 0,
+      engagement: enhancedProfile.icpScore.breakdown?.engagementLevel?.score || 0
+    }
+    
+    // Extract reasoning for each factor if needed
+    const breakdownReasoning = Object.entries(enhancedProfile.icpScore.breakdown || {}).reduce((acc, [key, value]) => {
+      if (value && typeof value === 'object' && 'reasoning' in value) {
+        acc[key] = value.reasoning
+      }
+      return acc
+    }, {} as Record<string, string>)
+    
     return NextResponse.json({
       success: true,
       prospect: {
         ...enhancedProfile,
-        tenureMonths
+        tenureMonths,
+        icpScore: {
+          ...enhancedProfile.icpScore,
+          breakdown: transformedBreakdown,
+          breakdownReasoning // Keep reasoning separate for potential future use
+        }
       },
       meta: {
         researchedAt: new Date().toISOString(),
