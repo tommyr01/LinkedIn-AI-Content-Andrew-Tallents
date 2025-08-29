@@ -13,7 +13,7 @@ Built the foundational database schema and analysis systems for performance-driv
 Created 4 new tables with comprehensive tracking:
 
 - **`post_performance_analytics`** - Tracks engagement metrics for Andrew's posts over time
-- **`voice_learning_data`** - Stores analyzed voice patterns from posts and comments  
+- **`voice_learning_data`** - Stores analysed voice patterns from posts and comments  
 - **`content_variants_tracking`** - Tracks performance of our 3 strategic variants
 - **`historical_insights`** - Stores processed insights from high-performing content
 

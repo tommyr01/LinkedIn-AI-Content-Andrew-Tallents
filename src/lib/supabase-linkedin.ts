@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { icpScorer, ProspectProfile } from './icp-scorer'
-import { enhancedICPScorer, type LinkedInCommentAuthor, type EnhancedProspectProfile } from './enhanced-icp-scorer'
+import { EnhancedLeadScoringEngine, type EnhancedResearchData } from './lead-scoring'
+import type { LinkedInCommentAuthor } from './enhanced-icp-scorer'
 
 const supabaseUrl = process.env.SUPABASE_URL
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -167,6 +168,33 @@ export interface LinkedInConnection {
   is_current?: boolean
   company_linkedin_url?: string
   current_company_urn?: string
+}
+
+// Enhanced prospect profile compatible with lead scoring engine
+export interface EnhancedProspectProfile {
+  name: string
+  headline: string
+  company: string
+  role: string
+  profileUrl: string
+  profilePicture: string
+  location: string
+  followerCount: number
+  connectionCount: number
+  icpScore: {
+    totalScore: number
+    category: 'Hot Lead' | 'Warm Lead' | 'Cold Lead' | 'Not ICP'
+    breakdown: Record<string, { score: number; reasoning: string }>
+    tags: string[]
+    reasoning?: string[]
+    // Enhanced fields
+    confidence?: number
+    dataQuality?: 'high' | 'medium' | 'low'
+    signals?: string[]
+    redFlags?: string[]
+    psychographicProfile?: any
+    urgencyLevel?: string
+  }
 }
 
 export interface DBLinkedInConnection {
@@ -340,7 +368,7 @@ export class SupabaseLinkedInService {
     return data || []
   }
 
-  // Profile Research & ICP Scoring
+  // Profile Research & ICP Scoring with Enhanced Lead Scoring Engine
   async researchCommentAuthor(comment: LinkedInComment): Promise<EnhancedProspectProfile | null> {
     try {
       // Check if profile already exists
@@ -356,17 +384,60 @@ export class SupabaseLinkedInService {
         }
       }
 
-      // Use enhanced ICP scorer for LinkedIn comment authors
-      const author: LinkedInCommentAuthor = {
-        name: comment.author.name,
-        headline: comment.author.headline,
-        profile_url: comment.author.profile_url,
-        profile_picture: comment.author.profile_picture
+      // Create enhanced lead scoring engine
+      const leadScoringEngine = new EnhancedLeadScoringEngine()
+
+      // Transform comment author data into enhanced research format
+      const researchData: EnhancedResearchData = {
+        profile: {
+          name: comment.author.name,
+          profileUrl: comment.author.profile_url,
+          headline: comment.author.headline,
+          location: 'Unknown', // Would need additional API call
+          summary: undefined,
+          followerCount: undefined,
+          connectionCount: undefined,
+        },
+        currentRole: {
+          title: this.extractRoleFromHeadline(comment.author.headline),
+          company: this.extractCompanyFromHeadline(comment.author.headline),
+          isCurrentRole: true,
+        },
+        companyInfo: {
+          name: this.extractCompanyFromHeadline(comment.author.headline),
+        }
       }
 
-      const prospectProfile = enhancedICPScorer.createEnhancedProspectProfile(author, comment.author.profile_url)
+      // Calculate enhanced ICP score
+      const scoringResult = await leadScoringEngine.calculateICPScore(researchData)
+
+      // Create enhanced prospect profile
+      const prospectProfile: EnhancedProspectProfile = {
+        name: comment.author.name,
+        headline: comment.author.headline,
+        company: researchData.companyInfo?.name || 'Unknown',
+        role: researchData.currentRole?.title || 'Unknown',
+        profileUrl: comment.author.profile_url,
+        profilePicture: comment.author.profile_picture || '',
+        location: 'Unknown',
+        followerCount: 0,
+        connectionCount: 0,
+        icpScore: {
+          totalScore: scoringResult.totalScore,
+          category: scoringResult.recommendation,
+          breakdown: scoringResult.breakdown,
+          tags: scoringResult.tags,
+          reasoning: Object.values(scoringResult.breakdown).map(b => b.reasoning),
+          psychographicProfile: scoringResult.psychographicProfile,
+          urgencyLevel: scoringResult.urgencyLevel,
+          confidence: 80, // Default confidence for comment-based analysis
+          dataQuality: 'medium', // Comment data quality
+          signals: [], // Would be populated with more comprehensive data
+          redFlags: []
+        }
+      }
       
-      // Save enhanced data to database
+      // Save enhanced data to database (enhanced fields will be filtered out by upsertProfile)
       await this.upsertProfile({
         profile_url: comment.author.profile_url,
         name: comment.author.name,
@@ -378,15 +449,10 @@ export class SupabaseLinkedInService {
         icp_category: prospectProfile.icpScore.category,
         icp_breakdown: prospectProfile.icpScore.breakdown,
         icp_tags: prospectProfile.icpScore.tags,
-        icp_reasoning: prospectProfile.icpScore.reasoning,
-        // Enhanced fields
-        icp_confidence: prospectProfile.icpScore.confidence,
-        data_quality: prospectProfile.icpScore.dataQuality,
-        signals: prospectProfile.icpScore.signals,
-        red_flags: prospectProfile.icpScore.redFlags
+        icp_reasoning: prospectProfile.icpScore.reasoning
       })
 
-      console.log(`✅ Enhanced ICP scoring for ${comment.author.name}: ${prospectProfile.icpScore.totalScore}/100 (${prospectProfile.icpScore.category}) - Confidence: ${prospectProfile.icpScore.confidence}%`)
+      console.log(`✅ Enhanced Lead Scoring for ${comment.author.name}: ${prospectProfile.icpScore.totalScore}/100 (${prospectProfile.icpScore.category}) - 10-factor analysis with psychographics`)
 
       return prospectProfile
     } catch (error) {
@@ -398,13 +464,26 @@ export class SupabaseLinkedInService {
   async upsertProfile(profileData: any): Promise<void> {
     this.checkSupabaseConnection()
     
+    // Filter out enhanced scoring fields that may not exist in the database schema yet
+    const safeProfileData = {
+      profile_url: profileData.profile_url,
+      name: profileData.name,
+      headline: profileData.headline,
+      profile_picture: profileData.profile_picture,
+      current_company: profileData.current_company,
+      current_role: profileData.current_role,
+      icp_score: profileData.icp_score,
+      icp_category: profileData.icp_category,
+      icp_breakdown: profileData.icp_breakdown,
+      icp_tags: profileData.icp_tags,
+      icp_reasoning: profileData.icp_reasoning,
+      last_researched_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+    
     const { error } = await supabase!
       .from('linkedin_profiles')
-      .upsert({
-        ...profileData,
-        last_researched_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }, { 
+      .upsert(safeProfileData, { 
         onConflict: 'profile_url',
         ignoreDuplicates: false 
       })
@@ -738,7 +817,10 @@ export class SupabaseLinkedInService {
         confidence: dbProfile.icp_confidence || 75,
         dataQuality: dbProfile.data_quality || 'medium',
         signals: dbProfile.signals || [],
-        redFlags: dbProfile.red_flags || []
+        redFlags: dbProfile.red_flags || [],
+        // Enhanced fields from new scoring engine
+        psychographicProfile: dbProfile.psychographic_profile || null,
+        urgencyLevel: dbProfile.urgency_level || null
       }
     }
   }

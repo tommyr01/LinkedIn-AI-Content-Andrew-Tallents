@@ -3,14 +3,20 @@ import { appConfig } from './config'
 import logger from './lib/logger'
 import { checkQueueHealth, closeQueue } from './queue/setup'
 import ContentGenerationWorker from './workers/content-generation'
+import ScheduledSyncWorker from './workers/scheduled-sync'
+import { schedulerService } from './services/scheduler'
+import { syncMonitoringService } from './services/sync-monitor'
 import { supabaseService } from './services/supabase'
 import { debugHandler, testJobHandler } from './api/debug'
 import debugRouter from './routes/debug'
 import performanceRouter from './routes/performance'
 import strategicVariantsRouter from './routes/strategic-variants'
+import syncMonitorRouter from './routes/sync-monitor'
+// Removed legacy authenticity analytics routes
 
 class WorkerService {
   private contentWorker: ContentGenerationWorker | null = null
+  private syncWorker: ScheduledSyncWorker | null = null
   private isShuttingDown = false
   private app: express.Application
   private server: any
@@ -30,6 +36,12 @@ class WorkerService {
     
     // Strategic variants endpoints (Phase 2)
     this.app.use('/api/content', strategicVariantsRouter)
+    
+    // Sync monitoring endpoints (Automatic Sync System)
+    this.app.use('/api/sync', syncMonitorRouter)
+    
+    // Authenticity analytics endpoints (Voice Improvement System)
+    // Legacy authenticity analytics routes removed
     
     this.app.get('/health', async (req, res) => {
       const health = await this.getStatus()
@@ -52,6 +64,16 @@ class WorkerService {
       this.contentWorker = new ContentGenerationWorker()
       await this.contentWorker.start()
 
+      // Start scheduled sync worker
+      this.syncWorker = new ScheduledSyncWorker()
+      await this.syncWorker.start()
+
+      // Initialize scheduler service (must be after workers are started)
+      await schedulerService.initialize()
+
+      // Start sync monitoring with periodic health checks
+      syncMonitoringService.startPeriodicHealthChecks()
+
       // Set up graceful shutdown
       this.setupGracefulShutdown()
 
@@ -59,9 +81,9 @@ class WorkerService {
       this.startPeriodicCleanup()
 
       // Start debug server
-      const port = process.env.PORT || 3001
+      const port = process.env.WORKER_PORT || process.env.PORT || 3002
       this.server = this.app.listen(port, () => {
-        logger.info({ port }, 'Debug server started')
+        logger.info({ port }, 'Worker debug server started')
       })
 
       logger.info('Worker service started successfully')
@@ -75,12 +97,25 @@ class WorkerService {
   private async performHealthChecks() {
     logger.info('Performing health checks...')
 
-    // Check Redis/Queue health
-    const queueHealth = await checkQueueHealth()
-    if (queueHealth.redis !== 'connected') {
-      throw new Error(`Queue health check failed: ${queueHealth.error}`)
+    // Check Redis/Queue health with timeout
+    try {
+      const queueHealthPromise = checkQueueHealth()
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Queue health check timeout')), 15000)
+      )
+      
+      const queueHealth = await Promise.race([queueHealthPromise, timeoutPromise]) as any
+      
+      if (queueHealth.redis === 'connected') {
+        logger.info({ queueHealth }, 'Queue health check passed')
+      } else {
+        logger.warn({ queueHealth }, 'Queue health check failed, continuing in degraded mode')
+      }
+    } catch (error) {
+      logger.warn({ 
+        error: error instanceof Error ? error.message : String(error) 
+      }, 'Queue health check failed/timeout, continuing in degraded mode')
     }
-    logger.info({ queueHealth }, 'Queue health check passed')
 
     // Check Supabase connection
     try {
@@ -107,14 +142,29 @@ class WorkerService {
         // Stop accepting new jobs
         if (this.contentWorker) {
           await this.contentWorker.pause()
-          logger.info('Worker paused, waiting for active jobs to complete')
+          logger.info('Content worker paused, waiting for active jobs to complete')
           
           // Give active jobs time to complete (max 30 seconds)
           await new Promise(resolve => setTimeout(resolve, 30000))
           
           await this.contentWorker.stop()
-          logger.info('Worker stopped')
+          logger.info('Content worker stopped')
         }
+
+        // Stop sync worker
+        if (this.syncWorker) {
+          await this.syncWorker.pause()
+          logger.info('Sync worker paused, waiting for active jobs to complete')
+          
+          // Give sync jobs time to complete (max 60 seconds since they can be longer)
+          await new Promise(resolve => setTimeout(resolve, 60000))
+          
+          await this.syncWorker.stop()
+          logger.info('Sync worker stopped')
+        }
+
+        // Shutdown scheduler
+        await schedulerService.shutdown()
 
         // Close debug server
         if (this.server) {
@@ -186,6 +236,8 @@ class WorkerService {
       const queueHealth = await checkQueueHealth()
       const cacheStats = await supabaseService.getCacheStats()
       const workerState = this.contentWorker?.getWorkerState() || null
+      const syncWorkerState = this.syncWorker?.getWorkerState() || null
+      const schedulerStats = await schedulerService.getStats()
 
       return {
         status: 'healthy',
@@ -193,7 +245,11 @@ class WorkerService {
         memory: process.memoryUsage(),
         queue: queueHealth,
         cache: cacheStats,
-        worker: workerState,
+        workers: {
+          content: workerState,
+          sync: syncWorkerState
+        },
+        scheduler: schedulerStats,
         environment: appConfig.environment,
         timestamp: new Date().toISOString()
       }

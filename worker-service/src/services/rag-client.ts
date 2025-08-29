@@ -1,7 +1,7 @@
 /**
  * RAG API Client - Simple HTTP client to connect to the existing RAG system
  * 
- * This client provides a clean interface to the RAG system running at localhost:8058
+ * This client provides a clean interface to the RAG system running at localhost:8000
  * which contains 865 Andrew voice chunks ready for semantic search.
  */
 
@@ -30,7 +30,7 @@ class RAGClient {
   private baseURL: string
   private timeout: number
 
-  constructor(baseURL: string = 'http://localhost:8058', timeout: number = 30000) {
+  constructor(baseURL: string = 'http://localhost:8000', timeout: number = 30000) {
     this.baseURL = baseURL
     this.timeout = timeout
   }

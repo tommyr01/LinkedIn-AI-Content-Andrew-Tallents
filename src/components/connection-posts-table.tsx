@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useState } from "react"
-import { MessageSquare, ThumbsUp, User, TrendingUp, Search, Grid, List } from "lucide-react"
+import { MessageSquare, ThumbsUp, User, TrendingUp, Search, Grid, List, Coffee, Sparkles, Zap, Target } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -214,16 +214,34 @@ export function ConnectionPostsTable({ posts, stats, onRefresh, isLoading = fals
             variant="outline"
             size="sm"
             onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
+            className="group hover:shadow-md transition-all duration-300 hover:scale-105"
           >
-            {viewMode === "grid" ? <List className="h-4 w-4" /> : <Grid className="h-4 w-4" />}
-            <span className="ml-2 hidden sm:inline">{viewMode === "grid" ? "List View" : "Grid View"}</span>
+            {viewMode === "grid" ? (
+              <List className="h-4 w-4 group-hover:rotate-12 transition-transform duration-200" />
+            ) : (
+              <Grid className="h-4 w-4 group-hover:rotate-12 transition-transform duration-200" />
+            )}
+            <span className="ml-2 hidden sm:inline group-hover:font-medium transition-all">
+              {viewMode === "grid" ? "List View" : "Grid View"}
+            </span>
           </Button>
           <Button
             variant="outline"
             onClick={onRefresh}
             disabled={isLoading}
+            className="group hover:shadow-md transition-all duration-300 hover:scale-105 relative overflow-hidden"
           >
-            {isLoading ? "Loading..." : "Refresh"}
+            <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-amber-500 opacity-0 group-hover:opacity-10 transition-opacity" />
+            <span className="relative group-hover:font-medium transition-all">
+              {isLoading ? (
+                <span className="flex items-center space-x-1">
+                  <Sparkles className="h-4 w-4 animate-spin" />
+                  <span>Syncing...</span>
+                </span>
+              ) : (
+                "Refresh"
+              )}
+            </span>
           </Button>
         </div>
       </div>
@@ -280,41 +298,85 @@ export function ConnectionPostsTable({ posts, stats, onRefresh, isLoading = fals
         </div>
       </div>
 
-      {/* Posts Grid/List */}
+      {/* Posts Grid/List with delightful loading */}
       {isLoading ? (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <Card key={i} className="h-80">
-              <CardContent className="p-6">
-                <div className="animate-pulse space-y-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="h-10 w-10 bg-muted rounded-full"></div>
-                    <div className="space-y-2">
-                      <div className="h-4 bg-muted rounded w-24"></div>
-                      <div className="h-3 bg-muted rounded w-32"></div>
+        <div className="space-y-6">
+          {/* Playful loading message */}
+          <div className="text-center py-8">
+            <div className="flex items-center justify-center space-x-2 text-orange-600">
+              <Coffee className="h-6 w-6 animate-bounce" />
+              <Sparkles className="h-5 w-5 animate-pulse" />
+              <span className="text-lg font-medium animate-pulse">Brewing your content insights...</span>
+              <Sparkles className="h-5 w-5 animate-pulse" />
+              <Zap className="h-6 w-6 animate-bounce" style={{ animationDelay: '0.5s' }} />
+            </div>
+            <p className="text-sm text-muted-foreground mt-2 animate-in fade-in duration-1000 delay-500">
+              Analyzing engagement patterns and preparing executive summaries
+            </p>
+          </div>
+          
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Card key={i} className="h-80 relative overflow-hidden group">
+                <div className="absolute inset-0 bg-gradient-to-br from-orange-50/20 to-amber-50/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <CardContent className="p-6 relative">
+                  <div className="animate-pulse space-y-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="h-10 w-10 bg-gradient-to-br from-orange-200 to-amber-200 rounded-full animate-pulse" style={{ animationDelay: `${i * 0.1}s` }}></div>
+                      <div className="space-y-2">
+                        <div className="h-4 bg-gradient-to-r from-orange-200 to-amber-200 rounded w-24 animate-pulse" style={{ animationDelay: `${i * 0.1 + 0.2}s` }}></div>
+                        <div className="h-3 bg-gradient-to-r from-orange-100 to-amber-100 rounded w-32 animate-pulse" style={{ animationDelay: `${i * 0.1 + 0.4}s` }}></div>
+                      </div>
                     </div>
+                    <div className="space-y-2">
+                      <div className="h-3 bg-gradient-to-r from-orange-100 to-amber-100 rounded animate-pulse" style={{ animationDelay: `${i * 0.1 + 0.6}s` }}></div>
+                      <div className="h-3 bg-gradient-to-r from-orange-100 to-amber-100 rounded animate-pulse" style={{ animationDelay: `${i * 0.1 + 0.8}s` }}></div>
+                      <div className="h-3 bg-gradient-to-r from-orange-100 to-amber-100 rounded w-3/4 animate-pulse" style={{ animationDelay: `${i * 0.1 + 1}s` }}></div>
+                    </div>
+                    <div className="h-20 bg-gradient-to-br from-orange-100 to-amber-100 rounded animate-pulse" style={{ animationDelay: `${i * 0.1 + 1.2}s` }}></div>
                   </div>
-                  <div className="space-y-2">
-                    <div className="h-3 bg-muted rounded"></div>
-                    <div className="h-3 bg-muted rounded"></div>
-                    <div className="h-3 bg-muted rounded w-3/4"></div>
-                  </div>
-                  <div className="h-20 bg-muted rounded"></div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       ) : filteredPosts.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <div className="text-center space-y-2">
-              <div className="text-2xl font-semibold text-muted-foreground">No posts found</div>
-              <div className="text-muted-foreground">
-                {searchTerm || timeFilter !== "all" 
-                  ? "Try adjusting your search or filters" 
-                  : "No connection posts available yet"}
+        <Card className="relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-orange-50/30 to-amber-50/30" />
+          <CardContent className="flex flex-col items-center justify-center py-16 relative">
+            <div className="text-center space-y-6 animate-in fade-in slide-in-from-bottom duration-700">
+              <div className="flex items-center justify-center space-x-2">
+                {searchTerm || timeFilter !== "all" ? (
+                  <>
+                    <Search className="h-12 w-12 text-orange-400 animate-pulse" />
+                    <Target className="h-8 w-8 text-amber-400 animate-bounce" />
+                  </>
+                ) : (
+                  <>
+                    <Coffee className="h-12 w-12 text-orange-400 animate-bounce" />
+                    <Sparkles className="h-10 w-10 text-amber-400 animate-pulse" />
+                  </>
+                )}
               </div>
+              
+              <div className="space-y-2">
+                <div className="text-2xl font-semibold text-muted-foreground">
+                  {searchTerm || timeFilter !== "all" ? "No matching posts found" : "Ready to analyze your content empire"}
+                </div>
+                <div className="text-muted-foreground max-w-md">
+                  {searchTerm || timeFilter !== "all" 
+                    ? "Try adjusting your search terms or time filters to discover more content" 
+                    : "Your LinkedIn posts will appear here once synced. Click 'Refresh from LinkedIn' to begin building your content analytics dashboard"}
+                </div>
+              </div>
+              
+              {!(searchTerm || timeFilter !== "all") && (
+                <div className="bg-gradient-to-r from-orange-100 to-amber-100 border border-orange-200 rounded-lg p-4 max-w-md">
+                  <p className="text-sm text-orange-800 font-medium">
+                    💡 Pro tip: Regular content analysis helps identify your most engaging topics and optimal posting times!
+                  </p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

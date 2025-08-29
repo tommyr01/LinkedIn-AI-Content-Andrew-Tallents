@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { linkedInScraper, extractUsernameFromLinkedInUrl } from '../../../../lib/linkedin-scraper'
 import { createConnection, createConnectionPosts, ConnectionPostRecord } from '../../../../lib/airtable-http'
+import { createEnhancedLeadScoringEngine, EnhancedResearchData } from '../../../../lib/lead-scoring'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -8,11 +9,18 @@ export const runtime = 'nodejs'
 export async function POST(request: NextRequest) {
   let usernameToUse = ''
   let createRecord = true
+  let performLeadScoring = true
   
   try {
     const body = await request.json()
-    const { username, linkedinUrl, createRecord: shouldCreate = true } = body
+    const { 
+      username, 
+      linkedinUrl, 
+      createRecord: shouldCreate = true,
+      leadScoring: shouldScore = true 
+    } = body
     createRecord = shouldCreate
+    performLeadScoring = shouldScore
 
     if (!username && !linkedinUrl) {
       return NextResponse.json({ 
@@ -38,6 +46,17 @@ export async function POST(request: NextRequest) {
       company: profile.data.basic_info.current_company,
       hasProfilePicture: !!profile.data.basic_info.profile_picture_url
     })
+
+    // Fetch LinkedIn posts for enhanced analysis
+    let linkedInPosts: any[] = []
+    try {
+      console.log(`📊 Fetching LinkedIn posts for enhanced lead scoring...`)
+      linkedInPosts = await linkedInScraper.getAllPosts(usernameToUse, 50) // Last 50 posts for analysis
+      console.log(`📊 Fetched ${linkedInPosts.length} posts for analysis`)
+    } catch (postsError) {
+      console.warn(`⚠️ Could not fetch posts for ${usernameToUse}:`, postsError)
+      // Continue without posts - scoring will still work
+    }
     
     // Map to Airtable fields
     const mappedData = linkedInScraper.mapToAirtableFields(profile)
@@ -49,6 +68,35 @@ export async function POST(request: NextRequest) {
       'Start Date': mappedData['Start Date']
     })
 
+    // Enhanced Lead Scoring Analysis
+    let leadScoringResult = null
+    if (performLeadScoring) {
+      try {
+        console.log(`🎯 Performing enhanced lead scoring analysis...`)
+        
+        // Convert LinkedIn data to enhanced research data format
+        const researchData: EnhancedResearchData = mapLinkedInDataToResearchData(profile, linkedInPosts)
+        
+        // Create enhanced lead scoring engine
+        const scoringEngine = createEnhancedLeadScoringEngine()
+        
+        // Calculate comprehensive ICP score with psychographic analysis
+        leadScoringResult = await scoringEngine.calculateICPScore(researchData, linkedInPosts)
+        
+        console.log(`🎯 Lead scoring completed:`, {
+          score: leadScoringResult.totalScore,
+          recommendation: leadScoringResult.recommendation,
+          tags: leadScoringResult.tags,
+          urgencyLevel: leadScoringResult.urgencyLevel,
+          hasPsychographicProfile: !!leadScoringResult.psychographicProfile
+        })
+        
+      } catch (scoringError: any) {
+        console.error(`🚨 Lead scoring failed:`, scoringError.message)
+        // Continue with enrichment even if scoring fails
+      }
+    }
+
     // Handle profile picture as attachment
     const profilePictureUrl = profile.data.basic_info.profile_picture_url
     console.log(`📸 Profile picture URL: ${profilePictureUrl ? 'Found' : 'Not found'}`)
@@ -56,10 +104,9 @@ export async function POST(request: NextRequest) {
     let airtableRecord = null;
     
     if (createRecord) {
-      // GRADUALLY ADDING MORE FIELDS: Starting with essential + safe text fields
-      console.log(`🎯 Using expanded but safe field set...`)
+      console.log(`🎯 Creating enriched Airtable record with lead scoring data...`)
       
-      const safeFields = {
+      const safeFields: Record<string, any> = {
         // Essential fields (these work)
         'Full Name': mappedData['Full Name'] || 'Unknown',
         'Username': mappedData['Username'] || '',
@@ -76,10 +123,9 @@ export async function POST(request: NextRequest) {
         'Follower Count': Number(mappedData['Follower Count']) || 0,
         'Connection Count': Number(mappedData['Connection Count']) || 0,
         
-        // GROUP A: Date + URLs (Background Picture URL handled separately as attachment)
+        // GROUP A: Date + URLs
         'Start Date': mappedData['Start Date'] || '',
         'Company LinkedIn URL': mappedData['Company LinkedIn URL'] || '',
-        // 'Background Picture URL' is handled separately as an attachment field
         'URN': mappedData['URN'] || '',
         'Current Company URN': mappedData['Current Company URN'] || '',
         
@@ -92,6 +138,28 @@ export async function POST(request: NextRequest) {
         // GROUP C: Long text fields
         'About': mappedData['About'] ? String(mappedData['About']).substring(0, 10000) : '',
         'Hashtags': mappedData['Hashtags'] || ''
+      }
+
+      // Add enhanced lead scoring fields if available
+      if (leadScoringResult) {
+        safeFields['Lead Score'] = leadScoringResult.totalScore
+        safeFields['Lead Recommendation'] = leadScoringResult.recommendation
+        safeFields['Lead Tags'] = leadScoringResult.tags.join(', ')
+        safeFields['Urgency Level'] = leadScoringResult.urgencyLevel
+        
+        // Add psychographic insights if available
+        if (leadScoringResult.psychographicProfile) {
+          safeFields['Leadership Style'] = leadScoringResult.psychographicProfile.leadershipStyle
+          safeFields['Challenge Awareness'] = Math.round((leadScoringResult.psychographicProfile.challengeAwareness || 0) * 100)
+          safeFields['Coaching Receptivity'] = Math.round((leadScoringResult.psychographicProfile.coachingReceptivity || 0) * 100)
+        }
+        
+        // Add scoring breakdown as notes
+        const breakdownNotes = Object.entries(leadScoringResult.breakdown)
+          .map(([factor, data]: [string, { score: number; reasoning: string }]) => 
+            `${factor}: ${data.score}/100 - ${data.reasoning}`)
+          .join('\n')
+        safeFields['Scoring Breakdown'] = breakdownNotes.substring(0, 10000) // Truncate if too long
       }
       
       // Only include fields that have actual values
@@ -121,44 +189,35 @@ export async function POST(request: NextRequest) {
         }]
       }
       
-      console.log(`📝 Creating Airtable record with ${Object.keys(fieldsToCreate).length} safe fields:`, fieldsToCreate)
+      console.log(`📝 Creating Airtable record with ${Object.keys(fieldsToCreate).length} enriched fields including lead scoring:`)
+      console.log(`    - Basic profile fields: ${Object.keys(safeFields).filter(k => !k.includes('Lead') && !k.includes('Scoring')).length}`)
+      if (leadScoringResult) {
+        console.log(`    - Lead scoring fields: ${Object.keys(safeFields).filter(k => k.includes('Lead') || k.includes('Scoring') || k.includes('Urgency')).length}`)
+        console.log(`    - Lead Score: ${leadScoringResult.totalScore}/100 (${leadScoringResult.recommendation})`)
+        console.log(`    - Tags: ${leadScoringResult.tags.join(', ')}`)
+      }
 
       try {
         airtableRecord = await createConnection(fieldsToCreate)
-        console.log(`🎉 Airtable record created successfully:`, {
+        console.log(`🎉 Enhanced Airtable record created successfully:`, {
           id: airtableRecord.id,
           hasFields: !!airtableRecord.fields,
-          fieldCount: Object.keys(airtableRecord.fields || {}).length
-        })
-
-        // DEBUG: Check if we should trigger posts
-        console.log(`🔍 [CONNECTION-DEBUG] Checking posts trigger conditions:`, {
-          hasAirtableRecord: !!airtableRecord,
-          airtableRecordId: airtableRecord?.id,
-          username: usernameToUse,
-          shouldTriggerPosts: !!(airtableRecord?.id)
+          fieldCount: Object.keys(airtableRecord.fields || {}).length,
+          leadScore: leadScoringResult?.totalScore
         })
 
         // After successful connection creation, fetch and save posts
         if (airtableRecord?.id) {
-          console.log(`🚀 [CONNECTION-DEBUG] Triggering posts fetch for connection: ${airtableRecord.id}`)
-          await fetchAndSaveConnectionPosts(usernameToUse, airtableRecord.id)
-          console.log(`✅ [CONNECTION-DEBUG] Posts fetch completed (check above for results)`)
-        } else {
-          console.log(`⚠️ [CONNECTION-DEBUG] Posts fetch skipped - no airtable record ID`)
+          console.log(`🚀 Triggering posts fetch for connection: ${airtableRecord.id}`)
+          await fetchAndSaveConnectionPosts(usernameToUse, airtableRecord.id, linkedInPosts)
+          console.log(`✅ Posts fetch completed`)
         }
       } catch (airtableError: any) {
         console.error(`💥 Airtable creation failed:`, {
           message: airtableError.message,
           statusCode: airtableError.statusCode,
           airtableError: airtableError.error,
-          fieldsAttempted: Object.keys(fieldsToCreate),
-          fieldValues: Object.fromEntries(
-            Object.entries(fieldsToCreate).map(([key, value]) => [
-              key, 
-              typeof value === 'object' ? `[${typeof value}]` : String(value).substring(0, 50)
-            ])
-          )
+          fieldsAttempted: Object.keys(fieldsToCreate)
         })
         
         // More specific error message based on Airtable error
@@ -166,11 +225,9 @@ export async function POST(request: NextRequest) {
         if (airtableError.message.includes('INVALID_MULTIPLE_CHOICE_OPTIONS')) {
           specificError = 'Invalid field value - check dropdown/select field options'
         } else if (airtableError.message.includes('UNKNOWN_FIELD_NAME')) {
-          specificError = 'Field name not found in Airtable schema'
+          specificError = 'Field name not found in Airtable schema - may need to add lead scoring fields'
         } else if (airtableError.message.includes('INVALID_VALUE_FOR_COLUMN')) {
           specificError = 'Invalid data type for field'
-        } else if (airtableError.message.includes('NOT_A_VALID_ATTACHMENT')) {
-          specificError = 'Profile picture attachment error'
         }
         
         throw new Error(`${specificError}: ${airtableError.message}`)
@@ -179,17 +236,34 @@ export async function POST(request: NextRequest) {
       console.log(`ℹ️ Skipping Airtable creation (createRecord = false)`)
     }
 
-    // Return enriched data and Airtable record
+    // Return comprehensive enriched data with lead scoring
     const response = {
       success: true,
-      message: 'Profile enriched successfully',
+      message: 'Profile enriched successfully with enhanced lead scoring',
       linkedinData: profile.data.basic_info,
       mappedData,
       airtableRecord,
       profilePictureUrl: profile.data.basic_info.profile_picture_url,
+      
+      // Enhanced lead scoring results
+      leadScoring: leadScoringResult ? {
+        enabled: true,
+        score: leadScoringResult.totalScore,
+        recommendation: leadScoringResult.recommendation,
+        tags: leadScoringResult.tags,
+        urgencyLevel: leadScoringResult.urgencyLevel,
+        breakdown: leadScoringResult.breakdown,
+        psychographicProfile: leadScoringResult.psychographicProfile,
+        postsAnalyzed: linkedInPosts.length
+      } : { 
+        enabled: false, 
+        reason: performLeadScoring ? 'Scoring failed' : 'Scoring disabled'  
+      },
+      
+      // Posts information
       postsEnabled: !!process.env.AIRTABLE_CONNECTION_POSTS_TABLE_ID,
       postsMessage: process.env.AIRTABLE_CONNECTION_POSTS_TABLE_ID 
-        ? 'Posts fetching initiated in background' 
+        ? `Posts fetching completed - analyzed ${linkedInPosts.length} posts` 
         : 'Posts fetching disabled (AIRTABLE_CONNECTION_POSTS_TABLE_ID not configured)'
     };
 
@@ -202,7 +276,8 @@ export async function POST(request: NextRequest) {
       username: usernameToUse,
       hasRapidApiKey: !!process.env.RAPIDAPI_KEY,
       hasAirtableConfig: !!(process.env.AIRTABLE_API_KEY && process.env.AIRTABLE_BASE_ID),
-      createRecord
+      createRecord,
+      leadScoring: performLeadScoring
     })
     
     // Provide helpful error messages
@@ -219,29 +294,131 @@ export async function POST(request: NextRequest) {
       errorMessage = 'LinkedIn API configuration error - RapidAPI key not found'
       statusCode = 500
     } else if (error.message.includes('AIRTABLE')) {
-      errorMessage = 'Airtable configuration error'
+      errorMessage = 'Airtable configuration error - may need lead scoring fields in schema'
       statusCode = 500
     }
 
     return NextResponse.json({ 
       error: errorMessage,
-      originalError: error.message, // Always include original error for debugging
+      originalError: error.message,
       details: {
         username: usernameToUse,
         hasRapidApiKey: !!process.env.RAPIDAPI_KEY,
         rapidApiKeyLength: process.env.RAPIDAPI_KEY?.length,
         hasAirtableConfig: !!(process.env.AIRTABLE_API_KEY && process.env.AIRTABLE_BASE_ID && process.env.AIRTABLE_CONNECTIONS_TABLE_ID),
         createRecord,
+        leadScoring: performLeadScoring,
         stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
       }
     }, { status: statusCode })
   }
 }
 
-// Helper function to fetch and save connection posts  
-async function fetchAndSaveConnectionPosts(username: string, connectionId: string): Promise<void> {
-  console.log(`🟢 [POSTS-ENTRY] Posts function called! Parameters:`, { username, connectionId });
-  console.log(`🚀 [POSTS-DEBUG] Starting posts fetch for username: ${username}, connection: ${connectionId}`);
+// Helper function to convert LinkedIn profile data to enhanced research data format
+function mapLinkedInDataToResearchData(profile: any, posts: any[]): EnhancedResearchData {
+  const basicInfo = profile.data.basic_info
+  const experience = profile.data.experience || []
+  const currentJob = experience.find((exp: any) => exp.is_current) || experience[0]
+
+  // Calculate tenure from start date if available
+  let tenure: number | undefined
+  if (currentJob?.start_date) {
+    const startDate = new Date(currentJob.start_date.year, 
+      getMonthNumber(currentJob.start_date.month) - 1, 1)
+    const now = new Date()
+    tenure = (now.getFullYear() - startDate.getFullYear()) * 12 + 
+             (now.getMonth() - startDate.getMonth())
+  }
+
+  return {
+    profile: {
+      name: basicInfo.fullname || '',
+      profileUrl: `https://linkedin.com/in/${basicInfo.public_identifier}`,
+      headline: basicInfo.headline || '',
+      location: basicInfo.location?.full || '',
+      summary: basicInfo.about || '',
+      followerCount: basicInfo.follower_count || 0,
+      connectionCount: basicInfo.connection_count || 0
+    },
+    currentRole: currentJob ? {
+      title: currentJob.title || '',
+      company: currentJob.company || basicInfo.current_company || '',
+      companyId: currentJob.company_id || basicInfo.current_company_urn || '',
+      startDate: currentJob.start_date ? 
+        `${currentJob.start_date.year}-${getMonthNumber(currentJob.start_date.month).toString().padStart(2, '0')}-01` : 
+        undefined,
+      tenure,
+      isCurrentRole: currentJob.is_current || false
+    } : undefined,
+    companyInfo: {
+      name: basicInfo.current_company || currentJob?.company || '',
+      industry: '', // Not directly available from current API
+      linkedinUrl: basicInfo.current_company_url || currentJob?.company_linkedin_url || ''
+    },
+    experience: experience.map((exp: any) => ({
+      title: exp.title || '',
+      company: exp.company || '',
+      companyId: exp.company_id || '',
+      duration: exp.duration || '',
+      isCurrentRole: exp.is_current || false,
+      startDate: exp.start_date ? {
+        year: exp.start_date.year,
+        month: exp.start_date.month
+      } : undefined
+    })),
+    recentActivity: {
+      posts: posts.length,
+      engagement: posts.length > 0 ? 'active' : 'low',
+      topics: extractTopicsFromPosts(posts)
+    }
+  }
+}
+
+// Helper function to extract topics from posts
+function extractTopicsFromPosts(posts: any[]): string[] {
+  if (!posts || posts.length === 0) return []
+  
+  const topics = new Set<string>()
+  const leadershipTopics = [
+    'leadership', 'team', 'culture', 'vision', 'strategy',
+    'growth', 'transformation', 'performance', 'results',
+    'coaching', 'development', 'mentoring', 'innovation',
+    'management', 'executive', 'success'
+  ]
+  
+  posts.forEach(post => {
+    const text = (post.text || '').toLowerCase()
+    leadershipTopics.forEach(topic => {
+      if (text.includes(topic)) {
+        topics.add(topic)
+      }
+    })
+  })
+  
+  return Array.from(topics).slice(0, 10) // Return top 10 topics
+}
+
+// Helper function to convert month name to number
+function getMonthNumber(monthName: string): number {
+  const months: { [key: string]: number } = {
+    'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
+    'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
+  }
+  return months[monthName] || 1
+}
+
+// Enhanced helper function to fetch and save connection posts with lead scoring context
+async function fetchAndSaveConnectionPosts(
+  username: string, 
+  connectionId: string,
+  existingPosts?: any[]
+): Promise<void> {
+  console.log(`🟢 [POSTS-ENTRY] Enhanced posts function with lead scoring context! Parameters:`, { 
+    username, 
+    connectionId, 
+    hasExistingPosts: !!existingPosts,
+    existingPostsCount: existingPosts?.length || 0
+  });
   
   try {
     // Enhanced configuration logging
@@ -260,10 +437,15 @@ async function fetchAndSaveConnectionPosts(username: string, connectionId: strin
       return;
     }
 
-    console.log(`📡 [POSTS-DEBUG] Fetching posts from LinkedIn API...`);
-    // Fetch posts from LinkedIn API
-    const posts = await linkedInScraper.getAllPosts(username, 100);
-    console.log(`📊 [POSTS-DEBUG] LinkedIn API response: ${posts.length} posts fetched for ${username}`);
+    // Use existing posts if available (already fetched for lead scoring), otherwise fetch fresh
+    let posts = existingPosts
+    if (!posts || posts.length === 0) {
+      console.log(`📡 [POSTS-DEBUG] Fetching posts from LinkedIn API (not cached from scoring)...`);
+      posts = await linkedInScraper.getAllPosts(username, 100);
+      console.log(`📊 [POSTS-DEBUG] LinkedIn API response: ${posts.length} posts fetched for ${username}`);
+    } else {
+      console.log(`📊 [POSTS-DEBUG] Using cached posts from lead scoring: ${posts.length} posts for ${username}`);
+    }
 
     if (posts.length === 0) {
       console.log(`ℹ️ [POSTS-DEBUG] No posts found for ${username} - this might indicate an API issue`);
@@ -284,8 +466,8 @@ async function fetchAndSaveConnectionPosts(username: string, connectionId: strin
       author: firstPost?.author
     });
 
-    // Map posts to Airtable format using correct field names based on actual API response
-    console.log(`🗂️ [POSTS-DEBUG] Mapping ${posts.length} posts to Airtable format...`);
+    // Map posts to Airtable format using correct field names
+    console.log(`🗂️ [POSTS-DEBUG] Mapping ${posts.length} posts to Airtable format with enhanced metadata...`);
     const connectionPosts: Partial<ConnectionPostRecord['fields']>[] = posts.map((post, index) => {
       const mappedPost: Partial<ConnectionPostRecord['fields']> = {
         // Connection linking
@@ -341,17 +523,17 @@ async function fetchAndSaveConnectionPosts(username: string, connectionId: strin
       
       // Log first mapped post for debugging
       if (index === 0) {
-        console.log(`🔍 [POSTS-DEBUG] First mapped post (with actual API structure):`, mappedPost);
+        console.log(`🔍 [POSTS-DEBUG] First mapped post with enhanced data:`, mappedPost);
       }
       
       return mappedPost;
     });
 
-    console.log(`📝 [POSTS-DEBUG] Attempting to save ${connectionPosts.length} posts to Airtable...`);
+    console.log(`📝 [POSTS-DEBUG] Attempting to save ${connectionPosts.length} enhanced posts to Airtable...`);
     
     // Save posts to Airtable
     const createdPosts = await createConnectionPosts(connectionPosts);
-    console.log(`✅ [POSTS-DEBUG] SUCCESS! Created ${createdPosts.length} connection posts in Airtable`);
+    console.log(`✅ [POSTS-DEBUG] SUCCESS! Created ${createdPosts.length} connection posts in Airtable with enhanced metadata`);
     
     // Log some record IDs for verification
     const recordIds = createdPosts.slice(0, 3).map(p => p.id);
@@ -359,7 +541,7 @@ async function fetchAndSaveConnectionPosts(username: string, connectionId: strin
 
   } catch (postsError: any) {
     // Enhanced error logging
-    console.error(`💥 [POSTS-DEBUG] FAILED to fetch/save posts for ${username}:`, {
+    console.error(`💥 [POSTS-DEBUG] FAILED to fetch/save enhanced posts for ${username}:`, {
       errorMessage: postsError.message,
       errorName: postsError.name,
       statusCode: postsError.statusCode,
@@ -383,14 +565,15 @@ async function fetchAndSaveConnectionPosts(username: string, connectionId: strin
     }
     
     console.log(`🏷️ [POSTS-DEBUG] Error type identified: ${errorType}`);
-    console.log(`⚠️ [POSTS-DEBUG] Connection created successfully but posts fetching failed for ${username}`);
+    console.log(`⚠️ [POSTS-DEBUG] Connection created successfully but enhanced posts fetching failed for ${username}`);
   }
 }
 
-// GET endpoint for testing
+// GET endpoint for testing enhanced functionality
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const username = searchParams.get('username')
+  const includeScoring = searchParams.get('scoring') !== 'false'
   
   if (!username) {
     return NextResponse.json({ 
@@ -402,12 +585,31 @@ export async function GET(request: NextRequest) {
     // Just fetch and return the data without creating a record
     const profile = await linkedInScraper.getProfile(username)
     const mappedData = linkedInScraper.mapToAirtableFields(profile)
+    
+    let leadScoringResult = null
+    let linkedInPosts: any[] = []
+    
+    if (includeScoring) {
+      try {
+        // Fetch posts for scoring
+        linkedInPosts = await linkedInScraper.getAllPosts(username, 25)
+        
+        // Perform lead scoring
+        const researchData = mapLinkedInDataToResearchData(profile, linkedInPosts)
+        const scoringEngine = createEnhancedLeadScoringEngine()
+        leadScoringResult = await scoringEngine.calculateICPScore(researchData, linkedInPosts)
+      } catch (scoringError) {
+        console.warn('Lead scoring failed in GET endpoint:', scoringError)
+      }
+    }
 
     return NextResponse.json({
       success: true,
-      message: 'Profile data retrieved successfully',
+      message: 'Profile data retrieved successfully with enhanced analysis',
       linkedinData: profile.data.basic_info,
       mappedData,
+      leadScoring: leadScoringResult,
+      postsAnalyzed: linkedInPosts.length,
       rawProfile: process.env.NODE_ENV === 'development' ? profile : undefined
     })
   } catch (error: any) {

@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { format } from "date-fns"
-import { MessageSquare, ThumbsUp, ExternalLink, User, Sparkles, Play, Image } from "lucide-react"
+import { MessageSquare, ThumbsUp, ExternalLink, User, Sparkles, Play, Image, Heart, Zap, TrendingUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
@@ -167,7 +167,9 @@ export function PostCard({
   }
 
   return (
-    <Card className="h-full max-w-md mx-auto hover:shadow-md transition-shadow duration-200 cursor-pointer group">
+    <Card className="h-full max-w-md mx-auto hover:shadow-xl transition-all duration-300 cursor-pointer group hover:scale-[1.02] relative overflow-hidden">
+      {/* Subtle gradient overlay on hover */}
+      <div className="absolute inset-0 bg-gradient-to-br from-orange-50/20 to-amber-50/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
       {/* Card Header */}
       <CardHeader className="pb-3">
         <div className="flex items-start space-x-3">
@@ -229,26 +231,44 @@ export function PostCard({
           </div>
         )}
 
-        {/* Engagement Metrics */}
+        {/* Engagement Metrics with playful animations */}
         <div className="flex items-center justify-between pt-2 border-t">
           <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-1 text-sm text-muted-foreground">
-              <ThumbsUp className="h-4 w-4 text-blue-500" />
-              <span>{post.likesCount}</span>
+            <div className="flex items-center space-x-1 text-sm text-muted-foreground group-hover:scale-105 transition-transform duration-200">
+              <div className="relative">
+                <ThumbsUp className="h-4 w-4 text-blue-500 group-hover:animate-pulse" />
+                {post.likesCount > 50 && (
+                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-400 rounded-full animate-ping" />
+                )}
+              </div>
+              <span className="group-hover:font-medium transition-all">{post.likesCount}</span>
             </div>
-            <div className="flex items-center space-x-1 text-sm text-muted-foreground">
-              <MessageSquare className="h-4 w-4 text-green-500" />
-              <span>{post.commentsCount}</span>
+            <div className="flex items-center space-x-1 text-sm text-muted-foreground group-hover:scale-105 transition-transform duration-200">
+              <div className="relative">
+                <MessageSquare className="h-4 w-4 text-green-500 group-hover:animate-pulse" />
+                {post.commentsCount > 20 && (
+                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-400 rounded-full animate-ping" />
+                )}
+              </div>
+              <span className="group-hover:font-medium transition-all">{post.commentsCount}</span>
             </div>
             {post.totalReactions > (post.likesCount + post.commentsCount) && (
-              <div className="text-xs text-muted-foreground">
-                {post.totalReactions} total
+              <div className="text-xs text-muted-foreground flex items-center space-x-1 group-hover:scale-105 transition-transform duration-200">
+                <Zap className="h-3 w-3 text-orange-500 group-hover:animate-pulse" />
+                <span className="group-hover:font-medium transition-all">{post.totalReactions} total</span>
+              </div>
+            )}
+            {/* High engagement indicator */}
+            {post.totalReactions > 100 && (
+              <div className="flex items-center space-x-1 text-xs bg-gradient-to-r from-orange-100 to-amber-100 text-orange-700 px-2 py-1 rounded-full">
+                <TrendingUp className="h-3 w-3" />
+                <span className="font-medium">Hot!</span>
               </div>
             )}
           </div>
         </div>
 
-        {/* Action Buttons */}
+        {/* Action Buttons with delightful hover effects */}
         <div className="flex items-center justify-start pt-2 space-x-1">
           {post.postUrl && (
             <Button
@@ -258,9 +278,9 @@ export function PostCard({
                 e.stopPropagation()
                 window.open(post.postUrl, '_blank')
               }}
-              className="h-8 px-2"
+              className="h-8 px-2 group/btn hover:bg-blue-50 transition-all duration-200 hover:scale-110"
             >
-              <ExternalLink className="h-3 w-3" />
+              <ExternalLink className="h-3 w-3 group-hover/btn:text-blue-600 group-hover/btn:rotate-12 transition-all duration-200" />
             </Button>
           )}
           
@@ -272,10 +292,28 @@ export function PostCard({
                 e.stopPropagation()
                 window.open(post.authorLinkedInUrl, '_blank')
               }}
-              className="h-8 px-2"
+              className="h-8 px-2 group/btn hover:bg-orange-50 transition-all duration-200 hover:scale-110"
             >
-              <User className="h-3 w-3" />
+              <User className="h-3 w-3 group-hover/btn:text-orange-600 group-hover/btn:rotate-12 transition-all duration-200" />
             </Button>
+          )}
+          
+          {/* Achievement badges for exceptional posts */}
+          {post.totalReactions > 500 && (
+            <div className="flex items-center space-x-1 ml-2">
+              <div className="bg-gradient-to-r from-yellow-100 to-orange-100 text-yellow-800 text-xs px-2 py-1 rounded-full flex items-center space-x-1 animate-pulse">
+                <Sparkles className="h-3 w-3" />
+                <span className="font-medium">Viral</span>
+              </div>
+            </div>
+          )}
+          {post.totalReactions > 200 && post.totalReactions <= 500 && (
+            <div className="flex items-center space-x-1 ml-2">
+              <div className="bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 text-xs px-2 py-1 rounded-full flex items-center space-x-1">
+                <Heart className="h-3 w-3" />
+                <span className="font-medium">Popular</span>
+              </div>
+            </div>
           )}
         </div>
       </CardContent>

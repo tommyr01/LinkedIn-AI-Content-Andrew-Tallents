@@ -54,6 +54,10 @@ export interface JobData {
   postType?: string
   tone?: string
   userId?: string
+  useVoiceLearning?: boolean
+  voiceLearningData?: any
+  strategicVariants?: ('performance' | 'engagement' | 'experimental')[]
+  contentIntent?: string
 }
 
 export interface ResearchResult {
@@ -95,6 +99,21 @@ export interface AIAgentResult {
     top_performer_score?: number
     predicted_engagement?: number
     prediction_confidence?: number
+    strategic_variant_type?: 'performance' | 'engagement' | 'experimental'
+    authenticity_validation?: {
+      passes_fool_me_test: boolean
+      overall_score: number
+      confidence_level: number
+      critical_feedback: string[]
+      improvements_needed: number
+    }
+    advanced_ai_validation?: {
+      constraint_enforcement_applied: boolean
+      citation_validation_applied: boolean
+      contextual_enhancement_applied: boolean
+      multi_stage_validation_applied: boolean
+      final_authenticity_score: number
+    }
   }
   score?: number
 }
@@ -108,6 +127,10 @@ export interface WorkerConfig {
     serviceKey: string
   }
   openai: {
+    apiKey: string
+    model: string
+  }
+  anthropic: {
     apiKey: string
     model: string
   }
@@ -312,4 +335,55 @@ export interface PerformanceAnalysisRequest {
   include_comments?: boolean
   force_refresh?: boolean
   analysis_depth?: 'basic' | 'comprehensive' | 'deep'
+}
+
+// ==========================================
+// AUTOMATIC SYNC SYSTEM TYPES
+// ==========================================
+
+// Scheduled job types
+export interface ScheduledSyncJob {
+  id: string
+  jobName: string
+  jobType: 'linkedin_posts_sync' | 'voice_learning_analysis'
+  schedulePattern: string
+  username?: string
+  isActive: boolean
+  lastRun?: string
+  nextRun?: string
+  runCount: number
+  successCount: number
+  errorCount: number
+  lastError?: string
+  lastSuccess?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface SyncJobData {
+  type: 'linkedin_posts_sync' | 'voice_learning_analysis'
+  username?: string
+  options?: {
+    maxPages?: number
+    pageNumber?: number
+    triggerVoiceAnalysis?: boolean
+  }
+}
+
+export interface SyncJobResult {
+  jobId: string
+  type: string
+  status: 'success' | 'error' | 'partial_success'
+  startedAt: string
+  completedAt: string
+  duration: number
+  summary: {
+    totalFetched?: number
+    newPosts?: number
+    updatedPosts?: number
+    errors?: number
+    pagesProcessed?: number
+  }
+  error?: string
+  details?: any
 }

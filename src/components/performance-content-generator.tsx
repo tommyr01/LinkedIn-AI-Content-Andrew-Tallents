@@ -25,8 +25,8 @@ import {
   Trophy,
   Zap,
   Eye,
-  Calendar,
-  Users
+  Users,
+  RotateCcw
 } from "lucide-react"
 import { SupabaseService, ContentJob, ContentDraft } from "../lib/supabase"
 
@@ -60,44 +60,43 @@ interface StrategicVariant {
 const STRATEGIC_VARIANTS: StrategicVariant[] = [
   {
     type: 'performance',
-    name: 'Performance-Optimized',
-    description: 'Uses Andrew\'s proven successful patterns and highest-performing content structures',
+    name: 'Executive Intelligence',
+    description: 'Uses Andrew\'s proven strategic patterns and highest-performing executive content structures',
     icon: Trophy,
     color: 'text-amber-600 bg-amber-50 border-amber-200',
-    focus: 'Proven Patterns',
-    expectedOutcome: 'High reach & professional engagement'
+    focus: 'Proven Strategic Patterns',
+    expectedOutcome: 'High executive reach & strategic engagement'
   },
   {
     type: 'engagement',
-    name: 'Engagement-Focused',
-    description: 'Maximizes comments, conversations, and meaningful interactions',
+    name: 'Strategic Dialogue',
+    description: 'Maximizes strategic conversations and meaningful C-level interactions',
     icon: MessageCircle,
     color: 'text-blue-600 bg-blue-50 border-blue-200',
-    focus: 'Conversation Starters',
-    expectedOutcome: 'More comments & discussions'
+    focus: 'Executive Conversation Starters',
+    expectedOutcome: 'Strategic discussions & C-level engagement'
   },
   {
     type: 'experimental',
-    name: 'Experimental Approach',
-    description: 'Tests new content formats and discovers emerging patterns',
+    name: 'Innovation Intelligence',
+    description: 'Tests new strategic formats and discovers emerging executive content patterns',
     icon: Brain,
     color: 'text-purple-600 bg-purple-50 border-purple-200',
-    focus: 'Innovation & Discovery',
-    expectedOutcome: 'New insights & pattern discovery'
+    focus: 'Strategic Innovation & Discovery',
+    expectedOutcome: 'New strategic insights & pattern discovery'
   }
 ]
 
 const CONTENT_INTENTS = [
-  { value: 'thought-leadership', label: 'Thought Leadership', description: 'Share insights and industry expertise' },
-  { value: 'company-update', label: 'Company Update', description: 'Announce news or achievements' },
-  { value: 'personal-story', label: 'Personal Story', description: 'Share experiences and lessons learned' },
-  { value: 'industry-commentary', label: 'Industry Commentary', description: 'React to trends and news' },
-  { value: 'educational', label: 'Educational', description: 'Teach or explain concepts' }
+  { value: 'thought-leadership', label: 'Executive Thought Leadership', description: 'Share strategic insights and C-level expertise' },
+  { value: 'company-update', label: 'Strategic Update', description: 'Announce strategic initiatives or executive achievements' },
+  { value: 'personal-story', label: 'Executive Journey', description: 'Share leadership experiences and strategic lessons learned' },
+  { value: 'industry-commentary', label: 'Strategic Intelligence', description: 'Provide executive perspective on industry trends' },
+  { value: 'educational', label: 'Leadership Intelligence', description: 'Share strategic frameworks and executive concepts' }
 ]
 
 export function PerformanceContentGenerator({ onContentGenerated }: PerformanceContentGeneratorProps) {
   const [topic, setTopic] = useState("")
-  const [voiceGuidelines, setVoiceGuidelines] = useState("")
   const [selectedIntent, setSelectedIntent] = useState("thought-leadership")
   const [selectedVariants, setSelectedVariants] = useState<string[]>(['performance'])
   const [platform] = useState("linkedin")
@@ -105,28 +104,11 @@ export function PerformanceContentGenerator({ onContentGenerated }: PerformanceC
   const [currentJob, setCurrentJob] = useState<JobStatus | null>(null)
   const [jobDrafts, setJobDrafts] = useState<ContentDraft[]>([])
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null)
-  const [isSavingVoice, setIsSavingVoice] = useState(false)
   const [activeTab, setActiveTab] = useState('generator')
+  const [hasNotifiedCompletion, setHasNotifiedCompletion] = useState(false)
+  const [editedContent, setEditedContent] = useState<{[key: string]: string}>({})
+  
 
-  // Load saved voice guidelines
-  useEffect(() => {
-    const saved = localStorage.getItem('voiceGuidelines')
-    if (saved) {
-      setVoiceGuidelines(saved)
-    }
-  }, [])
-
-  const handleSaveVoiceGuidelines = () => {
-    setIsSavingVoice(true)
-    try {
-      localStorage.setItem('voiceGuidelines', voiceGuidelines)
-      toast.success("Voice guidelines saved successfully")
-    } catch (error) {
-      toast.error("Failed to save voice guidelines")
-    } finally {
-      setIsSavingVoice(false)
-    }
-  }
 
   const toggleVariant = (variantType: string) => {
     setSelectedVariants(prev => {
@@ -165,11 +147,12 @@ export function PerformanceContentGenerator({ onContentGenerated }: PerformanceC
               if (result.job.status === 'completed') {
                 setIsGenerating(false)
                 
-                if (result.drafts?.length > 0) {
+                if (result.drafts?.length > 0 && !hasNotifiedCompletion) {
                   setJobDrafts(result.drafts)
                   onContentGenerated?.(result.drafts)
-                  toast.success(`Generated ${result.drafts.length} strategic content variations!`)
+                  toast.success(`Generated ${result.drafts.length} executive strategic intelligence variations!`)
                   setActiveTab('results')
+                  setHasNotifiedCompletion(true)
                 }
                 
                 if (pollingInterval) {
@@ -178,7 +161,7 @@ export function PerformanceContentGenerator({ onContentGenerated }: PerformanceC
                 }
               } else if (result.job.status === 'failed') {
                 setIsGenerating(false)
-                toast.error(result.job.error || 'Content generation failed')
+                toast.error(result.job.error || 'Strategic intelligence generation failed')
                 
                 if (pollingInterval) {
                   clearInterval(pollingInterval)
@@ -208,13 +191,14 @@ export function PerformanceContentGenerator({ onContentGenerated }: PerformanceC
     }
 
     if (selectedVariants.length === 0) {
-      toast.error("Please select at least one strategic variant")
+      toast.error("Please select at least one strategic intelligence variant")
       return
     }
 
     setIsGenerating(true)
     setCurrentJob(null)
     setJobDrafts([])
+    setHasNotifiedCompletion(false)
     
     if (pollingInterval) {
       clearInterval(pollingInterval)
@@ -222,7 +206,7 @@ export function PerformanceContentGenerator({ onContentGenerated }: PerformanceC
     }
 
     try {
-      const response = await fetch('/api/content/generate-performance', {
+      const response = await fetch('/api/content/generate-async', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -230,10 +214,10 @@ export function PerformanceContentGenerator({ onContentGenerated }: PerformanceC
         body: JSON.stringify({
           topic,
           platform,
-          voiceGuidelines: voiceGuidelines.trim() || undefined,
           contentIntent: selectedIntent,
           strategicVariants: selectedVariants,
-          tone: 'professional'
+          tone: 'professional',
+          useVoiceLearning: true // RAG Voice learning enabled for authentic Andrew voice
         })
       })
 
@@ -261,10 +245,6 @@ export function PerformanceContentGenerator({ onContentGenerated }: PerformanceC
 
         toast.success('Performance-driven content generation started!')
         setActiveTab('progress')
-        
-        if (voiceGuidelines.trim()) {
-          localStorage.setItem('voiceGuidelines', voiceGuidelines)
-        }
       } else {
         throw new Error('Invalid response from server')
       }
@@ -298,6 +278,31 @@ export function PerformanceContentGenerator({ onContentGenerated }: PerformanceC
     navigator.clipboard.writeText(content)
     toast.success("Content copied to clipboard!")
   }
+
+  const getEditableContent = (draftId: string, originalContent: string) => {
+    return editedContent[draftId] || originalContent
+  }
+
+  const updateEditedContent = (draftId: string, newContent: string) => {
+    setEditedContent(prev => ({
+      ...prev,
+      [draftId]: newContent
+    }))
+  }
+
+  const resetEditedContent = (draftId: string) => {
+    setEditedContent(prev => {
+      const updated = { ...prev }
+      delete updated[draftId]
+      return updated
+    })
+  }
+
+  const autoResizeTextarea = (element: HTMLTextAreaElement) => {
+    element.style.height = 'auto'
+    element.style.height = `${element.scrollHeight}px`
+  }
+
 
   const getVariantStats = (draft: ContentDraft) => {
     const stats = []
@@ -341,10 +346,10 @@ export function PerformanceContentGenerator({ onContentGenerated }: PerformanceC
             </div>
           </div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent mb-4">
-            Strategic Content Generator
+            AMPLIFY Strategic Intelligence Generator
           </h1>
           <p className="text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
-            AI-powered content creation with performance intelligence and Andrew's authentic voice
+            Executive-focused strategic intelligence creation with performance analytics and Andrew's authentic voice patterns
           </p>
         </div>
 
@@ -380,15 +385,15 @@ export function PerformanceContentGenerator({ onContentGenerated }: PerformanceC
                     <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl">
                       <Target className="h-5 w-5 text-white" />
                     </div>
-                    Content Strategy
+                    Strategic Intelligence Framework
                   </CardTitle>
                   <CardDescription className="text-base text-gray-300">
-                    Define your content goals and strategic approach
+                    Define your executive intelligence goals and strategic approach
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="space-y-3">
-                    <Label htmlFor="intent" className="text-sm font-semibold text-white">Content Intent</Label>
+                    <Label htmlFor="intent" className="text-sm font-semibold text-white">Strategic Intent</Label>
                     <Select value={selectedIntent} onValueChange={setSelectedIntent}>
                       <SelectTrigger className="h-12 border-gray-600 bg-gray-700 hover:bg-gray-600 transition-colors text-white">
                         <SelectValue />
@@ -407,13 +412,13 @@ export function PerformanceContentGenerator({ onContentGenerated }: PerformanceC
                   </div>
                   
                   <div className="space-y-3">
-                    <Label htmlFor="topic" className="text-sm font-semibold text-white">Topic or Key Message</Label>
+                    <Label htmlFor="topic" className="text-sm font-semibold text-white">Executive Topic or Strategic Message</Label>
                     <Textarea
                       id="topic"
                       value={topic}
                       onChange={(e) => setTopic(e.target.value)}
                       className="min-h-[140px] border-gray-600 bg-gray-700 hover:bg-gray-600 transition-colors text-white placeholder:text-gray-400 focus:border-amber-500 focus:ring-amber-500/20"
-                      placeholder="Enter your topic, idea, or key message for the LinkedIn post..."
+                      placeholder="Enter your executive topic, strategic insight, or key leadership message for your LinkedIn intelligence..."
                       disabled={isGenerating}
                     />
                   </div>
@@ -423,34 +428,53 @@ export function PerformanceContentGenerator({ onContentGenerated }: PerformanceC
               <Card className="shadow-xl border border-gray-700 bg-gray-800/90 backdrop-blur-sm">
                 <CardHeader className="pb-6">
                   <CardTitle className="flex items-center gap-3 text-xl text-white">
-                    <div className="p-2 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-xl">
-                      <Zap className="h-5 w-5 text-white" />
+                    <div className="p-2 bg-gradient-to-r from-green-500 to-blue-500 rounded-xl">
+                      <Eye className="h-5 w-5 text-white" />
                     </div>
-                    Voice Guidelines
+                    Intelligence Generation Preview
                   </CardTitle>
                   <CardDescription className="text-base text-gray-300">
-                    Maintain Andrew's authentic voice and tone
+                    Preview your strategic intelligence generation settings and parameters
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="flex justify-end">
-                    <Button 
-                      onClick={handleSaveVoiceGuidelines} 
-                      variant="outline" 
-                      size="sm"
-                      disabled={isSavingVoice || isGenerating}
-                      className="border-gray-600 bg-gray-700 text-white hover:border-purple-500 hover:bg-purple-500/20 hover:text-purple-300"
-                    >
-                      {isSavingVoice ? 'Saving...' : 'Save Guidelines'}
-                    </Button>
+                  <div className="grid gap-4">
+                    <div className="flex justify-between items-center p-4 bg-gray-700 rounded-lg">
+                      <span className="font-semibold text-white">Selected Variants:</span>
+                      <Badge className="bg-amber-500 text-white hover:bg-amber-600 px-3 py-1">
+                        {selectedVariants.length} variants
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between items-center p-4 bg-gray-700 rounded-lg">
+                      <span className="font-semibold text-white">Strategic Intent:</span>
+                      <span className="text-gray-300 font-medium">
+                        {CONTENT_INTENTS.find(i => i.value === selectedIntent)?.label}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center p-4 bg-gray-700 rounded-lg">
+                      <span className="font-semibold text-white">Platform:</span>
+                      <span className="text-gray-300 font-medium">LinkedIn</span>
+                    </div>
                   </div>
-                  <Textarea
-                    value={voiceGuidelines}
-                    onChange={(e) => setVoiceGuidelines(e.target.value)}
-                    className="min-h-[220px] border-gray-600 bg-gray-700 hover:bg-gray-600 transition-colors text-white placeholder:text-gray-400 focus:border-purple-500 focus:ring-purple-500/20"
-                    placeholder="Enter Andrew's voice guidelines, tone preferences, and style notes..."
-                    disabled={isGenerating}
-                  />
+
+                  <Button 
+                    onClick={handleGenerate}
+                    disabled={isGenerating || !topic.trim() || selectedVariants.length === 0}
+                    className="w-full h-14 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold text-base shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02]"
+                    size="lg"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <RefreshCw className="h-5 w-5 mr-3 animate-spin" />
+                        Generating Strategic Intelligence...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-5 w-5 mr-3" />
+                        Generate {selectedVariants.length} Strategic Intelligence Variants
+                      </>
+                    )}
+                  </Button>
                 </CardContent>
               </Card>
             </div>
@@ -463,10 +487,10 @@ export function PerformanceContentGenerator({ onContentGenerated }: PerformanceC
                     <div className="p-2 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl">
                       <Brain className="h-5 w-5 text-white" />
                     </div>
-                    Strategic Variants
+                    Strategic Intelligence Variants
                   </CardTitle>
                   <CardDescription className="text-base text-gray-300">
-                    Choose which content strategies to generate
+                    Choose which strategic intelligence approaches to generate
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -541,55 +565,6 @@ export function PerformanceContentGenerator({ onContentGenerated }: PerformanceC
                 </CardContent>
               </Card>
 
-              <Card className="shadow-xl border border-gray-700 bg-gradient-to-br from-gray-800/50 to-gray-700/50 backdrop-blur-sm">
-                <CardHeader className="pb-6">
-                  <CardTitle className="flex items-center gap-3 text-xl text-white">
-                    <div className="p-2 bg-gradient-to-r from-green-500 to-blue-500 rounded-xl">
-                      <Eye className="h-5 w-5 text-white" />
-                    </div>
-                    Generation Preview
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid gap-4">
-                    <div className="flex justify-between items-center p-4 bg-gray-700 rounded-lg">
-                      <span className="font-semibold text-white">Selected Variants:</span>
-                      <Badge className="bg-amber-500 text-white hover:bg-amber-600 px-3 py-1">
-                        {selectedVariants.length} variants
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between items-center p-4 bg-gray-700 rounded-lg">
-                      <span className="font-semibold text-white">Content Intent:</span>
-                      <span className="text-gray-300 font-medium">
-                        {CONTENT_INTENTS.find(i => i.value === selectedIntent)?.label}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center p-4 bg-gray-700 rounded-lg">
-                      <span className="font-semibold text-white">Platform:</span>
-                      <span className="text-gray-300 font-medium">LinkedIn</span>
-                    </div>
-                  </div>
-
-                  <Button 
-                    onClick={handleGenerate}
-                    disabled={isGenerating || !topic.trim() || selectedVariants.length === 0}
-                    className="w-full h-14 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold text-base shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02]"
-                    size="lg"
-                  >
-                    {isGenerating ? (
-                      <>
-                        <RefreshCw className="h-5 w-5 mr-3 animate-spin" />
-                        Generating Strategic Content...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="h-5 w-5 mr-3" />
-                        Generate {selectedVariants.length} Strategic Variants
-                      </>
-                    )}
-                  </Button>
-                </CardContent>
-              </Card>
             </div>
           </div>
         </TabsContent>
@@ -674,7 +649,7 @@ export function PerformanceContentGenerator({ onContentGenerated }: PerformanceC
                   Strategic Content Variants
                 </h3>
                 <p className="text-xl text-gray-300 mb-6">
-                  {jobDrafts.length} performance-optimized variations generated
+                  {jobDrafts.length} performance-optimised variations generated
                 </p>
                 <div className="flex justify-center gap-4">
                   <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 text-sm font-semibold">
@@ -697,10 +672,10 @@ export function PerformanceContentGenerator({ onContentGenerated }: PerformanceC
                   return (
                     <Card key={draft.id} className="overflow-hidden shadow-xl border border-gray-700 bg-gray-800/90 backdrop-blur-sm">
                       <CardHeader className={`border-l-4 pb-6 ${
-                        variant?.type === 'performance' ? 'border-amber-500 bg-gradient-to-r from-amber-50/80 to-orange-50/80' :
-                        variant?.type === 'engagement' ? 'border-blue-500 bg-gradient-to-r from-blue-50/80 to-cyan-50/80' :
-                        variant?.type === 'experimental' ? 'border-purple-500 bg-gradient-to-r from-purple-50/80 to-violet-50/80' :
-                        'border-gray-300 bg-gray-50/80'
+                        variant?.type === 'performance' ? 'border-amber-500 bg-gradient-to-r from-amber-900/20 to-orange-900/20' :
+                        variant?.type === 'engagement' ? 'border-blue-500 bg-gradient-to-r from-blue-900/20 to-cyan-900/20' :
+                        variant?.type === 'experimental' ? 'border-purple-500 bg-gradient-to-r from-purple-900/20 to-violet-900/20' :
+                        'border-gray-300 bg-gray-800/50'
                       }`}>
                         <CardTitle className="flex items-start justify-between gap-4">
                           <div className="flex items-start gap-4">
@@ -735,13 +710,25 @@ export function PerformanceContentGenerator({ onContentGenerated }: PerformanceC
                                 </Badge>
                               ))}
                             </div>
-                            <Button
-                              className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold px-6 py-2 shadow-lg transition-all duration-300 hover:shadow-xl"
-                              onClick={() => handleCopyContent(draft.content.body)}
-                            >
-                              <Copy className="h-4 w-4 mr-2" />
-                              Copy Content
-                            </Button>
+                            <div className="flex gap-2">
+                              {editedContent[draft.id] && (
+                                <Button
+                                  variant="outline"
+                                  className="border-orange-600 text-orange-400 hover:bg-orange-700 hover:text-white"
+                                  onClick={() => resetEditedContent(draft.id)}
+                                >
+                                  <RotateCcw className="h-4 w-4 mr-2" />
+                                  Reset
+                                </Button>
+                              )}
+                              <Button
+                                className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold px-6 py-2 shadow-lg transition-all duration-300 hover:shadow-xl"
+                                onClick={() => handleCopyContent(getEditableContent(draft.id, draft.content.body))}
+                              >
+                                <Copy className="h-4 w-4 mr-2" />
+                                Copy Content
+                              </Button>
+                            </div>
                           </div>
                         </CardTitle>
                         
@@ -758,90 +745,26 @@ export function PerformanceContentGenerator({ onContentGenerated }: PerformanceC
                       
                       <CardContent className="space-y-6 pt-6">
                         <div className="prose prose-base max-w-none">
-                          <div className="whitespace-pre-wrap bg-gray-900 rounded-xl p-6 border border-gray-600 text-white leading-relaxed text-base shadow-sm">
-                            {draft.content.body}
-                          </div>
+                          <Textarea
+                            value={getEditableContent(draft.id, draft.content.body)}
+                            onChange={(e) => {
+                              updateEditedContent(draft.id, e.target.value)
+                              autoResizeTextarea(e.target as HTMLTextAreaElement)
+                            }}
+                            onInput={(e) => autoResizeTextarea(e.target as HTMLTextAreaElement)}
+                            className="bg-gray-900 border-gray-600 text-white leading-relaxed text-base shadow-sm focus:border-amber-500 focus:ring-amber-500/20 resize-none overflow-hidden"
+                            placeholder="Edit your content here..."
+                            style={{ height: 'auto', minHeight: '120px' }}
+                            ref={(el) => {
+                              if (el) {
+                                setTimeout(() => autoResizeTextarea(el), 0)
+                              }
+                            }}
+                          />
                         </div>
                         
-                        {/* Performance Insights */}
-                        {draft.content.performance_prediction && (
-                          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200 shadow-lg">
-                            <h4 className="font-bold text-base mb-4 flex items-center gap-3 text-blue-800">
-                              <BarChart3 className="h-5 w-5" />
-                              Performance Insights
-                            </h4>
-                            
-                            <div className="grid grid-cols-2 gap-6 mb-6">
-                              <div className="text-center p-4 bg-white rounded-xl shadow-sm">
-                                <div className="text-3xl font-bold text-green-600 mb-2">
-                                  {draft.content.performance_prediction.predictedEngagement}
-                                </div>
-                                <div className="text-sm font-semibold text-gray-600">Predicted Engagement</div>
-                              </div>
-                              <div className="text-center p-4 bg-white rounded-xl shadow-sm">
-                                <div className="text-3xl font-bold text-blue-600 mb-2">
-                                  {draft.content.performance_prediction.confidenceScore}%
-                                </div>
-                                <div className="text-sm font-semibold text-gray-600">Confidence Score</div>
-                              </div>
-                            </div>
-                            
-                            {draft.content.performance_prediction.strengthFactors.length > 0 && (
-                              <div className="mb-4">
-                                <span className="font-bold text-sm text-green-700 mb-2 block">Strengths:</span>
-                                <ul className="text-sm space-y-2">
-                                  {draft.content.performance_prediction.strengthFactors.map((factor, i) => (
-                                    <li key={i} className="text-green-700 flex items-start gap-3">
-                                      <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" /> 
-                                      <span>{factor}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                            
-                            {draft.content.performance_prediction.improvementSuggestions.length > 0 && (
-                              <div>
-                                <span className="font-bold text-sm text-amber-700 mb-2 block">Improvement Opportunities:</span>
-                                <ul className="text-sm space-y-2">
-                                  {draft.content.performance_prediction.improvementSuggestions.map((suggestion, i) => (
-                                    <li key={i} className="text-amber-700 flex items-start gap-3">
-                                      <TrendingUp className="h-4 w-4 mt-0.5 flex-shrink-0" /> 
-                                      <span>{suggestion}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                          </div>
-                        )}
                         
-                        {/* Historical Context */}
-                        {(draft.metadata.similar_posts_analyzed && draft.metadata.similar_posts_analyzed > 0) && (
-                          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200 shadow-lg">
-                            <h4 className="font-bold text-base mb-4 flex items-center gap-3 text-purple-800">
-                              <Users className="h-5 w-5" />
-                              Historical Intelligence
-                            </h4>
-                            <div className="grid grid-cols-2 gap-6 mb-4">
-                              <div className="p-4 bg-gray-700 rounded-xl">
-                                <span className="font-semibold text-white block mb-2">Similar posts analyzed:</span>
-                                <p className="text-2xl font-bold text-purple-400">{draft.metadata.similar_posts_analyzed}</p>
-                              </div>
-                              <div className="p-4 bg-gray-700 rounded-xl">
-                                <span className="font-semibold text-white block mb-2">Top performer reference:</span>
-                                <p className="text-2xl font-bold text-purple-400">{draft.metadata.top_performer_score || 0} score</p>
-                              </div>
-                            </div>
-                            <div className="p-4 bg-white/40 rounded-xl">
-                              <p className="text-purple-800 font-medium">
-                                This variation leverages patterns from Andrew's highest-performing similar content.
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {draft.content.hashtags.length > 0 && (
+                        {draft.content.hashtags && draft.content.hashtags.length > 0 && (
                           <div className="space-y-3">
                             <h5 className="font-semibold text-white">Recommended Hashtags:</h5>
                             <div className="flex flex-wrap gap-3">
@@ -880,7 +803,7 @@ export function PerformanceContentGenerator({ onContentGenerated }: PerformanceC
                 Performance Analytics Dashboard
               </CardTitle>
               <CardDescription className="text-lg text-gray-300">
-                Track content performance and optimize Andrew's voice evolution
+                Track content performance and optimise Andrew's voice evolution
               </CardDescription>
             </CardHeader>
             <CardContent>

@@ -15,18 +15,21 @@ function parseRedisUrl(url: string) {
   }
 }
 
-// Create Redis connection optimized for Upstash/serverless
+// Create Redis connection optimized for local/Upstash Redis
 function createRedisConnection() {
   const redisUrl = process.env.REDIS_URL || process.env.UPSTASH_REDIS_URL
   
   if (redisUrl) {
     const parsed = parseRedisUrl(redisUrl)
     if (parsed) {
+      // Check if it's a local Redis connection
+      const isLocalRedis = parsed.host === 'localhost' || parsed.host === '127.0.0.1'
+      
       return new Redis({
         host: parsed.host,
         port: parsed.port,
         password: parsed.password,
-        tls: {}, // Enable TLS for Upstash
+        tls: isLocalRedis ? undefined : {}, // Only enable TLS for remote Redis
         enableReadyCheck: false,
         lazyConnect: true,
         connectTimeout: 10000,
@@ -93,6 +96,10 @@ export interface JobData {
   postType?: string
   tone?: string
   userId?: string
+  useVoiceLearning?: boolean
+  voiceLearningData?: any
+  strategicVariants?: string[]
+  contentIntent?: string
 }
 
 export class QueueService {

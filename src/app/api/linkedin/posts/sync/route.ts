@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseLinkedIn, type LinkedInPost } from '@/lib/supabase-linkedin'
+import { supabaseAdmin } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -32,11 +33,32 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
+    if (!supabaseAdmin) {
+      return NextResponse.json({ 
+        error: 'Supabase admin not available. Please check environment variables.' 
+      }, { status: 500 })
+    }
+
     // Get request parameters
     const body = await request.json().catch(() => ({}))
     const username = body.username || 'andrewtallents'
     const pageNumber = body.pageNumber || 1
     const maxPages = body.maxPages || 3 // Limit to prevent API overuse
+
+    // Get connection ID from username
+    const { data: connection, error: connectionError } = await supabaseAdmin
+      .from('linkedin_connections')
+      .select('id')
+      .eq('username', username)
+      .single()
+
+    if (connectionError || !connection) {
+      return NextResponse.json({ 
+        error: `Connection not found for username: ${username}` 
+      }, { status: 404 })
+    }
+
+    const connectionId = connection.id
 
     let allPosts: LinkedInPost[] = []
     let currentPage = pageNumber
@@ -147,12 +169,18 @@ export async function POST(request: NextRequest) {
 
     for (const post of allPosts) {
       try {
-        // Check if post already exists
-        const existingPost = await supabaseLinkedIn.getPostByUrn(post.urn)
+        // Check if post already exists in connection_posts
+        const { data: existingPost } = await supabaseAdmin
+          .from('connection_posts')
+          .select('id')
+          .eq('connection_id', connectionId)
+          .eq('post_urn', post.urn)
+          .single()
+
         const isNewPost = !existingPost
 
-        // Save/update post
-        const savedPost = await supabaseLinkedIn.upsertPost(post)
+        // Save/update post to connection_posts table
+        await supabaseLinkedIn.upsertConnectionPost(connectionId, post)
         
         results.push({
           urn: post.urn,

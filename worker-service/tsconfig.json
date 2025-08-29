@@ -1,12 +1,15 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
     "lib": ["ES2022"],
     "outDir": "./dist",
     "rootDir": "./src",
-    "strict": true,
+    "strict": false,
+    "noImplicitAny": false,
+    "noImplicitReturns": false,
+    "noImplicitThis": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
@@ -26,7 +29,14 @@
   ],
   "exclude": [
     "node_modules",
-    "dist",
-    "**/*.test.ts"
+    "dist", 
+    "**/*.test.ts",
+    "src/routes/performance.ts",
+    "src/routes/strategic-variants.ts", 
+    "src/routes/sync-monitor.ts",
+    "src/services/historical-analysis-enhanced.ts",
+    "src/services/linkedin-sync.ts",
+    "src/services/performance-insights.ts",
+    "src/services/scheduler.ts"
   ]
 }

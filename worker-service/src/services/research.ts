@@ -9,7 +9,10 @@ import type { ResearchResult } from '../types'
 export class ResearchService {
   
   private generateQueryHash(query: string, source: string): string {
-    return createHash('sha256').update(`${source}:${query}`).digest('hex')
+    // Normalize query to prevent similar queries from having different hashes
+    const normalizedQuery = query.toLowerCase().trim().replace(/\s+/g, ' ')
+    const hashInput = `${source}:${normalizedQuery}`
+    return createHash('sha256').update(hashInput).digest('hex')
   }
 
   private async getCachedResearch(query: string, source: string): Promise<any | null> {
@@ -17,7 +20,24 @@ export class ResearchService {
     const cached = await supabaseService.getCachedResearch(queryHash)
     
     if (cached) {
-      logger.info({ source, queryHash }, 'Using cached research data')
+      // CRITICAL FIX: Validate that cached content actually matches the query
+      const queryLower = query.toLowerCase()
+      const cachedQueryLower = (cached.query_text || '').toLowerCase()
+      
+      // Check if the cached query matches the current query (within reasonable similarity)
+      if (cachedQueryLower !== queryLower) {
+        logger.warn({ 
+          currentQuery: query,
+          cachedQuery: cached.query_text,
+          queryHash,
+          source
+        }, 'CACHE MISMATCH: Cached query does not match current query - invalidating cache')
+        
+        // Don't return mismatched cache data
+        return null
+      }
+      
+      logger.info({ source, queryHash, cachedQuery: cached.query_text }, 'Using validated cached research data')
       return cached.results
     }
     
@@ -41,13 +61,17 @@ export class ResearchService {
 
   async searchWithFirecrawl(query: string): Promise<ResearchResult[]> {
     try {
-      // Check cache first
+      // Check cache first with enhanced logging
+      const queryHash = this.generateQueryHash(query, 'firecrawl')
+      logger.debug({ query, queryHash }, 'Checking cache for Firecrawl search')
+      
       const cached = await this.getCachedResearch(query, 'firecrawl')
       if (cached) {
+        logger.info({ query, queryHash, resultCount: cached.length }, 'Cache HIT - Using cached Firecrawl results')
         return cached
       }
 
-      logger.info({ query }, 'Searching with Firecrawl')
+      logger.info({ query, queryHash }, 'Cache MISS - Searching with Firecrawl')
 
       // Use Firecrawl search API
       const response = await fetch('https://api.firecrawl.dev/v0/search', {
@@ -63,7 +87,7 @@ export class ResearchService {
             includeHtml: false
           },
           searchOptions: {
-            limit: 5
+            limit: 2 // Reduced from 5 to 2 to prevent token overflow
           }
         })
       })
@@ -77,10 +101,10 @@ export class ResearchService {
       const results: ResearchResult[] = (data.data || []).map((item: any) => ({
         source: 'firecrawl',
         title: item.metadata?.title || 'No title',
-        content: item.content || item.markdown || '',
+        content: (item.content || item.markdown || '').substring(0, 300) + '...', // Truncate content to 300 chars
         url: item.metadata?.sourceURL || item.url,
         relevance_score: 0.8,
-        summary: item.content?.substring(0, 200) + '...' || ''
+        summary: item.content?.substring(0, 150) + '...' || '' // Reduced summary from 200 to 150 chars
       }))
 
       // Cache results for 24 hours
@@ -196,30 +220,30 @@ export class ResearchService {
     historicalInsights?: any
   }> {
     const startTime = Date.now()
-    logger.info({ topic }, 'Starting enhanced Firecrawl research')
+    logger.info({ topic }, 'MINIMAL RESEARCH MODE - Reduced for RAG voice learning priority')
 
     try {
       // Calculate 7-day date range
       const now = new Date()
       const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
       
-      // Search for recent UK business news related to CEOs and leadership
+      // REDUCED RESEARCH: Only 2 minimal queries to prevent token overflow
       const searchQueries = [
-        'UK CEO leadership challenges 2024',
-        'UK business founders burnout stress',
-        'UK tech startup leadership self-leadership',
-        'UK executive coaching leadership development'
+        `${topic} UK trends 2024`,
+        `${topic} current news`
       ]
 
-      // Get news from multiple searches
+      // Get minimal news content from reduced searches
       let allNewsContent = ''
       for (const query of searchQueries) {
         try {
           const searchResults = await this.searchWithFirecrawl(query)
-          const recentResults = searchResults.slice(0, 3) // Top 3 results per query
+          const recentResults = searchResults.slice(0, 2) // Only 2 results per query
           
           for (const result of recentResults) {
-            allNewsContent += `\n\n=== ${result.title} ===\n${result.content}\nSource: ${result.url}\n`
+            // CRITICAL: Truncate content to 200 chars to prevent token overflow
+            const truncatedContent = result.content?.substring(0, 200) + '...' || 'No content'
+            allNewsContent += `\n=== ${result.title} ===\n${truncatedContent}\nSource: ${result.url}\n`
           }
         } catch (error) {
           logger.warn({ query, error }, 'Failed to search with query')
@@ -424,8 +448,10 @@ ${allNewsContent}`
       logger.info({ 
         totalTimeMs: totalTime,
         ideasFound: 3,
-        hasHistoricalInsights: !!historicalInsights
-      }, 'Enhanced Firecrawl research completed')
+        hasHistoricalInsights: !!historicalInsights,
+        tokenOptimized: true,
+        researchMode: 'minimal_for_rag'
+      }, 'Minimal research completed - optimized for RAG voice learning')
 
       return {
         ...researchData,
@@ -646,6 +672,71 @@ ${allNewsContent}`
     })
 
     return insights.slice(0, 5) // Return top 5 insights
+  }
+
+  // CACHE MANAGEMENT METHODS
+  async clearCacheForTopic(topic: string): Promise<{ cleared: number; failed: number }> {
+    logger.info({ topic }, 'Clearing cache entries for topic')
+    
+    let cleared = 0
+    let failed = 0
+    
+    // Clear both firecrawl and perplexity caches for this topic
+    const topicQueries = [
+      `${topic} UK business 2024`,
+      `${topic} trends analysis`, 
+      `${topic} UK leadership insights`,
+      `${topic} practical applications CEO founders`
+    ]
+    
+    for (const query of topicQueries) {
+      const firecrawlHash = this.generateQueryHash(query, 'firecrawl')
+      const perplexityHash = this.generateQueryHash(query, 'perplexity')
+      
+      try {
+        const firecrawlCleared = await supabaseService.clearCacheByHash(firecrawlHash)
+        const perplexityCleared = await supabaseService.clearCacheByHash(perplexityHash)
+        
+        if (firecrawlCleared) cleared++
+        else failed++
+        
+        if (perplexityCleared) cleared++
+        else failed++
+        
+        logger.debug({ query, firecrawlHash, perplexityHash, firecrawlCleared, perplexityCleared }, 'Cache clearing results for query')
+      } catch (error) {
+        logger.error({ error, query }, 'Error clearing cache for query')
+        failed += 2
+      }
+    }
+    
+    // Also clear by topic pattern
+    try {
+      const patternCleared = await supabaseService.clearCacheByPattern(topic)
+      cleared += patternCleared
+      logger.info({ topic, patternCleared }, 'Additional cache entries cleared by pattern')
+    } catch (error) {
+      logger.error({ error, topic }, 'Error clearing cache by pattern')
+    }
+    
+    logger.info({ topic, cleared, failed }, 'Cache clearing completed for topic')
+    return { cleared, failed }
+  }
+
+  async validateCacheIntegrity(): Promise<{
+    totalEntries: number
+    invalidEntries: number
+    clearedEntries: number
+  }> {
+    logger.info('Starting cache integrity validation')
+    
+    // This would need to be implemented with a database query
+    // to check all cache entries and validate their content
+    return {
+      totalEntries: 0,
+      invalidEntries: 0, 
+      clearedEntries: 0
+    }
   }
 }
 

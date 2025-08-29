@@ -32,6 +32,54 @@ export interface PerformanceInsights {
   generatedAt: string
 }
 
+export interface PerformancePrediction {
+  predictedEngagement: number
+  confidenceScore: number
+  strengthFactors: string[]
+  improvementSuggestions: string[]
+  similarPostPerformance: {
+    avgEngagement: number
+    topPerformance: number
+    similarityScore: number
+  }
+}
+
+export interface EnhancedInsight {
+  relatedPosts: any[]
+  topPerformers: any[]
+  patterns: {
+    avgWordCount: number
+    commonOpenings: string[]
+    commonStructures?: string[]
+    bestPerformingFormats: string[]
+    engagementTriggers: string[]
+  }
+  performanceContext: {
+    avgEngagement: number
+    topPerformingScore: number
+    suggestionScore: number
+  }
+  voiceAnalysis: {
+    tone: string
+    personalStoryElements: boolean
+    vulnerabilityScore: number
+    authoritySignals: string[]
+    emotionalWords: string[]
+    actionWords: string[]
+  }
+  structureRecommendations: any[]
+  performanceFactors: {
+    keyStrengths?: string[]
+    improvementAreas?: string[]
+    formatPreferences?: string[]
+    engagementDrivers?: string[]
+    highEngagementTriggers?: any
+    optimalTiming?: any
+    contentLengthOptimal?: any
+    formatRecommendations?: any
+  }
+}
+
 class PerformanceInsightsService {
   /**
    * Generate AI-powered performance insights for content strategy
@@ -128,7 +176,7 @@ PERFORMANCE ANALYSIS:
 - Performance Gap: ${Math.round(((performanceTarget - currentPerformance) / currentPerformance) * 100)}%
 
 HISTORICAL CONTEXT:
-- Historical Average: ${historicalInsights.performance_context.avg_engagement_score}
+- Historical Average: ${historicalInsights.performance_context.avg_engagement}
 - Top Performance: ${historicalInsights.performance_context.top_performing_score}
 - Confidence Level: ${historicalInsights.confidence_level}%
 
@@ -584,10 +632,94 @@ Provide insights in exactly this JSON format:
       return acc
     }, {} as Record<string, { total: number, count: number }>)
     
-    return Object.entries(agentStats).reduce((best, [agent, stats]) => {
-      const avgForAgent = stats.total / stats.count
-      return avgForAgent > best.avg ? { agent, avg: avgForAgent } : best
-    }, { agent: 'none', avg: 0 }).agent
+    let bestAgent = 'none'
+    let bestAvg = 0
+    
+    for (const [agent, stats] of Object.entries(agentStats)) {
+      const typedStats = stats as { total: number, count: number }
+      const avgForAgent = typedStats.total / typedStats.count
+      if (avgForAgent > bestAvg) {
+        bestAvg = avgForAgent
+        bestAgent = agent
+      }
+    }
+    
+    return bestAgent
+  }
+
+  /**
+   * Generate enhanced insights from basic historical analysis
+   */
+  async generateEnhancedInsights(basicInsight: any): Promise<EnhancedInsight> {
+    try {
+      const enhancedInsight: EnhancedInsight = {
+        relatedPosts: basicInsight.relatedPosts || basicInsight.historical_posts || [],
+        topPerformers: basicInsight.topPerformers || [],
+        patterns: {
+          avgWordCount: basicInsight.patterns?.avgWordCount || 150,
+          commonOpenings: basicInsight.patterns?.commonOpenings || [],
+          commonStructures: basicInsight.patterns?.commonStructures || [],
+          bestPerformingFormats: basicInsight.patterns?.bestPerformingFormats || [],
+          engagementTriggers: basicInsight.patterns?.engagementTriggers || []
+        },
+        performanceContext: {
+          avgEngagement: basicInsight.performanceContext?.avgEngagement || basicInsight.performance_metrics?.avg_engagement || 0,
+          topPerformingScore: basicInsight.performanceContext?.topPerformingScore || basicInsight.performance_metrics?.top_performing_score || 0,
+          suggestionScore: basicInsight.performanceContext?.suggestionScore || 0
+        },
+        voiceAnalysis: {
+          tone: basicInsight.voiceAnalysis?.tone || 'professional',
+          personalStoryElements: basicInsight.voiceAnalysis?.personalStoryElements || false,
+          vulnerabilityScore: basicInsight.voiceAnalysis?.vulnerabilityScore || 0,
+          authoritySignals: basicInsight.voiceAnalysis?.authoritySignals || [],
+          emotionalWords: basicInsight.voiceAnalysis?.emotionalWords || [],
+          actionWords: basicInsight.voiceAnalysis?.actionWords || []
+        },
+        structureRecommendations: basicInsight.structureRecommendations || [],
+        performanceFactors: {
+          keyStrengths: basicInsight.performanceFactors?.keyStrengths || [],
+          improvementAreas: basicInsight.performanceFactors?.improvementAreas || [],
+          formatPreferences: basicInsight.performanceFactors?.formatPreferences || [],
+          engagementDrivers: basicInsight.performanceFactors?.engagementDrivers || []
+        }
+      }
+
+      return enhancedInsight
+    } catch (error) {
+      logger.error({ error }, 'Failed to generate enhanced insights')
+      // Return a default enhanced insight
+      return {
+        relatedPosts: [],
+        topPerformers: [],
+        patterns: {
+          avgWordCount: 150,
+          commonOpenings: [],
+          commonStructures: [],
+          bestPerformingFormats: [],
+          engagementTriggers: []
+        },
+        performanceContext: {
+          avgEngagement: 0,
+          topPerformingScore: 0,
+          suggestionScore: 0
+        },
+        voiceAnalysis: {
+          tone: 'professional',
+          personalStoryElements: false,
+          vulnerabilityScore: 0,
+          authoritySignals: [],
+          emotionalWords: [],
+          actionWords: []
+        },
+        structureRecommendations: [],
+        performanceFactors: {
+          keyStrengths: [],
+          improvementAreas: [],
+          formatPreferences: [],
+          engagementDrivers: []
+        }
+      }
+    }
   }
 }
 

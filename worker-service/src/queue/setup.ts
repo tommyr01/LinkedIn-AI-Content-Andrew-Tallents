@@ -2,7 +2,7 @@ import { Queue, Worker, QueueEvents } from 'bullmq'
 import Redis from 'ioredis'
 import { appConfig } from '../config'
 import logger from '../lib/logger'
-import type { JobData } from '../types'
+import type { JobData, SyncJobData } from '../types'
 
 // Parse Redis URL to extract components
 function parseRedisUrl(url: string) {
@@ -26,9 +26,10 @@ const isProduction = appConfig.environment === 'production'
 function createRedisConnection() {
   const parsed = parseRedisUrl(appConfig.redis.url)
   
-  // Base configuration for Upstash Redis
+  // Base configuration - detect if local or remote Redis
+  const isLocalRedis = parsed?.host === 'localhost' || parsed?.host === '127.0.0.1'
   const baseConfig = {
-    tls: {}, // Enable TLS for Upstash
+    tls: isLocalRedis ? undefined : {}, // Enable TLS only for remote Redis
     enableReadyCheck: false,
     lazyConnect: false, // Connect immediately for health checks
     maxRetriesPerRequest: null, // Required by BullMQ (must be null, not a number)
@@ -131,7 +132,8 @@ export const redis = createRedisConnection()
 
 // Queue names
 export const QUEUE_NAMES = {
-  CONTENT_GENERATION: 'content-generation'
+  CONTENT_GENERATION: 'content-generation',
+  SCHEDULED_SYNC: 'scheduled-sync'
 } as const
 
 // Create content generation queue
@@ -151,8 +153,29 @@ export const contentGenerationQueue = new Queue<JobData>(
   }
 )
 
+// Create scheduled sync queue
+export const scheduledSyncQueue = new Queue<SyncJobData>(
+  QUEUE_NAMES.SCHEDULED_SYNC,
+  {
+    connection: redis,
+    defaultJobOptions: {
+      attempts: 3, // Retry failed syncs up to 3 times
+      backoff: {
+        type: 'exponential',
+        delay: 30000 // Start with 30 second delay, then exponential backoff
+      },
+      removeOnComplete: { count: 100 }, // Keep more sync job history
+      removeOnFail: { count: 50 } // Keep more failed sync history for debugging
+    }
+  }
+)
+
 // Queue events for monitoring
 export const queueEvents = new QueueEvents(QUEUE_NAMES.CONTENT_GENERATION, {
+  connection: redis
+})
+
+export const syncQueueEvents = new QueueEvents(QUEUE_NAMES.SCHEDULED_SYNC, {
   connection: redis
 })
 
@@ -167,6 +190,19 @@ queueEvents.on('failed', ({ jobId, failedReason }) => {
 
 queueEvents.on('progress', ({ jobId, data }) => {
   logger.debug({ jobId, data }, 'Job progress update')
+})
+
+// Set up sync queue event listeners
+syncQueueEvents.on('completed', ({ jobId, returnvalue }) => {
+  logger.info({ jobId, returnvalue, queue: 'scheduled-sync' }, 'Sync job completed successfully')
+})
+
+syncQueueEvents.on('failed', ({ jobId, failedReason }) => {
+  logger.error({ jobId, failedReason, queue: 'scheduled-sync' }, 'Sync job failed')
+})
+
+syncQueueEvents.on('progress', ({ jobId, data }) => {
+  logger.debug({ jobId, data, queue: 'scheduled-sync' }, 'Sync job progress update')
 })
 
 // Health check function
@@ -189,6 +225,12 @@ export const checkQueueHealth = async (retries = 3) => {
       const completed = await contentGenerationQueue.getCompleted()
       const failed = await contentGenerationQueue.getFailed()
       
+      // Test sync queue operations
+      const syncWaiting = await scheduledSyncQueue.getWaiting()
+      const syncActive = await scheduledSyncQueue.getActive()
+      const syncCompleted = await scheduledSyncQueue.getCompleted()
+      const syncFailed = await scheduledSyncQueue.getFailed()
+      
       return {
         redis: 'connected',
         queues: {
@@ -197,6 +239,12 @@ export const checkQueueHealth = async (retries = 3) => {
             active: active.length,
             completed: completed.length,
             failed: failed.length
+          },
+          [QUEUE_NAMES.SCHEDULED_SYNC]: {
+            waiting: syncWaiting.length,
+            active: syncActive.length,
+            completed: syncCompleted.length,
+            failed: syncFailed.length
           }
         }
       }
@@ -232,7 +280,9 @@ export const checkQueueHealth = async (retries = 3) => {
 export const closeQueue = async () => {
   try {
     await queueEvents.close()
+    await syncQueueEvents.close()
     await contentGenerationQueue.close()
+    await scheduledSyncQueue.close()
     await redis.quit()
     logger.info('Queue connections closed successfully')
   } catch (error) {
@@ -273,7 +323,9 @@ redis.on('node error', (error, node) => {
 
 export default {
   contentGenerationQueue,
+  scheduledSyncQueue,
   queueEvents,
+  syncQueueEvents,
   checkQueueHealth,
   closeQueue
 }

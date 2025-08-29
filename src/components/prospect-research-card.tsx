@@ -188,9 +188,13 @@ export function ProspectResearchCard({
               <div className="space-y-2">
                 <h4 className="font-semibold">Profile Tags</h4>
                 <div className="flex flex-wrap gap-2">
-                  {prospect.icpScore.tags.map((tag, index) => (
+                  {(Array.isArray(prospect.icpScore.tags) 
+                    ? prospect.icpScore.tags 
+                    : Object.values(prospect.icpScore.tags || {}))
+                    .filter(tag => tag && typeof tag === 'string')
+                    .map((tag, index) => (
                     <Badge key={index} variant="outline">
-                      {tag}
+                      {String(tag)}
                     </Badge>
                   ))}
                 </div>

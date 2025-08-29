@@ -7,13 +7,14 @@ export const maxDuration = 300 // 5 minutes for bulk sync
 
 interface Connection {
   id: string
-  linkedin_username: string
-  name: string
-  last_posts_sync?: string
+  username: string
+  full_name: string
+  last_synced_at?: string
 }
 
 export async function POST(request: NextRequest) {
   try {
+    const now = new Date()
     console.log('🔄 Starting bulk posts sync for all connections...')
 
     // Check if supabaseAdmin is available
@@ -27,9 +28,9 @@ export async function POST(request: NextRequest) {
 
     // Get all connections from Supabase using admin client
     const { data: connections, error } = await supabaseAdmin
-      .from('connections')
-      .select('id, linkedin_username, name, last_posts_sync')
-      .not('linkedin_username', 'is', null)
+      .from('linkedin_connections')
+      .select('id, username, full_name, last_synced_at')
+      .not('username', 'is', null)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -56,15 +57,8 @@ export async function POST(request: NextRequest) {
 
     console.log(`📊 Found ${connections.length} connections to potentially sync`)
 
-    // Filter out connections that were synced recently (within last 30 minutes)
-    const now = new Date()
-    const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000)
-    
-    const connectionsToSync = connections.filter(conn => {
-      if (!conn.last_posts_sync) return true
-      const lastSync = new Date(conn.last_posts_sync)
-      return lastSync < thirtyMinutesAgo
-    })
+    // Temporarily disable cooldown for testing - sync all connections
+    const connectionsToSync = connections
 
     const skippedCount = connections.length - connectionsToSync.length
     console.log(`📋 Syncing ${connectionsToSync.length} connections (${skippedCount} skipped - recently synced)`)
@@ -86,13 +80,13 @@ export async function POST(request: NextRequest) {
       // Process batch in parallel
       const batchPromises = batch.map(async (connection) => {
         try {
-          console.log(`📡 Syncing posts for ${connection.name} (@${connection.linkedin_username})`)
+          console.log(`📡 Syncing posts for ${connection.full_name} (@${connection.username})`)
           
           const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/linkedin/posts/sync`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
-              username: connection.linkedin_username,
+              username: connection.username,
               maxPages: 2 // Limit to avoid long processing times
             })
           })
@@ -110,16 +104,16 @@ export async function POST(request: NextRequest) {
             
             // Update last sync time
             await supabaseAdmin
-              .from('connections')
-              .update({ last_posts_sync: new Date().toISOString() })
+              .from('linkedin_connections')
+              .update({ last_synced_at: new Date().toISOString() })
               .eq('id', connection.id)
             
-            console.log(`✅ ${connection.name}: ${newPosts} new posts synced`)
+            console.log(`✅ ${connection.full_name}: ${newPosts} new posts synced`)
             
             return {
               connectionId: connection.id,
-              name: connection.name,
-              username: connection.linkedin_username,
+              name: connection.full_name,
+              username: connection.username,
               status: 'success',
               newPosts,
               totalPosts: syncResult.data?.summary?.totalFetched || 0
@@ -129,13 +123,13 @@ export async function POST(request: NextRequest) {
           }
           
         } catch (error: any) {
-          console.error(`❌ Error syncing ${connection.name}:`, error.message)
+          console.error(`❌ Error syncing ${connection.full_name}:`, error.message)
           errors++
           
           return {
             connectionId: connection.id,
-            name: connection.name,
-            username: connection.linkedin_username,
+            name: connection.full_name,
+            username: connection.username,
             status: 'error',
             error: error.message,
             newPosts: 0
@@ -210,10 +204,10 @@ export async function GET() {
 
     // Get some stats about recent syncs
     const { data: connections, error } = await supabaseAdmin
-      .from('connections')
-      .select('id, name, linkedin_username, last_posts_sync')
-      .not('linkedin_username', 'is', null)
-      .order('last_posts_sync', { ascending: false, nullsFirst: false })
+      .from('linkedin_connections')
+      .select('id, full_name, username, last_synced_at')
+      .not('username', 'is', null)
+      .order('last_synced_at', { ascending: false, nullsFirst: false })
       .limit(10)
 
     if (error) {
@@ -225,8 +219,8 @@ export async function GET() {
 
     const now = new Date()
     const recentlySynced = connections?.filter(conn => {
-      if (!conn.last_posts_sync) return false
-      const lastSync = new Date(conn.last_posts_sync)
+      if (!conn.last_synced_at) return false
+      const lastSync = new Date(conn.last_synced_at)
       const diffMinutes = (now.getTime() - lastSync.getTime()) / (1000 * 60)
       return diffMinutes < 60 // Synced within last hour
     }) || []
@@ -237,9 +231,9 @@ export async function GET() {
         totalConnections: connections?.length || 0,
         recentlySyncedCount: recentlySynced.length,
         lastSyncTimes: connections?.slice(0, 5).map(c => ({
-          name: c.name,
-          username: c.linkedin_username,
-          lastSync: c.last_posts_sync
+          name: c.full_name,
+          username: c.username,
+          lastSync: c.last_synced_at
         })) || []
       }
     })

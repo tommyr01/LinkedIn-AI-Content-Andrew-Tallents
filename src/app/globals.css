@@ -115,4 +115,32 @@
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
   }
+  
+  /* AMPLIFY brand gradient utilities */
+  .amplify-gradient {
+    background: linear-gradient(135deg, rgb(245 158 11), rgb(251 146 60));
+  }
+  
+  .amplify-gradient-text {
+    background: linear-gradient(135deg, rgb(245 158 11), rgb(251 146 60));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  
+  /* Executive card hover effects */
+  .executive-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .executive-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 10px 10px -5px rgb(0 0 0 / 0.04), 0 0 0 1px rgb(245 158 11 / 0.1);
+  }
+  
+  /* Strategic focus states */
+  .strategic-focus {
+    outline: 2px solid rgb(245 158 11 / 0.5);
+    outline-offset: 2px;
+  }
 }

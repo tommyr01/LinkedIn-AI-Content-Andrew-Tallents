@@ -152,7 +152,7 @@ export function PerformanceAnalyticsDashboard() {
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Performance Analytics</h2>
           <p className="text-muted-foreground">
-            Track content performance and optimize Andrew's strategic approach
+            Track content performance and optimise Andrew's strategic approach
           </p>
         </div>
         

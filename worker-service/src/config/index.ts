@@ -9,7 +9,8 @@ const configSchema = z.object({
   REDIS_URL: z.string().url('REDIS_URL must be a valid URL'),
   SUPABASE_URL: z.string().url('SUPABASE_URL must be a valid URL'),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1, 'SUPABASE_SERVICE_ROLE_KEY is required'),
-  OPENAI_API_KEY: z.string().min(1, 'OPENAI_API_KEY is required'),
+  OPENAI_API_KEY: z.string().optional(), // Optional since we're switching to Claude
+  ANTHROPIC_API_KEY: z.string().min(1, 'ANTHROPIC_API_KEY is required'),
   FIRECRAWL_API_KEY: z.string().min(1, 'FIRECRAWL_API_KEY is required'),
   PERPLEXITY_API_KEY: z.string().optional(), // Optional since Perplexity is disabled
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('debug'),
@@ -26,6 +27,7 @@ const parseConfig = () => {
       SUPABASE_URL: process.env.SUPABASE_URL,
       SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
       OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+      ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
       FIRECRAWL_API_KEY: process.env.FIRECRAWL_API_KEY,
       PERPLEXITY_API_KEY: process.env.PERPLEXITY_API_KEY,
       LOG_LEVEL: process.env.LOG_LEVEL,
@@ -47,7 +49,11 @@ const parseConfig = () => {
       },
       openai: {
         apiKey: validatedConfig.OPENAI_API_KEY,
-        model: 'gpt-4o-mini' // Balanced speed/cost for content generation
+        model: 'gpt-4o-mini' // Keep for fallback
+      },
+      anthropic: {
+        apiKey: validatedConfig.ANTHROPIC_API_KEY,
+        model: 'claude-3-5-sonnet-20241022' // Keep until migration, will use latest available
       },
       research: {
         firecrawl: {

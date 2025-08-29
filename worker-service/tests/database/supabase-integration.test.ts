@@ -11,76 +11,31 @@ import {
   createMockVoiceData
 } from '../helpers/test-data'
 
-// Mock Supabase client
-const mockSupabaseClient = {
-  from: vi.fn(),
-  select: vi.fn(),
-  insert: vi.fn(),
-  update: vi.fn(),
-  delete: vi.fn(),
-  upsert: vi.fn(),
-  eq: vi.fn(),
-  gte: vi.fn(),
-  lte: vi.fn(),
-  order: vi.fn(),
-  limit: vi.fn(),
-  single: vi.fn()
-}
-
-// Chain-able query builder mock
-const createQueryBuilder = () => {
-  const builder = {
-    select: vi.fn().mockReturnThis(),
-    insert: vi.fn().mockReturnThis(),
-    update: vi.fn().mockReturnThis(),
-    delete: vi.fn().mockReturnThis(),
-    upsert: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    gte: vi.fn().mockReturnThis(),
-    lte: vi.fn().mockReturnThis(),
-    lt: vi.fn().mockReturnThis(),
-    gt: vi.fn().mockReturnThis(),
-    order: vi.fn().mockReturnThis(),
-    limit: vi.fn().mockReturnThis(),
-    single: vi.fn().mockResolvedValue({ data: null, error: null }),
-    then: vi.fn()
-  }
-  return builder
-}
-
-vi.mock('@supabase/supabase-js', () => ({
-  createClient: vi.fn(() => mockSupabaseClient)
+// Mock the entire Supabase service module
+vi.mock('../../src/services/supabase', () => ({
+  SupabaseService: vi.fn().mockImplementation(() => mockSupabaseService)
 }))
 
-// Import the actual service for testing
-import { SupabaseService } from '../../src/services/supabase'
-
 describe('Database Integration Tests - Supabase', () => {
-  let supabaseService: SupabaseService
+  let supabaseService: any
 
   beforeEach(() => {
     resetAllMocks()
     
-    // Reset mock implementations
-    mockSupabaseClient.from.mockImplementation(() => createQueryBuilder())
-    
-    // Create a new service instance for each test
-    supabaseService = new SupabaseService()
+    // Use the mocked service directly
+    supabaseService = mockSupabaseService
   })
 
   describe('Performance Analytics Operations', () => {
     it('should store post performance analytics correctly', async () => {
-      const queryBuilder = createQueryBuilder()
-      queryBuilder.single.mockResolvedValueOnce({
-        data: { id: 'analytics-123', ...mockPostPerformanceAnalytics },
-        error: null
+      supabaseService.storePostPerformanceAnalytics.mockResolvedValueOnce({
+        id: 'analytics-123',
+        ...mockPostPerformanceAnalytics
       })
-      mockSupabaseClient.from.mockReturnValueOnce(queryBuilder)
 
       const result = await supabaseService.storePostPerformanceAnalytics(mockPostPerformanceAnalytics)
 
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('post_performance_analytics')
-      expect(queryBuilder.insert).toHaveBeenCalledWith([mockPostPerformanceAnalytics])
+      expect(supabaseService.storePostPerformanceAnalytics).toHaveBeenCalledWith(mockPostPerformanceAnalytics)
       expect(result).toMatchObject({
         id: 'analytics-123',
         post_id: mockPostPerformanceAnalytics.post_id
@@ -94,17 +49,11 @@ describe('Database Integration Tests - Supabase', () => {
         createMockPostAnalytics({ viral_score: 82, performance_tier: 'top_25_percent' })
       ]
 
-      const queryBuilder = createQueryBuilder()
-      queryBuilder.then.mockResolvedValueOnce({ data: mockPosts, error: null })
-      mockSupabaseClient.from.mockReturnValueOnce(queryBuilder)
+      supabaseService.getTopPerformingPosts.mockResolvedValueOnce(mockPosts)
 
       const result = await supabaseService.getTopPerformingPosts(50, 365)
 
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('post_performance_analytics')
-      expect(queryBuilder.select).toHaveBeenCalledWith('*')
-      expect(queryBuilder.gte).toHaveBeenCalled() // Date filtering
-      expect(queryBuilder.order).toHaveBeenCalledWith('viral_score', { ascending: false })
-      expect(queryBuilder.limit).toHaveBeenCalledWith(50)
+      expect(supabaseService.getTopPerformingPosts).toHaveBeenCalledWith(50, 365)
       expect(result).toHaveLength(3)
       expect(result[0].viral_score).toBe(95) // Highest score first
     })

@@ -161,11 +161,56 @@ export async function POST(request: NextRequest) {
     
     const syncData = await syncResponse.json()
     
-    // After posts sync, trigger comments sync for new posts
+    // After posts sync, trigger comments sync for new posts AND voice analysis for Andrew's posts
     let commentsResults = []
+    let voiceAnalysisResults: { 
+      triggered: boolean
+      post_count: number
+      processed?: number
+      error: string | null
+    } = { triggered: false, post_count: 0, error: null }
+    
     if (syncData.success && syncData.data.posts) {
       const newPosts = syncData.data.posts.filter((p: any) => p.status === 'new').slice(0, 5) // Limit to 5 new posts
       
+      // Trigger voice analysis for Andrew's new posts
+      if (username === 'andrewtallents' && newPosts.length > 0) {
+        try {
+          console.log(`🎯 Triggering voice analysis for ${newPosts.length} new Andrew posts`)
+          
+          const postIds = newPosts.map((p: any) => p.id || p.urn)
+          
+          const voiceAnalysisResponse = await fetch(`${request.nextUrl.origin}/api/voice-learning/monitor/emergency`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              post_ids: postIds,
+              reason: 'new_posts_detected',
+              priority: 'high'
+            })
+          })
+          
+          if (voiceAnalysisResponse.ok) {
+            const voiceData = await voiceAnalysisResponse.json()
+            voiceAnalysisResults = {
+              triggered: true,
+              post_count: postIds.length,
+              processed: voiceData.processing_details?.processed || 0,
+              error: null
+            }
+            console.log(`✅ Voice analysis triggered for ${voiceAnalysisResults.processed}/${postIds.length} posts`)
+          } else {
+            const errorData = await voiceAnalysisResponse.json().catch(() => ({}))
+            voiceAnalysisResults.error = errorData.error || 'Voice analysis trigger failed'
+            console.warn('⚠️ Voice analysis trigger failed:', voiceAnalysisResults.error)
+          }
+        } catch (voiceError) {
+          voiceAnalysisResults.error = voiceError instanceof Error ? voiceError.message : String(voiceError)
+          console.warn('⚠️ Voice analysis trigger error:', voiceAnalysisResults.error)
+        }
+      }
+      
+      // Continue with comments sync for new posts
       for (const post of newPosts) {
         try {
           console.log(`🔄 Syncing comments for post: ${post.urn}`)
@@ -199,11 +244,14 @@ export async function POST(request: NextRequest) {
       data: {
         postSync: syncData.data,
         commentSync: commentsResults,
+        voiceAnalysis: voiceAnalysisResults,
         summary: {
           postsProcessed: syncData.data?.summary?.totalFetched || 0,
           newPosts: syncData.data?.summary?.newPosts || 0,
           totalComments: commentsResults.reduce((sum, r) => sum + r.comments, 0),
-          totalProspects: commentsResults.reduce((sum, r) => sum + r.prospects, 0)
+          totalProspects: commentsResults.reduce((sum, r) => sum + r.prospects, 0),
+          voiceAnalysisTriggered: voiceAnalysisResults.triggered,
+          voiceAnalysisProcessed: voiceAnalysisResults.processed || 0
         }
       }
     })

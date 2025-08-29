@@ -505,9 +505,9 @@ export function AsyncContentGenerator({ onContentGenerated }: AsyncContentGenera
                     <div className="bg-blue-50 rounded-lg p-3 mb-4">
                       <h4 className="font-semibold text-sm mb-2">🔍 Historical Context</h4>
                       <div className="text-xs space-y-1">
-                        <p><span className="font-medium">Similar posts analyzed:</span> {draft.metadata.similar_posts_analyzed}</p>
+                        <p><span className="font-medium">Similar posts analysed:</span> {draft.metadata.similar_posts_analyzed}</p>
                         <p><span className="font-medium">Top performer score:</span> {draft.metadata.top_performer_score || 0}</p>
-                        <p className="text-blue-700">This variation was optimized using patterns from Andrew's highest-performing similar content.</p>
+                        <p className="text-blue-700">This variation was optimised using patterns from Andrew's highest-performing similar content.</p>
                       </div>
                     </div>
                   )}

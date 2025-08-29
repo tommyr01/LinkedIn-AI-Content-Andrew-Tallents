@@ -174,6 +174,15 @@ export interface MappedConnectionData {
   'Is Current': boolean;
   'Company LinkedIn URL': string;
   'Current Company URN': string;
+  // Lead scoring fields
+  'Lead Score'?: number;
+  'Lead Recommendation'?: string;
+  'Lead Tags'?: string;
+  'Urgency Level'?: string;
+  'Leadership Style'?: string;
+  'Challenge Awareness'?: number;
+  'Coaching Receptivity'?: number;
+  'Scoring Breakdown'?: string;
   // Note: Profile Picture URL will be handled separately as attachment
 }
 

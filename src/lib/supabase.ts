@@ -109,35 +109,66 @@ export class SupabaseService {
       // Use admin client for server-side operations to bypass RLS
       const client = supabaseAdmin || supabase
       
-      // First try to find by queue_job_id, then by regular id
-      let { data: job } = await client
+      console.log('🔍 DEBUGGING getJobWithDrafts for jobId:', jobId)
+      
+      // Try to find job by queue_job_id first (for queue job IDs like "3", "4", etc.)
+      // Use limit(1) and order to handle duplicate queue_job_ids by getting the most recent
+      let { data: jobs, error: jobError } = await client
         .from('content_jobs')
         .select('*')
         .eq('queue_job_id', jobId)
-        .single()
+        .order('created_at', { ascending: false }) // Get most recent if multiple
+        .limit(1)
+      
+      let job = jobs && jobs.length > 0 ? jobs[0] : null
 
-      // If not found by queue_job_id, try by regular id
-      if (!job) {
+      console.log('🔍 Job search by queue_job_id ("%s") result:', jobId, { found: !!job, error: jobError?.message })
+
+      // If not found by queue_job_id, try by database ID (for UUID job IDs)
+      if (!job && jobError) {
+        console.log('🔍 Trying job search by database ID...')
         const result = await client
           .from('content_jobs')
           .select('*')
           .eq('id', jobId)
-          .single()
+          .maybeSingle()
         job = result.data
+        console.log('🔍 Job search by database id result:', { found: !!job, error: result.error?.message })
       }
 
       if (!job) {
+        console.log('🔍 No job found for jobId:', jobId)
         return {
           job: null,
           drafts: []
         }
       }
 
-      const { data: drafts } = await client
+      console.log('🔍 Found job:', { 
+        database_id: job.id, 
+        queue_job_id: job.queue_job_id, 
+        status: job.status, 
+        progress: job.progress 
+      })
+
+      // Search for drafts - they are linked to the database job ID, not queue job ID
+      console.log('🔍 Searching for drafts with job_id:', job.id)
+      const { data: drafts, error: draftsError } = await client
         .from('content_drafts')
         .select('*')
         .eq('job_id', job.id) // Use the database job ID for drafts
         .order('variant_number')
+
+      console.log('🔍 Drafts search result:', { count: drafts?.length || 0, error: draftsError?.message })
+
+      // Also try a broader search to see what drafts exist
+      const { data: allRecentDrafts } = await client
+        .from('content_drafts')
+        .select('id, job_id, agent_name, created_at')
+        .order('created_at', { ascending: false })
+        .limit(10)
+      
+      console.log('🔍 Recent drafts in database:', allRecentDrafts?.map(d => ({ id: d.id, job_id: d.job_id, agent_name: d.agent_name })))
 
       return {
         job: job || null,

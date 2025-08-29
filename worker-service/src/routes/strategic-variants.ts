@@ -515,12 +515,13 @@ async function calculateVoiceEvolutionDetail(voiceData: any[], periodMonths: num
   }, {} as Record<string, any[]>)
   
   // Calculate monthly averages
-  const monthlyProgress = Object.entries(monthlyData).map(([month, data]: [string, any[]]) => {
-    const avgScore = data.reduce((sum: number, v: any) => sum + (v[`${metric}_score`] || 0), 0) / data.length
+  const monthlyProgress = Object.entries(monthlyData).map(([month, data]) => {
+    const typedData = data as any[]
+    const avgScore = typedData.reduce((sum: number, v: any) => sum + (v[`${metric}_score`] || 0), 0) / typedData.length
     return {
       month,
       score: Math.round(avgScore),
-      count: data.length
+      count: typedData.length
     }
   }).sort((a, b) => a.month.localeCompare(b.month))
   

@@ -1,0 +1,573 @@
+#!/usr/bin/env tsx
+
+/**
+ * RAG Voice Learning Integration Validation Script
+ * 
+ * This script validates the complete RAG integration including:
+ * - Database schema and data integrity
+ * - Voice chunk search and retrieval performance
+ * - Voice learning service functionality
+ * - Integration with content generation pipeline
+ * - Performance benchmarking and health checks
+ * 
+ * Usage: tsx src/scripts/validate-rag-integration.ts
+ */
+
+import { createClient } from '@supabase/supabase-js'
+import { voiceLearningEnhanced } from '../services/voice-learning-enhanced'
+import { supabaseService } from '../services/supabase'
+import { AIAgentsService } from '../services/ai-agents'
+import { appConfig } from '../config'
+import logger from '../lib/logger'
+import chalk from 'chalk'
+
+interface ValidationResult {
+  test: string
+  status: 'PASS' | 'FAIL' | 'WARN'
+  message: string
+  metrics?: Record<string, any>
+  duration?: number
+}
+
+class RAGIntegrationValidator {
+  private supabase: any
+  private aiAgentsService: AIAgentsService
+  private results: ValidationResult[] = []
+
+  constructor() {
+    this.supabase = createClient(appConfig.supabase.url, appConfig.supabase.serviceKey)
+    this.aiAgentsService = new AIAgentsService()
+  }
+
+  async runAllValidations(): Promise<void> {
+    console.log(chalk.blue('🚀 Starting RAG Voice Learning Integration Validation\n'))
+
+    const validationGroups = [
+      { name: 'Database Schema & Structure', tests: this.validateDatabaseSchema.bind(this) },
+      { name: 'Voice Chunks Data Integrity', tests: this.validateVoiceChunksData.bind(this) },
+      { name: 'Vector Search Performance', tests: this.validateVectorSearch.bind(this) },
+      { name: 'Voice Learning Service', tests: this.validateVoiceLearningService.bind(this) },
+      { name: 'Content Generation Integration', tests: this.validateContentGeneration.bind(this) },
+      { name: 'Performance & Analytics', tests: this.validatePerformanceTracking.bind(this) },
+      { name: 'System Health & Monitoring', tests: this.validateSystemHealth.bind(this) }
+    ]
+
+    for (const group of validationGroups) {
+      console.log(chalk.yellow(`\n📋 ${group.name}`))
+      console.log(chalk.gray('─'.repeat(50)))
+      
+      try {
+        await group.tests()
+      } catch (error) {
+        this.addResult(group.name, 'FAIL', `Group validation failed: ${error}`)
+      }
+    }
+
+    this.printSummary()
+  }
+
+  private async validateDatabaseSchema(): Promise<void> {
+    // Test 1: Verify RAG tables exist
+    const { data: tables } = await this.supabase
+      .from('information_schema.tables')
+      .select('table_name')
+      .in('table_name', [
+        'voice_chunks', 
+        'voice_learning_context', 
+        'voice_pattern_cache', 
+        'voice_learning_analytics'
+      ])
+
+    const tableCount = tables?.length || 0
+    this.addResult(
+      'RAG Tables Exist',
+      tableCount === 4 ? 'PASS' : 'FAIL',
+      `Found ${tableCount}/4 required RAG tables`,
+      { tables_found: tableCount }
+    )
+
+    // Test 2: Vector extension enabled
+    const { data: extensions } = await this.supabase
+      .from('pg_extension')
+      .select('extname')
+      .eq('extname', 'vector')
+
+    this.addResult(
+      'Vector Extension',
+      extensions && extensions.length > 0 ? 'PASS' : 'FAIL',
+      extensions && extensions.length > 0 ? 'Vector extension enabled' : 'Vector extension missing'
+    )
+
+    // Test 3: Voice chunks table structure
+    const { data: columns } = await this.supabase
+      .from('information_schema.columns')
+      .select('column_name, data_type')
+      .eq('table_name', 'voice_chunks')
+
+    const requiredColumns = ['id', 'content', 'embedding', 'voice_pattern_type', 'confidence_score']
+    const actualColumns = columns?.map((col: any) => col.column_name) || []
+    const hasAllColumns = requiredColumns.every(col => actualColumns.includes(col))
+
+    this.addResult(
+      'Voice Chunks Schema',
+      hasAllColumns ? 'PASS' : 'FAIL',
+      `Required columns: ${hasAllColumns ? 'All present' : 'Missing columns'}`,
+      { columns_found: actualColumns.length, required_columns: requiredColumns.length }
+    )
+
+    // Test 4: Database functions exist
+    const { data: functions } = await this.supabase
+      .from('pg_proc')
+      .select('proname')
+      .in('proname', ['search_voice_chunks', 'update_voice_chunk_usage', 'cleanup_voice_pattern_cache'])
+
+    const functionCount = functions?.length || 0
+    this.addResult(
+      'RAG Functions',
+      functionCount >= 3 ? 'PASS' : 'WARN',
+      `Found ${functionCount}/3 RAG database functions`,
+      { functions_found: functionCount }
+    )
+  }
+
+  private async validateVoiceChunksData(): Promise<void> {
+    // Test 1: Voice chunks count
+    const { count: chunkCount } = await this.supabase
+      .from('voice_chunks')
+      .select('id', { count: 'exact', head: true })
+
+    this.addResult(
+      'Voice Chunks Count',
+      (chunkCount || 0) > 800 ? 'PASS' : (chunkCount || 0) > 500 ? 'WARN' : 'FAIL',
+      `Found ${chunkCount} voice chunks (target: 915)`,
+      { chunk_count: chunkCount, target: 915 }
+    )
+
+    // Test 2: Embeddings populated
+    const { count: embeddingCount } = await this.supabase
+      .from('voice_chunks')
+      .select('id', { count: 'exact', head: true })
+      .not('embedding', 'is', null)
+
+    const embeddingRate = chunkCount ? (embeddingCount || 0) / chunkCount : 0
+    this.addResult(
+      'Embeddings Population',
+      embeddingRate > 0.9 ? 'PASS' : embeddingRate > 0.5 ? 'WARN' : 'FAIL',
+      `${Math.round(embeddingRate * 100)}% of chunks have embeddings`,
+      { embedding_rate: embeddingRate, chunks_with_embeddings: embeddingCount }
+    )
+
+    // Test 3: Voice pattern classification
+    const { data: patterns } = await this.supabase
+      .from('voice_chunks')
+      .select('voice_pattern_type')
+      .not('voice_pattern_type', 'is', null)
+
+    const patternDistribution = patterns?.reduce((acc: any, chunk: any) => {
+      acc[chunk.voice_pattern_type] = (acc[chunk.voice_pattern_type] || 0) + 1
+      return acc
+    }, {}) || {}
+
+    const uniquePatterns = Object.keys(patternDistribution).length
+    this.addResult(
+      'Voice Pattern Classification',
+      uniquePatterns >= 5 ? 'PASS' : uniquePatterns >= 3 ? 'WARN' : 'FAIL',
+      `${uniquePatterns} unique voice patterns identified`,
+      { pattern_count: uniquePatterns, distribution: patternDistribution }
+    )
+
+    // Test 4: Content quality check
+    const { data: sampleChunks } = await this.supabase
+      .from('voice_chunks')
+      .select('content, token_count, confidence_score')
+      .not('content', 'is', null)
+      .limit(10)
+
+    const avgTokenCount = sampleChunks?.reduce((sum: number, chunk: any) => sum + (chunk.token_count || 0), 0) / (sampleChunks?.length || 1)
+    const avgConfidence = sampleChunks?.reduce((sum: number, chunk: any) => sum + (chunk.confidence_score || 0), 0) / (sampleChunks?.length || 1)
+
+    this.addResult(
+      'Content Quality',
+      avgConfidence > 0.6 && avgTokenCount > 50 ? 'PASS' : 'WARN',
+      `Avg confidence: ${avgConfidence?.toFixed(2)}, Avg tokens: ${Math.round(avgTokenCount)}`,
+      { avg_confidence: avgConfidence, avg_token_count: avgTokenCount }
+    )
+  }
+
+  private async validateVectorSearch(): Promise<void> {
+    // Test 1: Vector similarity search function
+    const { data: sampleChunk } = await this.supabase
+      .from('voice_chunks')
+      .select('embedding')
+      .not('embedding', 'is', null)
+      .limit(1)
+      .single()
+
+    if (!sampleChunk?.embedding) {
+      this.addResult('Vector Search', 'FAIL', 'No embeddings available for testing')
+      return
+    }
+
+    const searchStart = Date.now()
+    const { data: searchResults, error } = await this.supabase.rpc('search_voice_chunks', {
+      query_embedding: sampleChunk.embedding,
+      similarity_threshold: 0.7,
+      limit_count: 10
+    })
+    const searchDuration = Date.now() - searchStart
+
+    this.addResult(
+      'Vector Search Function',
+      !error && searchResults ? 'PASS' : 'FAIL',
+      error ? `Search failed: ${error.message}` : `Found ${searchResults?.length || 0} similar chunks`,
+      { search_duration_ms: searchDuration, results_count: searchResults?.length || 0 }
+    )
+
+    // Test 2: Search performance benchmarking
+    const performanceResults = await this.benchmarkVectorSearch()
+    this.addResult(
+      'Search Performance',
+      performanceResults.avgDuration < 500 ? 'PASS' : performanceResults.avgDuration < 1000 ? 'WARN' : 'FAIL',
+      `Avg search time: ${performanceResults.avgDuration}ms over ${performanceResults.iterations} queries`,
+      performanceResults
+    )
+
+    // Test 3: Content-based fallback search
+    const contentSearchStart = Date.now()
+    const contentResults = await supabaseService.searchVoiceChunksByContent('leadership', 0.7, 5)
+    const contentSearchDuration = Date.now() - contentSearchStart
+
+    this.addResult(
+      'Content Search Fallback',
+      Array.isArray(contentResults) ? 'PASS' : 'FAIL',
+      `Content search returned ${contentResults.length} results`,
+      { search_duration_ms: contentSearchDuration, results_count: contentResults.length }
+    )
+  }
+
+  private async validateVoiceLearningService(): Promise<void> {
+    // Test 1: Voice learning statistics
+    const statsStart = Date.now()
+    const stats = await voiceLearningEnhanced.getVoiceLearningStats()
+    const statsDuration = Date.now() - statsStart
+
+    this.addResult(
+      'Voice Learning Stats',
+      stats.totalSegments > 0 ? 'PASS' : 'FAIL',
+      `Retrieved stats for ${stats.totalSegments} segments`,
+      { 
+        ...stats, 
+        response_time_ms: statsDuration 
+      }
+    )
+
+    // Test 2: Voice context generation
+    const contextStart = Date.now()
+    const context = await voiceLearningEnhanced.getVoiceContextForGeneration(
+      'post',
+      ['leadership', 'coaching', 'effectiveness'],
+      ['authenticity', 'authority']
+    )
+    const contextDuration = Date.now() - contextStart
+
+    this.addResult(
+      'Voice Context Generation',
+      context.authenticity_score > 0 && context.authenticityBoosts.length > 0 ? 'PASS' : 'FAIL',
+      `Generated context with ${context.authenticityBoosts.length} boosts, authenticity: ${context.authenticity_score.toFixed(2)}`,
+      {
+        authenticity_score: context.authenticity_score,
+        boosts_count: context.authenticityBoosts.length,
+        patterns_count: context.voicePatterns.length,
+        response_time_ms: contextDuration
+      }
+    )
+
+    // Test 3: Content enhancement
+    const testContent = 'Today I want to share some insights about effective leadership in challenging times.'
+    const enhancementStart = Date.now()
+    const enhancement = await voiceLearningEnhanced.enhanceVoiceForContent(testContent, 'leadership insights')
+    const enhancementDuration = Date.now() - enhancementStart
+
+    this.addResult(
+      'Content Enhancement',
+      enhancement.success && enhancement.voiceScore > 0 ? 'PASS' : 'FAIL',
+      `Enhanced content, voice score: ${enhancement.voiceScore}`,
+      {
+        voice_score: enhancement.voiceScore,
+        improvements_count: enhancement.improvements.length,
+        success: enhancement.success,
+        response_time_ms: enhancementDuration
+      }
+    )
+
+    // Test 4: Caching performance
+    const cacheResults = await this.testVoiceLearningCache()
+    this.addResult(
+      'Voice Learning Cache',
+      cacheResults.cacheWorking ? 'PASS' : 'WARN',
+      `Cache ${cacheResults.cacheWorking ? 'working' : 'not working'}, speedup: ${cacheResults.speedupFactor.toFixed(1)}x`,
+      cacheResults
+    )
+  }
+
+  private async validateContentGeneration(): Promise<void> {
+    // Test 1: Integration with AI agents service
+    try {
+      // Test voice context compatibility with AI agents
+      const voiceContext = await voiceLearningEnhanced.getVoiceContextForGeneration(
+        'post',
+        ['test', 'integration'],
+        ['authenticity']
+      )
+
+      const hasRequiredFields = voiceContext.authenticityBoosts && 
+                               voiceContext.voicePatterns && 
+                               typeof voiceContext.authenticity_score === 'number'
+
+      this.addResult(
+        'AI Agents Integration',
+        hasRequiredFields ? 'PASS' : 'FAIL',
+        hasRequiredFields ? 'Voice context compatible with AI agents' : 'Voice context missing required fields'
+      )
+    } catch (error) {
+      this.addResult(
+        'AI Agents Integration',
+        'FAIL',
+        `Integration test failed: ${error}`
+      )
+    }
+
+    // Test 2: Voice learning data format validation
+    const context = await voiceLearningEnhanced.getVoiceContextForGeneration('post', ['validation'], [])
+    
+    const formatValid = Array.isArray(context.authenticityBoosts) &&
+                       Array.isArray(context.voicePatterns) &&
+                       Array.isArray(context.contextualGuidance) &&
+                       typeof context.authenticity_score === 'number' &&
+                       context.authenticity_score >= 0 && context.authenticity_score <= 1
+
+    this.addResult(
+      'Voice Data Format',
+      formatValid ? 'PASS' : 'FAIL',
+      formatValid ? 'Voice learning data format valid' : 'Voice learning data format invalid'
+    )
+  }
+
+  private async validatePerformanceTracking(): Promise<void> {
+    // Test 1: Voice learning context tracking
+    const testJobId = `validation-${Date.now()}`
+    const contextSaved = await supabaseService.saveVoiceLearningContext({
+      job_id: testJobId,
+      generation_topic: 'validation test topic',
+      content_type: 'post',
+      voice_chunks_used: ['test-chunk-1'],
+      chunks_retrieval_query: 'validation test query',
+      chunks_retrieved_count: 5,
+      topic_match_score: 0.85,
+      voice_authenticity_score: 0.90
+    })
+
+    this.addResult(
+      'Context Tracking',
+      contextSaved ? 'PASS' : 'FAIL',
+      contextSaved ? 'Voice learning context saved successfully' : 'Failed to save voice learning context'
+    )
+
+    // Test 2: Analytics updates
+    const analyticsUpdated = await supabaseService.updateVoiceLearningAnalytics()
+    const analytics = await supabaseService.getVoiceLearningAnalytics(1)
+
+    this.addResult(
+      'Analytics System',
+      analyticsUpdated && Array.isArray(analytics) ? 'PASS' : 'WARN',
+      `Analytics ${analyticsUpdated ? 'updated' : 'failed'}, retrieved ${analytics.length} records`
+    )
+
+    // Test 3: Cache cleanup
+    const cleanupCount = await supabaseService.cleanupExpiredVoicePatternCache()
+    this.addResult(
+      'Cache Cleanup',
+      typeof cleanupCount === 'number' ? 'PASS' : 'WARN',
+      `Cleaned up ${cleanupCount} expired cache entries`
+    )
+
+    // Cleanup test data
+    await this.supabase
+      .from('voice_learning_context')
+      .delete()
+      .eq('job_id', testJobId)
+  }
+
+  private async validateSystemHealth(): Promise<void> {
+    // Test 1: System health metrics
+    const health = await supabaseService.getVoiceSystemHealth()
+    
+    this.addResult(
+      'System Health Metrics',
+      health.systemStatus === 'healthy' ? 'PASS' : health.systemStatus === 'warning' ? 'WARN' : 'FAIL',
+      `Status: ${health.systemStatus}, ${health.totalChunks} chunks, ${health.avgConfidence} avg confidence`,
+      health
+    )
+
+    // Test 2: Database connectivity and performance
+    const dbStart = Date.now()
+    const { data } = await this.supabase
+      .from('voice_chunks')
+      .select('id')
+      .limit(1)
+    const dbDuration = Date.now() - dbStart
+
+    this.addResult(
+      'Database Performance',
+      dbDuration < 200 ? 'PASS' : dbDuration < 500 ? 'WARN' : 'FAIL',
+      `Database query time: ${dbDuration}ms`,
+      { db_response_time_ms: dbDuration }
+    )
+
+    // Test 3: Memory and resource usage check
+    const memUsage = process.memoryUsage()
+    const heapUsedMB = Math.round(memUsage.heapUsed / 1024 / 1024)
+    
+    this.addResult(
+      'Resource Usage',
+      heapUsedMB < 512 ? 'PASS' : heapUsedMB < 1024 ? 'WARN' : 'FAIL',
+      `Heap memory: ${heapUsedMB}MB`,
+      { heap_used_mb: heapUsedMB, heap_total_mb: Math.round(memUsage.heapTotal / 1024 / 1024) }
+    )
+  }
+
+  // Helper methods
+
+  private async benchmarkVectorSearch(): Promise<any> {
+    const iterations = 5
+    const durations: number[] = []
+    
+    // Get sample embeddings for testing
+    const { data: sampleChunks } = await this.supabase
+      .from('voice_chunks')
+      .select('embedding')
+      .not('embedding', 'is', null)
+      .limit(iterations)
+
+    if (!sampleChunks || sampleChunks.length === 0) {
+      return { avgDuration: 0, iterations: 0, error: 'No sample embeddings available' }
+    }
+
+    for (const chunk of sampleChunks) {
+      if (chunk.embedding) {
+        const start = Date.now()
+        await this.supabase.rpc('search_voice_chunks', {
+          query_embedding: chunk.embedding,
+          similarity_threshold: 0.7,
+          limit_count: 10
+        })
+        durations.push(Date.now() - start)
+      }
+    }
+
+    return {
+      avgDuration: Math.round(durations.reduce((sum, d) => sum + d, 0) / durations.length),
+      minDuration: Math.min(...durations),
+      maxDuration: Math.max(...durations),
+      iterations: durations.length
+    }
+  }
+
+  private async testVoiceLearningCache(): Promise<any> {
+    const testQuery = ['cache-test', 'performance']
+    
+    // First call (should populate cache)
+    const start1 = Date.now()
+    await voiceLearningEnhanced.getVoiceContextForGeneration('post', testQuery, [])
+    const duration1 = Date.now() - start1
+
+    // Second call (should use cache)
+    const start2 = Date.now()
+    await voiceLearningEnhanced.getVoiceContextForGeneration('post', testQuery, [])
+    const duration2 = Date.now() - start2
+
+    const speedupFactor = duration1 / Math.max(duration2, 1)
+    const cacheWorking = speedupFactor > 1.5 // Cache should provide significant speedup
+
+    return {
+      firstCall_ms: duration1,
+      secondCall_ms: duration2,
+      speedupFactor,
+      cacheWorking
+    }
+  }
+
+  private addResult(test: string, status: ValidationResult['status'], message: string, metrics?: Record<string, any>, duration?: number): void {
+    this.results.push({ test, status, message, metrics, duration })
+    
+    const icon = status === 'PASS' ? '✅' : status === 'WARN' ? '⚠️' : '❌'
+    const color = status === 'PASS' ? chalk.green : status === 'WARN' ? chalk.yellow : chalk.red
+    
+    console.log(`  ${icon} ${color(test)}: ${message}`)
+    
+    if (metrics && Object.keys(metrics).length > 0) {
+      const metricsStr = Object.entries(metrics)
+        .map(([key, value]) => `${key}=${typeof value === 'number' ? value.toFixed(2) : value}`)
+        .join(', ')
+      console.log(`    ${chalk.gray(`{${metricsStr}}`)`)
+    }
+  }
+
+  private printSummary(): void {
+    const passed = this.results.filter(r => r.status === 'PASS').length
+    const warned = this.results.filter(r => r.status === 'WARN').length
+    const failed = this.results.filter(r => r.status === 'FAIL').length
+    const total = this.results.length
+
+    console.log(chalk.blue('\\n🏁 Validation Summary'))
+    console.log(chalk.gray('─'.repeat(50)))
+    console.log(`${chalk.green(`✅ Passed: ${passed}`)} | ${chalk.yellow(`⚠️  Warnings: ${warned}`)} | ${chalk.red(`❌ Failed: ${failed}`)}`)
+    console.log(`${chalk.blue(`📊 Total Tests: ${total}`)}`)
+    
+    const successRate = Math.round((passed / total) * 100)
+    console.log(`${chalk.blue(`🎯 Success Rate: ${successRate}%`)}`)
+
+    if (failed > 0) {
+      console.log(chalk.red('\\n❌ Failed Tests:'))
+      this.results.filter(r => r.status === 'FAIL').forEach(result => {
+        console.log(chalk.red(`  • ${result.test}: ${result.message}`))
+      })
+    }
+
+    if (warned > 0) {
+      console.log(chalk.yellow('\\n⚠️  Warnings:'))
+      this.results.filter(r => r.status === 'WARN').forEach(result => {
+        console.log(chalk.yellow(`  • ${result.test}: ${result.message}`))
+      })
+    }
+
+    // Overall system status
+    if (failed === 0 && warned <= 2) {
+      console.log(chalk.green('\\n🎉 RAG Integration Status: HEALTHY'))
+    } else if (failed <= 2 || warned <= 5) {
+      console.log(chalk.yellow('\\n⚠️  RAG Integration Status: NEEDS ATTENTION'))
+    } else {
+      console.log(chalk.red('\\n🚨 RAG Integration Status: CRITICAL ISSUES'))
+    }
+  }
+}
+
+// Script execution
+async function main() {
+  const validator = new RAGIntegrationValidator()
+  
+  try {
+    await validator.runAllValidations()
+    process.exit(0)
+  } catch (error) {
+    logger.error('RAG integration validation failed:', error)
+    console.log(chalk.red(`\\n🚨 Validation script failed: ${error}`))
+    process.exit(1)
+  }
+}
+
+if (require.main === module) {
+  main()
+}
+
+export default RAGIntegrationValidator

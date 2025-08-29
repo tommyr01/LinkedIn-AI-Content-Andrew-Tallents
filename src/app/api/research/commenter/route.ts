@@ -1,9 +1,59 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { linkedInScraper, extractUsernameFromLinkedInUrl } from '../../../../lib/linkedin-scraper'
-import { icpScorer, ProspectProfile } from '../../../../lib/icp-scorer'
+import { SupabaseLinkedInService } from '../../../../lib/supabase-linkedin'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
+
+// Helper function to calculate tenure months from LinkedIn experience data
+function calculateTenureMonths(linkedInData: any): number {
+  // Find the current role (is_current: true)
+  const currentExperience = linkedInData.data?.experience?.find((exp: any) => exp.is_current === true)
+  
+  if (!currentExperience?.duration) {
+    return 0
+  }
+  
+  // Parse duration string like "Feb 2023 - Present · 2 yrs 7 mos"
+  const duration = currentExperience.duration
+  
+  // Extract the part after the "·" symbol
+  const durationPart = duration.split('·')[1]?.trim()
+  if (!durationPart) {
+    return 0
+  }
+  
+  let totalMonths = 0
+  
+  // Parse years (e.g., "2 yrs")
+  const yearMatch = durationPart.match(/(\d+)\s*yrs?/)
+  if (yearMatch) {
+    totalMonths += parseInt(yearMatch[1]) * 12
+  }
+  
+  // Parse months (e.g., "7 mos")
+  const monthMatch = durationPart.match(/(\d+)\s*mos?/)
+  if (monthMatch) {
+    totalMonths += parseInt(monthMatch[1])
+  }
+  
+  // If no years or months found, check for just "X mos" or "X yrs"
+  if (totalMonths === 0) {
+    if (durationPart.includes('mo')) {
+      const singleMonthMatch = durationPart.match(/(\d+)/)
+      if (singleMonthMatch) {
+        totalMonths = parseInt(singleMonthMatch[1])
+      }
+    } else if (durationPart.includes('yr')) {
+      const singleYearMatch = durationPart.match(/(\d+)/)
+      if (singleYearMatch) {
+        totalMonths = parseInt(singleYearMatch[1]) * 12
+      }
+    }
+  }
+  
+  return totalMonths
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,25 +88,47 @@ export async function POST(request: NextRequest) {
     // Check cache first (optional - implement later)
     // For now, fetch fresh data each time
 
-    // Fetch LinkedIn profile data
+    // First, fetch LinkedIn profile data to get the raw experience data
     const profileData = await linkedInScraper.getProfile(username)
     
     if (!profileData.success) {
       throw new Error(profileData.message || 'Failed to fetch LinkedIn profile')
     }
 
-    // Score the profile using ICP criteria
-    const prospectProfile: ProspectProfile = icpScorer.createProspectProfile(profileData, profileUrl)
+    // Initialize LinkedIn Supabase client for enhanced scoring
+    const linkedInClient = new SupabaseLinkedInService()
     
-    console.log(`✅ Research completed for ${prospectProfile.name}`)
-    console.log(`📊 ICP Score: ${prospectProfile.icpScore.totalScore} (${prospectProfile.icpScore.category})`)
+    // Create mock comment to use the enhanced scoring system
+    const mockComment = {
+      author: {
+        name: name || profileData.data.basic_info.fullname || 'Unknown',
+        headline: headline || profileData.data.basic_info.headline || '',
+        profile_url: profileUrl
+      }
+    }
+    
+    // Use enhanced lead scoring system
+    const enhancedProfile = await linkedInClient.researchCommentAuthor(mockComment as any)
+    
+    if (!enhancedProfile) {
+      throw new Error('Failed to research profile with enhanced scoring system')
+    }
+    
+    console.log(`✅ Research completed for ${enhancedProfile.name}`)
+    console.log(`📊 ICP Score: ${enhancedProfile.icpScore.totalScore} (${enhancedProfile.icpScore.category})`)
 
     // TODO: Cache the result in Airtable "Researched Prospects" table
     // This would help avoid duplicate API calls and provide research history
 
+    // Calculate tenure months for display
+    const tenureMonths = calculateTenureMonths(profileData)
+    
     return NextResponse.json({
       success: true,
-      prospect: prospectProfile,
+      prospect: {
+        ...enhancedProfile,
+        tenureMonths
+      },
       meta: {
         researchedAt: new Date().toISOString(),
         source: 'linkedin-comment',

@@ -1,0 +1,63 @@
+{
+  "mcpServers": {
+    "dataforseo": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "dataforseo-mcp-server"
+      ],
+    "env": {
+        "DATAFORSEO_USERNAME": "tommy@richardsons.ltd",
+        "DATAFORSEO_PASSWORD": "8901061f99a1e5d1"
+      }
+    },
+    "firecrawl-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "firecrawl-mcp"
+      ],
+      "env": {
+        "FIRECRAWL_API_KEY": "fc-2fb5d4ec4f8949ca934beda6402f8857"
+      }
+    },
+    "perplexity-ask": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "server-perplexity-ask"
+      ],
+      "env": {
+        "PERPLEXITY_API_KEY": "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"
+      }
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@executeautomation/playwright-mcp-server"
+      ]
+    },
+    "airtable": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "airtable-mcp-server"
+      ],
+      "env": {
+        "AIRTABLE_API_KEY": "patPvpLHv2DkksR3f.e44753b54bd0c549752dd57173c8f9a6fd2a816725836c5fbd2c327a80eac3b5"
+      }
+    },
+      "supabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@latest",
+        "--project-ref=alfsmmquyaygykvfcxbb"
+      ],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "sbp_759d15a7e4c5cb72763b5809a46573d9fc714df9"
+      }
+    }
+  }
+}

@@ -59,6 +59,13 @@ export const mockSupabaseService = {
   storeContentVariantsTracking: vi.fn().mockResolvedValue({
     id: 'tracking-123',
     ...mockContentVariantsTracking
+  }),
+  
+  // Missing methods for historical insights
+  getHistoricalInsight: vi.fn().mockResolvedValue(mockHistoricalInsights),
+  saveHistoricalInsight: vi.fn().mockResolvedValue({
+    id: 'insights-456',
+    ...mockHistoricalInsights
   })
 }
 

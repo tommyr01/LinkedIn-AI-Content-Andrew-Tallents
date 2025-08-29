@@ -1,20 +1,24 @@
 // Simplified Airtable integration matching the working project pattern
 import Airtable from 'airtable';
 
-// Configure Airtable connection
-const apiKey = process.env.AIRTABLE_API_KEY!;
-const baseId = process.env.AIRTABLE_BASE_ID!;
+// Configure Airtable connection - only if API key exists
+const apiKey = process.env.AIRTABLE_API_KEY;
+const baseId = process.env.AIRTABLE_BASE_ID;
 
-// Create a configured Airtable instance
-const airtableInstance = new Airtable({ apiKey });
-const base = airtableInstance.base(baseId);
+let airtableInstance: Airtable | null = null;
+let base: any = null;
+
+if (apiKey && baseId) {
+  airtableInstance = new Airtable({ apiKey });
+  base = airtableInstance.base(baseId);
+}
 
 // Export the base for direct use
 export const airtableBase = base;
 
 // Table IDs - using environment variables
 export const tables = {
-  connections: process.env.AIRTABLE_CONNECTIONS_TABLE_ID!,
+  connections: process.env.AIRTABLE_CONNECTIONS_TABLE_ID || '',
   connectionPosts: process.env.AIRTABLE_CONNECTION_POSTS_TABLE_ID || '',
   contentPosts: process.env.AIRTABLE_TABLE_ID || '', // Andrew's Posts table
 };
@@ -54,6 +58,10 @@ export interface ConnectionRecord {
 
 // Helper function to get connections
 export async function getConnections(maxRecords = 200) {
+  if (!base) {
+    throw new Error('Airtable not configured - missing API key or base ID');
+  }
+  
   try {
     const records = await base(tables.connections)
       .select({

@@ -156,16 +156,25 @@ export class ContentGenerationWorker {
       await job.updateProgress(10)
       await supabaseService.updateJobProgress(dbJob.id, 10, 'processing')
 
-      // Step 2: Minimal research (no complex research service)
-      logger.info({ jobId: job.id, topic }, 'Getting minimal research context')
+      // Step 2: INTELLIGENT STORY vs RESEARCH DETECTION
+      const isUserStory = this.detectUserStory(topic)
+      logger.info({ jobId: job.id, topic, isUserStory }, isUserStory ? 'USER STORY DETECTED - Using story directly with RAG voice patterns' : 'RESEARCH TOPIC DETECTED - Getting research context')
       await job.updateProgress(20)
 
       let research: any = {}
-      try {
-        research = await researchService.enhancedFirecrawlResearch(topic)
-      } catch (error) {
-        logger.warn({ error: error instanceof Error ? error.message : String(error) }, 'Research failed, continuing with topic only')
-        research = { topic_context: topic }
+      if (isUserStory) {
+        // For user stories, create story-based research structure
+        research = this.createStoryBasedResearch(topic)
+        logger.info({ jobId: job.id }, 'Story-based research structure created - user story preserved')
+      } else {
+        // Only do web research for actual research topics
+        try {
+          research = await researchService.enhancedFirecrawlResearch(topic)
+          logger.info({ jobId: job.id }, 'Web research completed for research topic')
+        } catch (error) {
+          logger.warn({ error: error instanceof Error ? error.message : String(error) }, 'Research failed, continuing with topic only')
+          research = { topic_context: topic }
+        }
       }
 
       const researchData = {
@@ -178,8 +187,65 @@ export class ContentGenerationWorker {
       await job.updateProgress(30)
       await supabaseService.updateJobProgress(dbJob.id, 30)
 
-      // Step 3: CLEAN content generation using new RAG system
-      logger.info({ jobId: job.id }, 'Starting CLEAN content generation with LinkedIn RAG only')
+      // Step 3: Get RAG voice patterns before content generation
+      logger.info({ jobId: job.id, isUserStory }, 'Getting RAG voice patterns from voice learning system')
+      await job.updateProgress(35)
+      
+      let enhancedVoiceGuidelines = voiceGuidelines || ''
+      try {
+        // Get voice context from RAG system based on topic/story keywords
+        const topicKeywords = topic.toLowerCase().split(/\s+/).filter(word => word.length > 3).slice(0, 5)
+        const contentType = isUserStory ? 'story' : 'linkedin_post'
+        const features = isUserStory ? ['storytelling', 'authenticity', 'authority'] : ['question-based', 'opening', 'authority']
+        
+        logger.info({ jobId: job.id, topicKeywords, contentType, features, isUserStory }, 'Requesting RAG voice patterns')
+        
+        const voiceContext = await voiceLearningEnhanced.getVoiceContextForGeneration(
+          contentType,
+          topicKeywords,
+          features
+        )
+        
+        if (voiceContext && voiceContext.authenticityBoosts.length > 0) {
+          const ragGuidelines = `
+**ANDREW TALLENTS RAG-RETRIEVED VOICE PATTERNS:**
+
+Authenticity Guidelines:
+${voiceContext.authenticityBoosts.map(boost => `• ${boost}`).join('\n')}
+
+Voice Patterns:
+${voiceContext.voicePatterns.map(pattern => `• ${pattern}`).join('\n')}
+
+Contextual Guidance:
+${voiceContext.contextualGuidance.map(guidance => `• ${guidance}`).join('\n')}
+
+Authenticity Score: ${Math.round(voiceContext.authenticity_score * 100)}%
+Confidence Level: ${Math.round(voiceContext.confidence_level * 100)}%
+
+${isUserStory ? '**STORY MODE:** Use these patterns to enhance the user\'s story, preserving the story as core content.' : '**RESEARCH MODE:** Apply these patterns to create authentic Andrew Tallents content.'}`
+          
+          enhancedVoiceGuidelines = ragGuidelines
+          
+          logger.info({ 
+            jobId: job.id, 
+            isUserStory,
+            authenticityScore: Math.round(voiceContext.authenticity_score * 100),
+            confidenceLevel: Math.round(voiceContext.confidence_level * 100),
+            guidanceCount: voiceContext.authenticityBoosts.length
+          }, 'RAG voice patterns retrieved successfully')
+        } else {
+          logger.warn({ jobId: job.id, isUserStory }, 'RAG voice context empty or unavailable - using fallback')
+        }
+      } catch (error) {
+        logger.error({ 
+          jobId: job.id, 
+          isUserStory,
+          error: error instanceof Error ? error.message : String(error) 
+        }, 'Failed to get RAG voice patterns - continuing with provided voice guidelines')
+      }
+      
+      // Step 4: CLEAN content generation using RAG voice patterns
+      logger.info({ jobId: job.id, isUserStory, hasEnhancedGuidelines: !!enhancedVoiceGuidelines }, isUserStory ? 'Starting story-based content generation with RAG voice patterns' : 'Starting research-based content generation with RAG voice patterns')
       await job.updateProgress(40)
 
       const numVariants = strategicVariants && strategicVariants.length > 0 ? strategicVariants.length : 3
@@ -191,14 +257,15 @@ export class ContentGenerationWorker {
           const variantName = strategicVariants && strategicVariants[i] ? 
             strategicVariants[i] : `variant_${i + 1}`
 
-          logger.info({ jobId: job.id, variant: variantName }, 'Generating clean content variant')
+          logger.info({ jobId: job.id, variant: variantName, isUserStory }, 'Generating content variant with proper story/research handling')
 
-          // Use current AI agents service instead of archived clean content generator
+          // Use current AI agents service with story-aware generation and enhanced RAG voice guidelines
           const singleVariantResults = await this.aiAgentsService.generateAllVariations(
             topic,
             research,
-            voiceGuidelines,
-            undefined // historical insights
+            enhancedVoiceGuidelines, // Use RAG-enhanced voice guidelines instead of raw voiceGuidelines
+            undefined, // historical insights
+            isUserStory // Pass story detection flag
           )
           
           const agentResult = singleVariantResults[i] || {
@@ -407,6 +474,117 @@ export class ContentGenerationWorker {
     }
     
     return improvements
+  }
+
+  /**
+   * Detect if the topic is a user story vs a research topic
+   */
+  private detectUserStory(topic: string): boolean {
+    const topicLower = topic.toLowerCase().trim()
+    const topicLength = topic.trim().length
+    
+    // Strong story indicators
+    const storyIndicators = [
+      // Personal story patterns
+      /\bi (was|had|met|worked|discovered|learned|realized|found|saw|experienced)/i,
+      /\bmy (client|colleague|friend|team|experience|story|journey)/i,
+      /\blast (week|month|year|time)/i,
+      /\byesterday|today|recently/i,
+      
+      // Specific narrative elements  
+      /\btold (me|us|him|her)/i,
+      /\bsaid (to me|that)/i,
+      /\bcame to me/i,
+      /\bworking with/i,
+      /\bcoaching (a|an)/i,
+      
+      // Story structure indicators
+      /\bwhat happened (was|next)/i,
+      /\bthe breakthrough (moment|was|came)/i,
+      /\bsuddenly (realized|understood|discovered)/i,
+      /\bthat's when/i,
+      
+      // Named individuals (like "Matt Brown")
+      /\b[A-Z][a-z]+ [A-Z][a-z]+/,  // First Last name pattern
+      
+      // Specific coaching/business story patterns
+      /\b(ceo|founder|leader|executive|client) (who|that)/i,
+      /\bone of my (clients|colleagues)/i,
+      /\ba (ceo|founder|leader) i (work|worked|know|knew)/i
+    ]
+    
+    // Research topic patterns (opposite indicators)
+    const researchIndicators = [
+      /^(leadership|innovation|productivity|strategy|management|growth|scaling|burnout|wellness)$/i,
+      /^(how to|ways to|tips for|best practices)/i,
+      /^(ai|artificial intelligence|technology|digital transformation)$/i,
+      /^(trends|statistics|data|research|analysis)/i,
+      /\b(2024|2025|current|latest|recent) (trends|news|developments)/i
+    ]
+    
+    // Length-based detection (stories are typically longer and more detailed)
+    const isLongContent = topicLength > 100
+    
+    // Check for story indicators
+    const hasStoryIndicators = storyIndicators.some(pattern => pattern.test(topic))
+    
+    // Check for research indicators
+    const hasResearchIndicators = researchIndicators.some(pattern => pattern.test(topic))
+    
+    // Detailed story detection logic
+    let isStory = false
+    
+    if (hasStoryIndicators) {
+      isStory = true
+    } else if (hasResearchIndicators) {
+      isStory = false
+    } else if (isLongContent) {
+      // Long content without clear research indicators is likely a story
+      isStory = true
+    }
+    
+    logger.info({
+      topic: topic.substring(0, 100) + '...',
+      topicLength,
+      hasStoryIndicators,
+      hasResearchIndicators,
+      isLongContent,
+      isStory
+    }, 'Story detection analysis')
+    
+    return isStory
+  }
+
+  /**
+   * Create story-based research structure that preserves the user's story
+   */
+  private createStoryBasedResearch(story: string): any {
+    // Create a research structure that treats the story as content, not a search query
+    const storyExcerpt = story.substring(0, 300) + (story.length > 300 ? '...' : '')
+    
+    return {
+      idea_1: {
+        concise_summary: `User's personal story: ${storyExcerpt}`,
+        angle_approach: "Share this authentic story with Andrew's voice to demonstrate leadership insights",
+        details: story, // CRITICAL: Use the full story as details
+        relevance: "This personal story contains valuable leadership lessons that will resonate with UK CEOs and Founders facing similar challenges"
+      },
+      idea_2: {
+        concise_summary: `Leadership insight from user's experience: ${storyExcerpt}`,
+        angle_approach: "Extract the key leadership principle from this story and present it with Andrew's research-backed authority",
+        details: story, // CRITICAL: Use the full story as details
+        relevance: "The leadership insight embedded in this story directly addresses the self-leadership challenges that successful executives face"
+      },
+      idea_3: {
+        concise_summary: `Practical application from user's story: ${storyExcerpt}`,
+        angle_approach: "Transform this story into actionable advice that executives can implement immediately",
+        details: story, // CRITICAL: Use the full story as details  
+        relevance: "This story provides concrete, real-world application that busy leaders can relate to and act upon"
+      },
+      // Flag this as story-based so AI agents know to preserve the story
+      story_mode: true,
+      original_story: story
+    }
   }
 
   /**

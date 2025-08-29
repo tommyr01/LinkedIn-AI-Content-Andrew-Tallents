@@ -5,11 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { User, UserPlus, Search, Building, Calendar, MessageSquare, TrendingUp, Star, RefreshCw, MapPin, Users, ExternalLink, FileText } from 'lucide-react'
+// Removed Tabs components - using custom implementation
+import { User, UserPlus, Search, Building, Calendar, MessageSquare, TrendingUp, Star, RefreshCw, MapPin, Users, ExternalLink, FileText, Trash2 } from 'lucide-react'
 import { toast } from "sonner"
 import { AddConnectionModal } from '@/components/add-connection-modal'
 import { ConnectionPostsTable, type ConnectionPost, type PostStats } from '@/components/connection-posts-table'
+import { ResearchButton } from '@/components/lead-research-sheet'
 
 interface Connection {
   id: string
@@ -76,7 +77,7 @@ export default function NetworkPage() {
       if (showLoading) setIsLoadingPosts(true)
       console.log('🔍 Loading connection posts from Supabase...')
       
-      const res = await fetch('/api/connections/posts/list?limit=200', { cache: 'no-store' })
+      const res = await fetch('/api/connections/posts/list?limit=500', { cache: 'no-store' })
       if (!res.ok) {
         const errorData = await res.json()
         throw new Error(errorData.error || 'Failed to load connection posts')
@@ -168,6 +169,43 @@ export default function NetworkPage() {
     }
   }
 
+  const handleDeleteConnection = async (connectionId: string, connectionName: string) => {
+    if (!window.confirm(`Are you sure you want to delete ${connectionName}? This will also remove all their posts and cannot be undone.`)) {
+      return
+    }
+
+    try {
+      console.log(`🗑️ Deleting connection: ${connectionName} (${connectionId})`)
+      
+      const response = await fetch(`/api/connections/delete?id=${connectionId}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to delete connection')
+      }
+
+      const result = await response.json()
+      
+      if (result.success) {
+        toast.success(`Successfully deleted ${connectionName} and all their posts`)
+        
+        // Refresh both connections and posts
+        loadConnections()
+        if (activeTab === 'posts') {
+          loadConnectionPosts()
+        }
+      } else {
+        throw new Error(result.error || 'Delete failed')
+      }
+
+    } catch (error: any) {
+      console.error('❌ Delete connection error:', error)
+      toast.error(`Failed to delete connection: ${error.message}`)
+    }
+  }
+
   useEffect(() => {
     loadConnections()
   }, [])
@@ -206,9 +244,9 @@ export default function NetworkPage() {
   const allTags = Array.from(new Set(connections.flatMap(c => c.tags)))
 
   const getEngagementColor = (score: number) => {
-    if (score >= 80) return 'text-green-600 bg-green-50'
-    if (score >= 60) return 'text-yellow-600 bg-yellow-50'
-    return 'text-red-600 bg-red-50'
+    if (score >= 80) return 'text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
+    if (score >= 60) return 'text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800'
+    return 'text-red-700 dark:text-red-400 bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
   }
 
   const calculateDuration = (startDate: string) => {
@@ -260,127 +298,186 @@ export default function NetworkPage() {
   }
 
   return (
-    <div className="flex-1 space-y-4 p-8 pt-6">
+    <div className="flex-1 space-y-6 min-h-screen bg-gradient-to-br from-slate-950 via-gray-950 to-slate-950">
       <AddConnectionModal open={addOpen} onOpenChange={(o) => { setAddOpen(o); if (!o) loadConnections() }} />
-      <div className="flex items-center justify-between space-y-2">
+      
+      {/* Header Section with distinct background */}
+      <div className="bg-gradient-to-r from-gray-900/80 via-slate-900/60 to-gray-900/80 backdrop-blur-sm border-b border-gray-800/50 p-8 pt-6 rounded-b-2xl shadow-2xl shadow-slate-950/50">
+        <div className="flex items-center justify-between space-y-2">
         <div className="flex items-center space-x-4">
-          <h2 className="text-3xl font-bold tracking-tight">LinkedIn Network</h2>
+          <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-orange-400 to-amber-400 bg-clip-text text-transparent">Strategic Network Intelligence</h2>
           {lastRefresh && (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-slate-400 bg-slate-800/60 px-3 py-1 rounded-full border border-slate-700/50">
               Last updated: {lastRefresh.toLocaleTimeString()}
             </p>
           )}
         </div>
-        <div className="flex items-center space-x-2">
-          <Button 
-            onClick={handleRefresh} 
-            variant="outline" 
-            size="sm"
-            disabled={isLoading || isLoadingPosts}
-          >
+          <div className="flex items-center space-x-2">
+            <Button 
+              onClick={handleRefresh} 
+              variant="outline" 
+              size="sm"
+              disabled={isLoading || isLoadingPosts}
+              className="bg-slate-800/60 border-slate-600/50 hover:bg-blue-500/10 hover:border-blue-500/30 hover:text-blue-400 transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/20"
+            >
             <RefreshCw className={`mr-2 h-4 w-4 ${(isLoading || isLoadingPosts) ? 'animate-spin' : ''}`} />
             {(isLoading || isLoadingPosts) 
               ? (activeTab === 'posts' ? 'Syncing Posts...' : 'Refreshing...') 
               : (activeTab === 'posts' ? 'Sync New Posts' : 'Refresh')
             }
           </Button>
-          <Button onClick={() => setAddOpen(true)}>
+            <Button 
+              onClick={() => setAddOpen(true)}
+              className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg hover:shadow-xl hover:shadow-orange-500/25 transition-all duration-200 hover:transform hover:scale-105"
+            >
             <UserPlus className="mr-2 h-4 w-4" />
-            Add Connection
-          </Button>
+              Add Connection
+            </Button>
+          </div>
         </div>
       </div>
+      
+      {/* Main Content with layered backgrounds */}
+      <div className="px-8 pb-8 space-y-8">
 
-      <Tabs defaultValue="connections" className="space-y-4" onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="connections">
-            <Users className="mr-2 h-4 w-4" />
-            Connections ({connections.length})
-          </TabsTrigger>
-          <TabsTrigger value="posts">
-            <FileText className="mr-2 h-4 w-4" />
-            Their Posts ({postsStats.totalPosts})
-          </TabsTrigger>
-        </TabsList>
+        {/* Tab Navigation with enhanced background */}
+        <div className="bg-gradient-to-r from-gray-800/80 via-slate-800/60 to-gray-800/80 backdrop-blur-md rounded-2xl p-1.5 border border-gray-700/50 inline-flex items-center gap-1.5 shadow-xl shadow-slate-950/30">
+          <button
+            onClick={() => setActiveTab('connections')}
+            className={`inline-flex items-center justify-center whitespace-nowrap rounded-xl px-5 py-3 text-sm font-medium ring-offset-background transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${
+              activeTab === 'connections'
+                ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/30 transform scale-105 border border-orange-400/30'
+                : 'text-slate-300 hover:text-white hover:bg-gradient-to-r hover:from-orange-500/20 hover:to-amber-500/20 border border-transparent hover:border-orange-500/20 hover:shadow-lg hover:shadow-orange-500/10'
+            }`}
+          >
+            <Users className={`mr-2 h-4 w-4 ${activeTab === 'connections' ? 'text-white' : ''}`} />
+            Strategic Connections ({connections.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('posts')}
+            className={`inline-flex items-center justify-center whitespace-nowrap rounded-xl px-5 py-3 text-sm font-medium ring-offset-background transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${
+              activeTab === 'posts'
+                ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/30 transform scale-105 border border-orange-400/30'
+                : 'text-slate-300 hover:text-white hover:bg-gradient-to-r hover:from-orange-500/20 hover:to-amber-500/20 border border-transparent hover:border-orange-500/20 hover:shadow-lg hover:shadow-orange-500/10'
+            }`}
+          >
+            <FileText className={`mr-2 h-4 w-4 ${activeTab === 'posts' ? 'text-white' : ''}`} />
+            Intelligence Feed ({postsStats.totalPosts})
+          </button>
+        </div>
 
-        <TabsContent value="connections" className="space-y-4">
+        <div className={`space-y-8 ${activeTab === 'connections' ? 'block' : 'hidden'}`}>
 
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
+        {/* Connections Section with distinct background */}
+        <div className="bg-gradient-to-b from-gray-900/40 to-slate-900/60 rounded-3xl p-8 border border-gray-800/50 shadow-2xl shadow-slate-950/40">
+          {/* Enhanced Stats Cards */}
+          <div className="grid gap-6 md:grid-cols-4 mb-8">
+        <Card className="bg-gradient-to-br from-blue-500/15 via-blue-600/10 to-slate-800/60 border-blue-500/30 hover:border-blue-400/50 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/20 hover:transform hover:scale-105 backdrop-blur-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Connections</CardTitle>
-            <User className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-blue-600 dark:text-blue-400">Total Connections</CardTitle>
+            <div className="p-2 bg-blue-500/15 rounded-lg">
+              <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{connections.length}</div>
-            <p className="text-xs text-muted-foreground">Tracked relationships</p>
+            <div className="text-2xl font-bold text-foreground">{connections.length}</div>
+            <p className="text-xs text-muted-foreground mt-1">Tracked relationships</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gradient-to-br from-green-500/15 via-green-600/10 to-slate-800/60 border-green-500/30 hover:border-green-400/50 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/20 hover:transform hover:scale-105 backdrop-blur-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">High Engagement</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-green-600 dark:text-green-400">High Engagement</CardTitle>
+            <div className="p-2 bg-green-500/15 rounded-lg">
+              <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{connections.filter(c => c.engagementScore >= 80).length}</div>
-            <p className="text-xs text-muted-foreground">Score 80+</p>
+            <div className="text-2xl font-bold text-foreground">{connections.filter(c => c.engagementScore >= 80).length}</div>
+            <p className="text-xs text-muted-foreground mt-1">Score 80+</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gradient-to-br from-purple-500/15 via-purple-600/10 to-slate-800/60 border-purple-500/30 hover:border-purple-400/50 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/20 hover:transform hover:scale-105 backdrop-blur-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Recent Activity</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-purple-600 dark:text-purple-400">Recent Activity</CardTitle>
+            <div className="p-2 bg-purple-500/15 rounded-lg">
+              <Calendar className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{connections.filter(c => c.lastEngagement?.includes('day')).length}</div>
-            <p className="text-xs text-muted-foreground">This week</p>
+            <div className="text-2xl font-bold text-foreground">{connections.filter(c => c.lastEngagement?.includes('day')).length}</div>
+            <p className="text-xs text-muted-foreground mt-1">This week</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-slate-800/60 border-amber-500/30 hover:border-orange-400/50 transition-all duration-300 hover:shadow-xl hover:shadow-amber-500/20 hover:transform hover:scale-105 backdrop-blur-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Potential Clients</CardTitle>
-            <Star className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-amber-600 dark:text-amber-400">Potential Clients</CardTitle>
+            <div className="p-2 bg-amber-500/15 rounded-lg">
+              <Star className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{connections.filter(c => c.tags.includes('Potential Client')).length}</div>
-            <p className="text-xs text-muted-foreground">Opportunities</p>
+            <div className="text-2xl font-bold text-foreground">{connections.filter(c => c.tags.includes('Potential Client')).length}</div>
+            <p className="text-xs text-muted-foreground mt-1">Opportunities</p>
           </CardContent>
         </Card>
-      </div>
+          </div>
 
-      {/* Search & Filters */}
-      <Card>
+          {/* Enhanced Search & Filters with layered background */}
+          <Card className="bg-gradient-to-br from-slate-800/60 via-gray-800/40 to-slate-900/80 border-gray-700/50 backdrop-blur-md shadow-xl shadow-slate-950/40">
         <CardHeader>
-          <CardTitle>Search and Filter</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-foreground">
+            <Search className="h-5 w-5 text-orange-500" />
+            Search and Filter
+          </CardTitle>
+          <CardDescription className="text-muted-foreground">Find and organise your strategic LinkedIn intelligence network</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center space-x-2">
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search by name, company, or role..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="flex-1" />
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input 
+              placeholder="Search strategic connections by name, company, or role..." 
+              value={searchTerm} 
+              onChange={e => setSearchTerm(e.target.value)} 
+              className="pl-10 bg-slate-900/60 border-slate-600/50 focus:border-orange-500/70 focus:ring-orange-500/30 transition-all duration-200 hover:bg-slate-900/80 focus:bg-slate-900/90" 
+            />
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant={selectedTag === null ? 'default' : 'outline'} onClick={() => setSelectedTag(null)}>All Tags</Button>
+            <Button 
+              size="sm" 
+              variant={selectedTag === null ? 'default' : 'outline'} 
+              onClick={() => setSelectedTag(null)}
+              className={selectedTag === null ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-orange-500/25' : 'bg-slate-700/60 border-slate-600/50 hover:bg-orange-500/20 hover:border-orange-500/40 hover:text-orange-400 transition-all duration-200'}
+            >
+              All Tags
+            </Button>
             {allTags.map(tag => (
-              <Button key={tag} size="sm" variant={selectedTag === tag ? 'default' : 'outline'} onClick={() => setSelectedTag(tag)}>{tag}</Button>
+              <Button 
+                key={tag} 
+                size="sm" 
+                variant={selectedTag === tag ? 'default' : 'outline'} 
+                onClick={() => setSelectedTag(tag)}
+                className={selectedTag === tag ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-orange-500/25' : 'bg-slate-700/60 border-slate-600/50 hover:bg-orange-500/20 hover:border-orange-500/40 hover:text-orange-400 transition-all duration-200'}
+              >
+                {tag}
+              </Button>
             ))}
           </div>
         </CardContent>
-      </Card>
+          </Card>
 
-      {/* Connections List */}
-      <Card>
+          {/* Enhanced Connections List with distinct background */}
+          <Card className="bg-gradient-to-br from-gray-800/50 via-slate-800/30 to-gray-900/70 border-gray-700/50 backdrop-blur-md shadow-xl shadow-slate-950/40">
         <CardHeader>
-          <CardTitle>Connections</CardTitle>
-          <CardDescription>Manage and track your key LinkedIn relationships</CardDescription>
+          <CardTitle className="text-foreground">Strategic Network</CardTitle>
+          <CardDescription className="text-muted-foreground">Manage and track your executive LinkedIn intelligence network relationships</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             {filteredConnections.map(connection => (
-              <div key={connection.id} className="flex items-start space-x-4 p-4 border rounded-lg hover:bg-gray-50">
+              <div key={connection.id} className="group flex items-start space-x-4 p-6 border border-slate-700/50 rounded-xl bg-gradient-to-r from-slate-900/60 via-gray-900/40 to-slate-900/60 hover:border-orange-500/40 hover:bg-gradient-to-r hover:from-orange-500/10 hover:via-amber-500/5 hover:to-orange-500/10 hover:shadow-xl hover:shadow-orange-500/10 transition-all duration-300 hover:transform hover:scale-[1.02] backdrop-blur-sm">
                 <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
                   {connection.profilePictureUrl ? (
                     <img 
@@ -406,7 +503,9 @@ export default function NetworkPage() {
                         </div>
                       )}
                     </div>
-                    <div className={`px-3 py-1 rounded-full text-sm font-medium ${getEngagementColor(connection.engagementScore)}`}>{connection.engagementScore}% engagement</div>
+                    <div className={`px-3 py-1 rounded-full text-sm font-medium transition-colors duration-200 ${getEngagementColor(connection.engagementScore)}`}>
+                      {connection.engagementScore}% engagement
+                    </div>
                   </div>
 
                   {/* Company tenure and follower info */}
@@ -428,7 +527,15 @@ export default function NetworkPage() {
                   </div>
 
                   <div className="flex flex-wrap gap-2">
-                    {connection.tags.map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
+                    {connection.tags.map(tag => (
+                      <Badge 
+                        key={tag} 
+                        variant="secondary" 
+                        className="bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/20 hover:bg-orange-500/20 transition-colors duration-200"
+                      >
+                        {tag}
+                      </Badge>
+                    ))}
                   </div>
                   
                   {connection.notes && <p className="text-sm text-muted-foreground">{connection.notes}</p>}
@@ -436,19 +543,37 @@ export default function NetworkPage() {
                   <div className="flex items-center justify-between pt-2">
                     <span className="text-xs text-muted-foreground">Last engagement: {connection.lastEngagement}</span>
                     <div className="flex items-center gap-2">
-                      <Button size="sm" variant="outline"><MessageSquare className="mr-2 h-4 w-4" />View Activity</Button>
-                      <Button size="sm" variant="outline" asChild>
+                      <ResearchButton 
+                        profileUrl={connection.linkedinUrl} 
+                        size="sm" 
+                        variant="outline"
+                        onLeadCreated={(lead) => {
+                          toast.success(`Research completed for ${lead.name} - ICP Score: ${lead.icpScore}/100`)
+                        }}
+                      />
+                      <Button size="sm" variant="outline" className="bg-slate-800/60 border-slate-600/50 hover:bg-orange-500/20 hover:border-orange-500/40 hover:text-orange-400 transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/20 executive-card">
+                        <MessageSquare className="mr-2 h-4 w-4" />Strategic Intelligence
+                      </Button>
+                      <Button size="sm" variant="outline" asChild className="bg-slate-800/60 border-slate-600/50 hover:bg-blue-500/20 hover:border-blue-500/40 hover:text-blue-400 transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/20">
                         <a href={connection.linkedinUrl} target="_blank" rel="noreferrer">
-                          <User className="mr-2 h-4 w-4" />Profile
+                          <ExternalLink className="mr-2 h-4 w-4" />Executive Profile
                         </a>
                       </Button>
                       {connection.companyLinkedinUrl && (
-                        <Button size="sm" variant="outline" asChild>
+                        <Button size="sm" variant="outline" asChild className="bg-slate-800/60 border-slate-600/50 hover:bg-green-500/20 hover:border-green-500/40 hover:text-green-400 transition-all duration-200 hover:shadow-lg hover:shadow-green-500/20">
                           <a href={connection.companyLinkedinUrl} target="_blank" rel="noreferrer">
                             <Building className="mr-2 h-4 w-4" />Company
                           </a>
                         </Button>
                       )}
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => handleDeleteConnection(connection.id, connection.name)}
+                        className="bg-slate-800/60 border-slate-600/50 hover:bg-red-500/20 hover:border-red-500/40 hover:text-red-400 transition-all duration-200 hover:shadow-lg hover:shadow-red-500/20"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />Delete
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -457,66 +582,81 @@ export default function NetworkPage() {
           </div>
         </CardContent>
           </Card>
-        </TabsContent>
+        </div>
+        </div>
 
-        <TabsContent value="posts" className="space-y-4">
-          {/* Posts Stats */}
-          <div className="grid gap-4 md:grid-cols-4">
-            <Card>
+        <div className={`space-y-8 ${activeTab === 'posts' ? 'block' : 'hidden'}`}>
+        
+        {/* Posts Section with distinct background */}
+        <div className="bg-gradient-to-b from-slate-900/50 to-gray-900/70 rounded-3xl p-8 border border-slate-700/50 shadow-2xl shadow-slate-950/40">
+          {/* Enhanced Posts Stats */}
+          <div className="grid gap-6 md:grid-cols-4 mb-8">
+            <Card className="bg-gradient-to-br from-cyan-500/15 via-cyan-600/10 to-slate-800/60 border-cyan-500/30 hover:border-cyan-400/50 transition-all duration-300 hover:shadow-xl hover:shadow-cyan-500/20 hover:transform hover:scale-105 backdrop-blur-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Posts</CardTitle>
-                <FileText className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium text-cyan-600 dark:text-cyan-400">Total Posts</CardTitle>
+                <div className="p-2 bg-cyan-500/15 rounded-lg">
+                  <FileText className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{postsStats.totalPosts}</div>
-                <p className="text-xs text-muted-foreground">From all connections</p>
+                <div className="text-2xl font-bold text-foreground">{postsStats.totalPosts}</div>
+                <p className="text-xs text-muted-foreground mt-1">From all connections</p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-gradient-to-br from-pink-500/15 via-pink-600/10 to-slate-800/60 border-pink-500/30 hover:border-pink-400/50 transition-all duration-300 hover:shadow-xl hover:shadow-pink-500/20 hover:transform hover:scale-105 backdrop-blur-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Reactions</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium text-pink-600 dark:text-pink-400">Total Reactions</CardTitle>
+                <div className="p-2 bg-pink-500/15 rounded-lg">
+                  <TrendingUp className="h-4 w-4 text-pink-600 dark:text-pink-400" />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{postsStats.totalReactions}</div>
-                <p className="text-xs text-muted-foreground">Across all posts</p>
+                <div className="text-2xl font-bold text-foreground">{postsStats.totalReactions}</div>
+                <p className="text-xs text-muted-foreground mt-1">Across all posts</p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-gradient-to-br from-emerald-500/15 via-emerald-600/10 to-slate-800/60 border-emerald-500/30 hover:border-emerald-400/50 transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/20 hover:transform hover:scale-105 backdrop-blur-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Connections</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Active Connections</CardTitle>
+                <div className="p-2 bg-emerald-500/15 rounded-lg">
+                  <Users className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{postsStats.uniqueConnections}</div>
-                <p className="text-xs text-muted-foreground">Posted content</p>
+                <div className="text-2xl font-bold text-foreground">{postsStats.uniqueConnections}</div>
+                <p className="text-xs text-muted-foreground mt-1">Posted content</p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-gradient-to-br from-violet-500/15 via-violet-600/10 to-slate-800/60 border-violet-500/30 hover:border-violet-400/50 transition-all duration-300 hover:shadow-xl hover:shadow-violet-500/20 hover:transform hover:scale-105 backdrop-blur-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Avg Engagement</CardTitle>
-                <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium text-violet-600 dark:text-violet-400">Avg Engagement</CardTitle>
+                <div className="p-2 bg-violet-500/15 rounded-lg">
+                  <MessageSquare className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{postsStats.averageEngagement}</div>
-                <p className="text-xs text-muted-foreground">Per post</p>
+                <div className="text-2xl font-bold text-foreground">{postsStats.averageEngagement}</div>
+                <p className="text-xs text-muted-foreground mt-1">Per post</p>
               </CardContent>
             </Card>
           </div>
 
-          {/* Connection Posts Table */}
-          <ConnectionPostsTable 
-            posts={connectionPosts} 
-            stats={postsStats}
-            onRefresh={() => loadConnectionPosts(true)}
-            isLoading={isLoadingPosts}
-            showCommentGeneration={true}
-          />
-        </TabsContent>
-      </Tabs>
+          {/* Connection Posts Table with enhanced background */}
+          <div className="bg-gradient-to-br from-gray-800/40 via-slate-800/20 to-gray-900/60 rounded-2xl p-6 border border-gray-700/30 shadow-lg shadow-slate-950/30">
+            <ConnectionPostsTable 
+              posts={connectionPosts} 
+              stats={postsStats}
+              onRefresh={() => loadConnectionPosts(true)}
+              isLoading={isLoadingPosts}
+              showCommentGeneration={true}
+            />
+          </div>
+        </div>
+        </div>
+      </div>
     </div>
   )
 }

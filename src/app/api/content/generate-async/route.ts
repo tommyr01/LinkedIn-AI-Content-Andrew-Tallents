@@ -21,7 +21,10 @@ export async function POST(request: NextRequest) {
       voiceGuidelines,
       postType = 'Thought Leadership',
       tone = 'professional',
-      userId
+      userId,
+      useVoiceLearning = true, // RAG enabled by default for authentic voice
+      strategicVariants = [],
+      contentIntent
     } = body
 
     // Validate platform
@@ -37,8 +40,19 @@ export async function POST(request: NextRequest) {
       topic: topic.substring(0, 50) + '...',
       platform,
       postType,
-      hasVoiceGuidelines: !!voiceGuidelines
+      hasVoiceGuidelines: !!voiceGuidelines,
+      useVoiceLearning,
+      strategicVariants,
+      contentIntent
     })
+
+    // Prepare voice learning data flag for worker
+    let voiceLearningData = null
+    if (useVoiceLearning) {
+      console.log('🎯 Voice learning enabled - will be processed by worker')
+      // Pass the flag to the worker - the worker will handle voice learning data generation
+      voiceLearningData = { enabled: true, timestamp: new Date().toISOString() }
+    }
 
     // Add job to queue
     const result = await QueueService.addContentGenerationJob({
@@ -47,7 +61,11 @@ export async function POST(request: NextRequest) {
       voiceGuidelines,
       postType,
       tone,
-      userId
+      userId,
+      useVoiceLearning,
+      voiceLearningData,
+      strategicVariants,
+      contentIntent
     })
 
     if (!result.success) {

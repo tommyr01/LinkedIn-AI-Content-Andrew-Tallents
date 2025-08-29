@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { format } from "date-fns"
 import { MessageSquare, ThumbsUp, ExternalLink, User, Sparkles, X, Play, Image, Calendar, TrendingUp, Repeat2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -37,6 +37,15 @@ export function PostDetailDialog({
   const [generatedComment, setGeneratedComment] = useState("")
   const [isGeneratingComment, setIsGeneratingComment] = useState(false)
   const [isPostingComment, setIsPostingComment] = useState(false)
+
+  // Clear generated comment and reset states when post changes or dialog opens/closes
+  useEffect(() => {
+    setGeneratedComment("")
+    setIsGeneratingComment(false)
+    setIsPostingComment(false)
+    setImageError(false)
+    setProfileImageError(false)
+  }, [post?.id, open])
 
   if (!post) return null
 
@@ -277,9 +286,10 @@ export function PostDetailDialog({
                         variant="outline"
                         size="sm"
                         onClick={() => window.open(post.authorLinkedInUrl, '_blank')}
+                        className="border-gray-600 hover:border-amber-500/50 hover:bg-amber-500/10 hover:text-amber-400 transition-all duration-200"
                       >
                         <User className="h-4 w-4 mr-2" />
-                        View Profile
+                        Executive Profile
                       </Button>
                     )}
                     {post.postUrl && (
@@ -287,9 +297,10 @@ export function PostDetailDialog({
                         variant="outline"
                         size="sm"
                         onClick={() => window.open(post.postUrl, '_blank')}
+                        className="border-gray-600 hover:border-orange-500/50 hover:bg-orange-500/10 hover:text-orange-400 transition-all duration-200"
                       >
                         <ExternalLink className="h-4 w-4 mr-2" />
-                        View Post
+                        Strategic Intelligence
                       </Button>
                     )}
                   </div>
@@ -324,11 +335,11 @@ export function PostDetailDialog({
                 <Button
                   onClick={() => onGenerateComment(post)}
                   disabled={isGenerating}
-                  className="bg-primary hover:bg-primary/90"
+                  className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg transition-all duration-200 hover:shadow-xl hover:shadow-amber-500/25"
                   size="lg"
                 >
                   <Sparkles className="h-5 w-5 mr-2" />
-                  {isGenerating && selectedPostId === post.id ? "Generating Comment..." : "Generate AI Comment"}
+                  {isGenerating && selectedPostId === post.id ? "Generating Strategic Response..." : "Generate Executive Response"}
                 </Button>
               )}
             </div>
@@ -375,22 +386,22 @@ export function PostDetailDialog({
 
                 {/* Comment Generation Section */}
                 <div className="space-y-4">
-                  <h5 className="font-semibold text-base">AI Comment Generation</h5>
+                  <h5 className="font-semibold text-base">Executive Response Generation</h5>
                   
                   <Button 
                     onClick={handleGenerateComment}
                     disabled={isGeneratingComment}
-                    className="w-full"
+                    className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white"
                     size="sm"
                   >
                     <Sparkles className="h-4 w-4 mr-2" />
-                    {isGeneratingComment ? "Generating..." : "Generate Comment"}
+                    {isGeneratingComment ? "Generating Strategic Response..." : "Generate Executive Response"}
                   </Button>
                   
                   <Textarea
                     value={generatedComment}
                     onChange={(e) => setGeneratedComment(e.target.value)}
-                    placeholder="Generated comment will appear here..."
+                    placeholder="Your strategic executive response will appear here..."
                     className="min-h-[120px] text-sm"
                     disabled={isGeneratingComment}
                   />
@@ -402,7 +413,7 @@ export function PostDetailDialog({
                     variant="default"
                     size="sm"
                   >
-                    {isPostingComment ? "Posting..." : "Post Comment"}
+                    {isPostingComment ? "Publishing Strategic Response..." : "Publish Executive Response"}
                   </Button>
                 </div>
               </>
