@@ -214,7 +214,17 @@ async function callRAGAPI(
   authorName: string, 
   postId: string
 ): Promise<{ success: boolean; comment?: string; contextUsed?: any[]; sources?: string[]; error?: string }> {
-  const ragApiUrl = process.env.RAG_API_URL || `${process.env.VERCEL_URL ? 'https://' + process.env.VERCEL_URL : 'http://localhost:3000'}/api/chat/stream`;
+  // Use relative URL on Vercel for internal API calls to bypass authentication
+  const ragApiUrl = process.env.RAG_API_URL || 
+    (process.env.VERCEL 
+      ? '/api/chat/stream'  // Internal relative path on Vercel
+      : 'http://localhost:3000/api/chat/stream'); // Local development
+  
+  console.log('🔧 RAG URL construction debug:', {
+    RAG_API_URL: process.env.RAG_API_URL,
+    VERCEL: process.env.VERCEL,
+    finalUrl: ragApiUrl
+  });
   // Create unique conversation ID with timestamp and post hash to prevent caching
   const postHash = Buffer.from(postContent + authorName).toString('base64').slice(0, 8);
   const timestamp = Date.now();
