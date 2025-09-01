@@ -42,16 +42,16 @@ export default function ContentPage() {
           className={`cursor-pointer transition-all duration-200 h-32 executive-card ${
             activeGenerator === 'chat' 
               ? 'border-2 border-amber-500 shadow-md bg-gradient-to-br from-amber-500/20 to-orange-500/20' 
-              : 'border border-gray-700 bg-gray-800 hover:border-gray-600 hover:bg-gray-750'
+              : 'border border-border bg-card hover:border-muted hover:bg-muted/50'
           }`}
           onClick={() => setActiveGenerator('chat')}
         >
           <CardHeader className="pb-2">
             <CardTitle className={`flex items-center gap-2 text-sm ${
-              activeGenerator === 'chat' ? 'text-white' : 'text-white'
+              activeGenerator === 'chat' ? 'text-foreground' : 'text-foreground'
             }`}>
               <MessageSquare className={`h-4 w-4 ${
-                activeGenerator === 'chat' ? 'text-white' : 'text-amber-400'
+                activeGenerator === 'chat' ? 'text-foreground' : 'text-amber-400'
               }`} />
               Strategic Intelligence Chat
               <Badge variant="outline" className="bg-amber-500 text-white border-amber-400 ml-auto text-xs px-2 py-0">
@@ -59,7 +59,7 @@ export default function ContentPage() {
               </Badge>
             </CardTitle>
             <CardDescription className={`text-xs ${
-              activeGenerator === 'chat' ? 'text-gray-200' : 'text-gray-400'
+              activeGenerator === 'chat' ? 'text-muted-foreground' : 'text-muted-foreground'
             }`}>
               Executive AI assistant powered by Andrew's strategic knowledge base
             </CardDescription>
@@ -67,19 +67,19 @@ export default function ContentPage() {
           <CardContent className="pt-0">
             <div className="grid grid-cols-3 gap-2 text-xs">
               <div className={`flex items-center gap-1 ${
-                activeGenerator === 'chat' ? 'text-amber-300' : 'text-amber-500'
+                activeGenerator === 'chat' ? 'text-amber-400' : 'text-amber-500'
               }`}>
                 <Brain className="h-3 w-3" />
                 RAG System
               </div>
               <div className={`flex items-center gap-1 ${
-                activeGenerator === 'chat' ? 'text-blue-300' : 'text-blue-500'
+                activeGenerator === 'chat' ? 'text-blue-400' : 'text-blue-500'
               }`}>
                 <MessageSquare className="h-3 w-3" />
                 Chat Interface
               </div>
               <div className={`flex items-center gap-1 ${
-                activeGenerator === 'chat' ? 'text-purple-300' : 'text-purple-500'
+                activeGenerator === 'chat' ? 'text-purple-400' : 'text-purple-500'
               }`}>
                 <Sparkles className="h-3 w-3" />
                 Real-time
@@ -92,16 +92,16 @@ export default function ContentPage() {
           className={`cursor-pointer transition-all duration-200 h-32 executive-card ${
             activeGenerator === 'performance' 
               ? 'border-2 border-amber-500 shadow-md bg-gradient-to-br from-amber-500/20 to-orange-500/20' 
-              : 'border border-gray-700 bg-gray-800 hover:border-gray-600 hover:bg-gray-750'
+              : 'border border-border bg-card hover:border-muted hover:bg-muted/50'
           }`}
           onClick={() => setActiveGenerator('performance')}
         >
           <CardHeader className="pb-2">
             <CardTitle className={`flex items-center gap-2 text-sm ${
-              activeGenerator === 'performance' ? 'text-white' : 'text-white'
+              activeGenerator === 'performance' ? 'text-foreground' : 'text-foreground'
             }`}>
               <Brain className={`h-4 w-4 ${
-                activeGenerator === 'performance' ? 'text-white' : 'text-blue-400'
+                activeGenerator === 'performance' ? 'text-foreground' : 'text-blue-400'
               }`} />
               Strategic Intelligence Generator
               <Badge variant="outline" className="bg-green-500 text-white border-green-400 ml-auto text-xs px-2 py-0">
@@ -109,7 +109,7 @@ export default function ContentPage() {
               </Badge>
             </CardTitle>
             <CardDescription className={`text-xs ${
-              activeGenerator === 'performance' ? 'text-gray-200' : 'text-gray-400'
+              activeGenerator === 'performance' ? 'text-muted-foreground' : 'text-muted-foreground'
             }`}>
               Executive-level intelligence variants using Andrew's proven strategic patterns
             </CardDescription>
@@ -117,19 +117,19 @@ export default function ContentPage() {
           <CardContent className="pt-0">
             <div className="grid grid-cols-3 gap-2 text-xs">
               <div className={`flex items-center gap-1 ${
-                activeGenerator === 'performance' ? 'text-amber-300' : 'text-amber-500'
+                activeGenerator === 'performance' ? 'text-amber-400' : 'text-amber-500'
               }`}>
                 <BarChart3 className="h-3 w-3" />
                 Intelligence
               </div>
               <div className={`flex items-center gap-1 ${
-                activeGenerator === 'performance' ? 'text-blue-300' : 'text-blue-500'
+                activeGenerator === 'performance' ? 'text-blue-400' : 'text-blue-500'
               }`}>
                 <TrendingUp className="h-3 w-3" />
                 Strategic Impact
               </div>
               <div className={`flex items-center gap-1 ${
-                activeGenerator === 'performance' ? 'text-purple-300' : 'text-purple-500'
+                activeGenerator === 'performance' ? 'text-purple-400' : 'text-purple-500'
               }`}>
                 <Brain className="h-3 w-3" />
                 Experimental

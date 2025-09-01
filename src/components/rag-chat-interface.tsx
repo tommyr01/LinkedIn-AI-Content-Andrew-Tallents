@@ -247,21 +247,21 @@ export function RagChatInterface({ onContentGenerated }: RagChatInterfaceProps) 
   }
 
   return (
-    <Card className="h-[945px] flex flex-col bg-gray-900 border-gray-700">
+    <Card className="h-[945px] flex flex-col bg-card border-border">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-700">
+      <div className="flex items-center justify-between p-4 border-b border-border">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg">
             <MessageSquare className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h3 className="font-semibold text-white flex items-center gap-2">
+            <h3 className="font-semibold text-foreground flex items-center gap-2">
               AMPLIFY Strategic Intelligence Chat
               <Badge variant="outline" className="bg-amber-500/20 text-amber-400 border-amber-500/30">
                 Executive AI
               </Badge>
             </h3>
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-muted-foreground">
               Chat with Andrew's strategic intelligence system for executive content creation
             </p>
           </div>
@@ -271,7 +271,7 @@ export function RagChatInterface({ onContentGenerated }: RagChatInterfaceProps) 
           variant="outline"
           size="sm"
           onClick={clearConversation}
-          className="border-gray-600 hover:bg-gray-800 text-gray-300"
+          className="border-border hover:bg-muted text-muted-foreground"
         >
           <Trash2 className="h-4 w-4" />
           Clear
@@ -286,8 +286,8 @@ export function RagChatInterface({ onContentGenerated }: RagChatInterfaceProps) 
               <div className="w-16 h-16 bg-gradient-to-br from-amber-500 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Sparkles className="h-8 w-8 text-white" />
               </div>
-              <h4 className="text-lg font-medium text-white mb-2">Start Strategic Intelligence Creation</h4>
-              <p className="text-gray-400 text-sm mb-6">
+              <h4 className="text-lg font-medium text-foreground mb-2">Start Strategic Intelligence Creation</h4>
+              <p className="text-muted-foreground text-sm mb-6">
                 Ask me to create executive LinkedIn intelligence, analyse your strategic content, or help with executive positioning. 
                 I have access to Andrew's strategic voice patterns and executive insights.
               </p>
@@ -296,48 +296,48 @@ export function RagChatInterface({ onContentGenerated }: RagChatInterfaceProps) 
               <div className="grid md:grid-cols-2 gap-3 mt-6">
                 <button
                   onClick={() => setInput('Create executive LinkedIn intelligence about AI innovation in business strategy')}
-                  className="p-3 text-left bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-amber-500/50 rounded-lg transition-all group"
+                  className="p-3 text-left bg-muted hover:bg-muted/80 border border-border hover:border-amber-500/50 rounded-lg transition-all group"
                 >
-                  <div className="text-sm font-medium text-white group-hover:text-amber-400 mb-1">
+                  <div className="text-sm font-medium text-foreground group-hover:text-amber-400 mb-1">
                     Strategic Intelligence Creation
                   </div>
-                  <div className="text-xs text-gray-400">
+                  <div className="text-xs text-muted-foreground">
                     "Create executive LinkedIn intelligence about AI innovation in business strategy"
                   </div>
                 </button>
                 
                 <button
                   onClick={() => setInput("Help me write executive intelligence about the strategic future of remote work")}
-                  className="p-3 text-left bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-amber-500/50 rounded-lg transition-all group"
+                  className="p-3 text-left bg-muted hover:bg-muted/80 border border-border hover:border-amber-500/50 rounded-lg transition-all group"
                 >
-                  <div className="text-sm font-medium text-white group-hover:text-amber-400 mb-1">
+                  <div className="text-sm font-medium text-foreground group-hover:text-amber-400 mb-1">
                     Strategic Analysis
                   </div>
-                  <div className="text-xs text-gray-400">
+                  <div className="text-xs text-muted-foreground">
                     "Help me write executive intelligence about the strategic future of remote work"
                   </div>
                 </button>
                 
                 <button
                   onClick={() => setInput("What are some executive engagement hooks for strategic LinkedIn intelligence?")}
-                  className="p-3 text-left bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-amber-500/50 rounded-lg transition-all group"
+                  className="p-3 text-left bg-muted hover:bg-muted/80 border border-border hover:border-amber-500/50 rounded-lg transition-all group"
                 >
-                  <div className="text-sm font-medium text-white group-hover:text-amber-400 mb-1">
+                  <div className="text-sm font-medium text-foreground group-hover:text-amber-400 mb-1">
                     Executive Strategy
                   </div>
-                  <div className="text-xs text-gray-400">
+                  <div className="text-xs text-muted-foreground">
                     "What are some executive engagement hooks for strategic LinkedIn intelligence?"
                   </div>
                 </button>
                 
                 <button
                   onClick={() => setInput("Create 3 strategic intelligence variations about executive leadership insights")}
-                  className="p-3 text-left bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-amber-500/50 rounded-lg transition-all group"
+                  className="p-3 text-left bg-muted hover:bg-muted/80 border border-border hover:border-amber-500/50 rounded-lg transition-all group"
                 >
-                  <div className="text-sm font-medium text-white group-hover:text-amber-400 mb-1">
+                  <div className="text-sm font-medium text-foreground group-hover:text-amber-400 mb-1">
                     Strategic Variants
                   </div>
-                  <div className="text-xs text-gray-400">
+                  <div className="text-xs text-muted-foreground">
                     "Create 3 strategic intelligence variations about executive leadership insights"
                   </div>
                 </button>
@@ -379,7 +379,7 @@ export function RagChatInterface({ onContentGenerated }: RagChatInterfaceProps) 
                   ? 'bg-blue-600 text-white rounded-br-md'
                   : message.error
                   ? 'bg-red-900/50 text-red-200 border border-red-700 rounded-bl-md'
-                  : 'bg-gray-800 text-gray-100 rounded-bl-md border border-gray-700'
+                  : 'bg-muted text-foreground rounded-bl-md border border-border'
               )}>
                 {message.error ? (
                   <div className="flex items-start gap-2">
@@ -401,7 +401,7 @@ export function RagChatInterface({ onContentGenerated }: RagChatInterfaceProps) 
 
               {/* Actions */}
               <div className="flex items-center gap-1 mt-1">
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-muted-foreground">
                   {message.timestamp.toLocaleTimeString([], { 
                     hour: '2-digit', 
                     minute: '2-digit' 
@@ -413,7 +413,7 @@ export function RagChatInterface({ onContentGenerated }: RagChatInterfaceProps) 
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-6 px-2 text-gray-400 hover:text-white hover:bg-gray-700"
+                      className="h-6 px-2 text-muted-foreground hover:text-foreground hover:bg-muted"
                       onClick={() => handleCopy(message.content, message.id)}
                     >
                       {copiedMessageId === message.id ? (
@@ -429,7 +429,7 @@ export function RagChatInterface({ onContentGenerated }: RagChatInterfaceProps) 
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-6 px-2 text-amber-400 hover:text-amber-300 hover:bg-gray-700 ml-2"
+                    className="h-6 px-2 text-amber-400 hover:text-amber-300 hover:bg-muted ml-2"
                     onClick={() => {
                       const userMessage = messages[index - 1]
                       if (userMessage?.role === 'user') {
@@ -449,7 +449,7 @@ export function RagChatInterface({ onContentGenerated }: RagChatInterfaceProps) 
       </div>
 
       {/* Input */}
-      <div className="border-t border-gray-700 p-4">
+      <div className="border-t border-border p-4">
         <div className="flex gap-2">
           <div className="flex-1 relative">
             <Input
@@ -458,7 +458,7 @@ export function RagChatInterface({ onContentGenerated }: RagChatInterfaceProps) 
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Ask me to create executive LinkedIn intelligence, analyse strategic performance, or provide leadership insights..."
-              className="bg-gray-800 border-gray-600 text-white placeholder:text-gray-400 focus:border-amber-500 focus:ring-amber-500 pr-12"
+              className="bg-muted border-border text-foreground placeholder:text-muted-foreground focus:border-amber-500 focus:ring-amber-500 pr-12"
               disabled={isLoading}
             />
             {isLoading && (
@@ -476,7 +476,7 @@ export function RagChatInterface({ onContentGenerated }: RagChatInterfaceProps) 
           </Button>
         </div>
         
-        <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
+        <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
           <span>
             Press Enter to send, Shift+Enter for new line
           </span>

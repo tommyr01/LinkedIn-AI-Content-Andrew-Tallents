@@ -298,16 +298,16 @@ export default function NetworkPage() {
   }
 
   return (
-    <div className="flex-1 space-y-6 min-h-screen bg-gradient-to-br from-slate-950 via-gray-950 to-slate-950">
+    <div className="flex-1 space-y-6 min-h-screen bg-gradient-to-br from-background via-card to-background">
       <AddConnectionModal open={addOpen} onOpenChange={(o) => { setAddOpen(o); if (!o) loadConnections() }} />
       
       {/* Header Section with distinct background */}
-      <div className="bg-gradient-to-r from-gray-900/80 via-slate-900/60 to-gray-900/80 backdrop-blur-sm border-b border-gray-800/50 p-8 pt-6 rounded-b-2xl shadow-2xl shadow-slate-950/50">
+      <div className="bg-gradient-to-r from-card/80 via-muted/60 to-card/80 backdrop-blur-sm border-b border-border/50 p-8 pt-6 rounded-b-2xl shadow-2xl shadow-background/50">
         <div className="flex items-center justify-between space-y-2">
         <div className="flex items-center space-x-4">
           <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-orange-400 to-amber-400 bg-clip-text text-transparent">Strategic Network Intelligence</h2>
           {lastRefresh && (
-            <p className="text-sm text-slate-400 bg-slate-800/60 px-3 py-1 rounded-full border border-slate-700/50">
+            <p className="text-sm text-muted-foreground bg-muted/60 px-3 py-1 rounded-full border border-border/50">
               Last updated: {lastRefresh.toLocaleTimeString()}
             </p>
           )}
@@ -318,7 +318,7 @@ export default function NetworkPage() {
               variant="outline" 
               size="sm"
               disabled={isLoading || isLoadingPosts}
-              className="bg-slate-800/60 border-slate-600/50 hover:bg-blue-500/10 hover:border-blue-500/30 hover:text-blue-400 transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/20"
+              className="bg-muted/60 border-border/50 hover:bg-blue-500/10 hover:border-blue-500/30 hover:text-blue-400 transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/20"
             >
             <RefreshCw className={`mr-2 h-4 w-4 ${(isLoading || isLoadingPosts) ? 'animate-spin' : ''}`} />
             {(isLoading || isLoadingPosts) 
@@ -341,13 +341,13 @@ export default function NetworkPage() {
       <div className="px-8 pb-8 space-y-8">
 
         {/* Tab Navigation with enhanced background */}
-        <div className="bg-gradient-to-r from-gray-800/80 via-slate-800/60 to-gray-800/80 backdrop-blur-md rounded-2xl p-1.5 border border-gray-700/50 inline-flex items-center gap-1.5 shadow-xl shadow-slate-950/30">
+        <div className="bg-gradient-to-r from-card/80 via-muted/60 to-card/80 backdrop-blur-md rounded-2xl p-1.5 border border-border/50 inline-flex items-center gap-1.5 shadow-xl shadow-background/30">
           <button
             onClick={() => setActiveTab('connections')}
             className={`inline-flex items-center justify-center whitespace-nowrap rounded-xl px-5 py-3 text-sm font-medium ring-offset-background transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${
               activeTab === 'connections'
                 ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/30 transform scale-105 border border-orange-400/30'
-                : 'text-slate-300 hover:text-white hover:bg-gradient-to-r hover:from-orange-500/20 hover:to-amber-500/20 border border-transparent hover:border-orange-500/20 hover:shadow-lg hover:shadow-orange-500/10'
+                : 'text-muted-foreground hover:text-foreground hover:bg-gradient-to-r hover:from-orange-500/20 hover:to-amber-500/20 border border-transparent hover:border-orange-500/20 hover:shadow-lg hover:shadow-orange-500/10'
             }`}
           >
             <Users className={`mr-2 h-4 w-4 ${activeTab === 'connections' ? 'text-white' : ''}`} />
@@ -358,7 +358,7 @@ export default function NetworkPage() {
             className={`inline-flex items-center justify-center whitespace-nowrap rounded-xl px-5 py-3 text-sm font-medium ring-offset-background transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${
               activeTab === 'posts'
                 ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/30 transform scale-105 border border-orange-400/30'
-                : 'text-slate-300 hover:text-white hover:bg-gradient-to-r hover:from-orange-500/20 hover:to-amber-500/20 border border-transparent hover:border-orange-500/20 hover:shadow-lg hover:shadow-orange-500/10'
+                : 'text-muted-foreground hover:text-foreground hover:bg-gradient-to-r hover:from-orange-500/20 hover:to-amber-500/20 border border-transparent hover:border-orange-500/20 hover:shadow-lg hover:shadow-orange-500/10'
             }`}
           >
             <FileText className={`mr-2 h-4 w-4 ${activeTab === 'posts' ? 'text-white' : ''}`} />
@@ -369,10 +369,10 @@ export default function NetworkPage() {
         <div className={`space-y-8 ${activeTab === 'connections' ? 'block' : 'hidden'}`}>
 
         {/* Connections Section with distinct background */}
-        <div className="bg-gradient-to-b from-gray-900/40 to-slate-900/60 rounded-3xl p-8 border border-gray-800/50 shadow-2xl shadow-slate-950/40">
+        <div className="bg-gradient-to-b from-card/40 to-muted/60 rounded-3xl p-8 border border-border/50 shadow-2xl shadow-background/40">
           {/* Enhanced Stats Cards */}
           <div className="grid gap-6 md:grid-cols-4 mb-8">
-        <Card className="bg-gradient-to-br from-blue-500/15 via-blue-600/10 to-slate-800/60 border-blue-500/30 hover:border-blue-400/50 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/20 hover:transform hover:scale-105 backdrop-blur-sm">
+        <Card className="bg-gradient-to-br from-blue-500/15 via-blue-600/10 to-card/60 border-blue-500/30 hover:border-blue-400/50 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/20 hover:transform hover:scale-105 backdrop-blur-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-blue-600 dark:text-blue-400">Total Connections</CardTitle>
             <div className="p-2 bg-blue-500/15 rounded-lg">
@@ -385,7 +385,7 @@ export default function NetworkPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-green-500/15 via-green-600/10 to-slate-800/60 border-green-500/30 hover:border-green-400/50 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/20 hover:transform hover:scale-105 backdrop-blur-sm">
+        <Card className="bg-gradient-to-br from-green-500/15 via-green-600/10 to-card/60 border-green-500/30 hover:border-green-400/50 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/20 hover:transform hover:scale-105 backdrop-blur-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-green-600 dark:text-green-400">High Engagement</CardTitle>
             <div className="p-2 bg-green-500/15 rounded-lg">
@@ -398,7 +398,7 @@ export default function NetworkPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-500/15 via-purple-600/10 to-slate-800/60 border-purple-500/30 hover:border-purple-400/50 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/20 hover:transform hover:scale-105 backdrop-blur-sm">
+        <Card className="bg-gradient-to-br from-purple-500/15 via-purple-600/10 to-card/60 border-purple-500/30 hover:border-purple-400/50 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/20 hover:transform hover:scale-105 backdrop-blur-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-purple-600 dark:text-purple-400">Recent Activity</CardTitle>
             <div className="p-2 bg-purple-500/15 rounded-lg">
@@ -411,7 +411,7 @@ export default function NetworkPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-slate-800/60 border-amber-500/30 hover:border-orange-400/50 transition-all duration-300 hover:shadow-xl hover:shadow-amber-500/20 hover:transform hover:scale-105 backdrop-blur-sm">
+        <Card className="bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-card/60 border-amber-500/30 hover:border-orange-400/50 transition-all duration-300 hover:shadow-xl hover:shadow-amber-500/20 hover:transform hover:scale-105 backdrop-blur-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-amber-600 dark:text-amber-400">Potential Clients</CardTitle>
             <div className="p-2 bg-amber-500/15 rounded-lg">
@@ -426,7 +426,7 @@ export default function NetworkPage() {
           </div>
 
           {/* Enhanced Search & Filters with layered background */}
-          <Card className="bg-gradient-to-br from-slate-800/60 via-gray-800/40 to-slate-900/80 border-gray-700/50 backdrop-blur-md shadow-xl shadow-slate-950/40">
+          <Card className="bg-gradient-to-br from-muted/60 via-card/40 to-muted/80 border-border/50 backdrop-blur-md shadow-xl shadow-background/40">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-foreground">
             <Search className="h-5 w-5 text-orange-500" />
@@ -441,7 +441,7 @@ export default function NetworkPage() {
               placeholder="Search strategic connections by name, company, or role..." 
               value={searchTerm} 
               onChange={e => setSearchTerm(e.target.value)} 
-              className="pl-10 bg-slate-900/60 border-slate-600/50 focus:border-orange-500/70 focus:ring-orange-500/30 transition-all duration-200 hover:bg-slate-900/80 focus:bg-slate-900/90" 
+              className="pl-10 bg-muted/60 border-border/50 focus:border-orange-500/70 focus:ring-orange-500/30 transition-all duration-200 hover:bg-muted/80 focus:bg-muted/90" 
             />
           </div>
           <div className="flex flex-wrap gap-2">
@@ -449,7 +449,7 @@ export default function NetworkPage() {
               size="sm" 
               variant={selectedTag === null ? 'default' : 'outline'} 
               onClick={() => setSelectedTag(null)}
-              className={selectedTag === null ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-orange-500/25' : 'bg-slate-700/60 border-slate-600/50 hover:bg-orange-500/20 hover:border-orange-500/40 hover:text-orange-400 transition-all duration-200'}
+              className={selectedTag === null ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-orange-500/25' : 'bg-muted/60 border-border/50 hover:bg-orange-500/20 hover:border-orange-500/40 hover:text-orange-400 transition-all duration-200'}
             >
               All Tags
             </Button>
@@ -459,7 +459,7 @@ export default function NetworkPage() {
                 size="sm" 
                 variant={selectedTag === tag ? 'default' : 'outline'} 
                 onClick={() => setSelectedTag(tag)}
-                className={selectedTag === tag ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-orange-500/25' : 'bg-slate-700/60 border-slate-600/50 hover:bg-orange-500/20 hover:border-orange-500/40 hover:text-orange-400 transition-all duration-200'}
+                className={selectedTag === tag ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-orange-500/25' : 'bg-muted/60 border-border/50 hover:bg-orange-500/20 hover:border-orange-500/40 hover:text-orange-400 transition-all duration-200'}
               >
                 {tag}
               </Button>
@@ -469,7 +469,7 @@ export default function NetworkPage() {
           </Card>
 
           {/* Enhanced Connections List with distinct background */}
-          <Card className="bg-gradient-to-br from-gray-800/50 via-slate-800/30 to-gray-900/70 border-gray-700/50 backdrop-blur-md shadow-xl shadow-slate-950/40">
+          <Card className="bg-gradient-to-br from-card/50 via-muted/30 to-card/70 border-border/50 backdrop-blur-md shadow-xl shadow-background/40">
         <CardHeader>
           <CardTitle className="text-foreground">Strategic Network</CardTitle>
           <CardDescription className="text-muted-foreground">Manage and track your executive LinkedIn intelligence network relationships</CardDescription>
@@ -477,7 +477,7 @@ export default function NetworkPage() {
         <CardContent>
           <div className="space-y-4">
             {filteredConnections.map(connection => (
-              <div key={connection.id} className="group flex items-start space-x-4 p-6 border border-slate-700/50 rounded-xl bg-gradient-to-r from-slate-900/60 via-gray-900/40 to-slate-900/60 hover:border-orange-500/40 hover:bg-gradient-to-r hover:from-orange-500/10 hover:via-amber-500/5 hover:to-orange-500/10 hover:shadow-xl hover:shadow-orange-500/10 transition-all duration-300 hover:transform hover:scale-[1.02] backdrop-blur-sm">
+              <div key={connection.id} className="group flex items-start space-x-4 p-6 border border-border/50 rounded-xl bg-gradient-to-r from-muted/60 via-card/40 to-muted/60 hover:border-orange-500/40 hover:bg-gradient-to-r hover:from-orange-500/10 hover:via-amber-500/5 hover:to-orange-500/10 hover:shadow-xl hover:shadow-orange-500/10 transition-all duration-300 hover:transform hover:scale-[1.02] backdrop-blur-sm">
                 <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
                   {connection.profilePictureUrl ? (
                     <img 
@@ -551,16 +551,16 @@ export default function NetworkPage() {
                           toast.success(`Research completed for ${lead.name} - ICP Score: ${lead.icpScore}/100`)
                         }}
                       />
-                      <Button size="sm" variant="outline" className="bg-slate-800/60 border-slate-600/50 hover:bg-orange-500/20 hover:border-orange-500/40 hover:text-orange-400 transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/20 executive-card">
+                      <Button size="sm" variant="outline" className="bg-muted/60 border-border/50 hover:bg-orange-500/20 hover:border-orange-500/40 hover:text-orange-400 transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/20 executive-card">
                         <MessageSquare className="mr-2 h-4 w-4" />Strategic Intelligence
                       </Button>
-                      <Button size="sm" variant="outline" asChild className="bg-slate-800/60 border-slate-600/50 hover:bg-blue-500/20 hover:border-blue-500/40 hover:text-blue-400 transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/20">
+                      <Button size="sm" variant="outline" asChild className="bg-muted/60 border-border/50 hover:bg-blue-500/20 hover:border-blue-500/40 hover:text-blue-400 transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/20">
                         <a href={connection.linkedinUrl} target="_blank" rel="noreferrer">
                           <ExternalLink className="mr-2 h-4 w-4" />Executive Profile
                         </a>
                       </Button>
                       {connection.companyLinkedinUrl && (
-                        <Button size="sm" variant="outline" asChild className="bg-slate-800/60 border-slate-600/50 hover:bg-green-500/20 hover:border-green-500/40 hover:text-green-400 transition-all duration-200 hover:shadow-lg hover:shadow-green-500/20">
+                        <Button size="sm" variant="outline" asChild className="bg-muted/60 border-border/50 hover:bg-green-500/20 hover:border-green-500/40 hover:text-green-400 transition-all duration-200 hover:shadow-lg hover:shadow-green-500/20">
                           <a href={connection.companyLinkedinUrl} target="_blank" rel="noreferrer">
                             <Building className="mr-2 h-4 w-4" />Company
                           </a>
@@ -570,7 +570,7 @@ export default function NetworkPage() {
                         size="sm" 
                         variant="outline" 
                         onClick={() => handleDeleteConnection(connection.id, connection.name)}
-                        className="bg-slate-800/60 border-slate-600/50 hover:bg-red-500/20 hover:border-red-500/40 hover:text-red-400 transition-all duration-200 hover:shadow-lg hover:shadow-red-500/20"
+                        className="bg-muted/60 border-border/50 hover:bg-red-500/20 hover:border-red-500/40 hover:text-red-400 transition-all duration-200 hover:shadow-lg hover:shadow-red-500/20">
                       >
                         <Trash2 className="mr-2 h-4 w-4" />Delete
                       </Button>
@@ -588,10 +588,10 @@ export default function NetworkPage() {
         <div className={`space-y-8 ${activeTab === 'posts' ? 'block' : 'hidden'}`}>
         
         {/* Posts Section with distinct background */}
-        <div className="bg-gradient-to-b from-slate-900/50 to-gray-900/70 rounded-3xl p-8 border border-slate-700/50 shadow-2xl shadow-slate-950/40">
+        <div className="bg-gradient-to-b from-muted/50 to-card/70 rounded-3xl p-8 border border-border/50 shadow-2xl shadow-background/40">
           {/* Enhanced Posts Stats */}
           <div className="grid gap-6 md:grid-cols-4 mb-8">
-            <Card className="bg-gradient-to-br from-cyan-500/15 via-cyan-600/10 to-slate-800/60 border-cyan-500/30 hover:border-cyan-400/50 transition-all duration-300 hover:shadow-xl hover:shadow-cyan-500/20 hover:transform hover:scale-105 backdrop-blur-sm">
+            <Card className="bg-gradient-to-br from-cyan-500/15 via-cyan-600/10 to-card/60 border-cyan-500/30 hover:border-cyan-400/50 transition-all duration-300 hover:shadow-xl hover:shadow-cyan-500/20 hover:transform hover:scale-105 backdrop-blur-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-cyan-600 dark:text-cyan-400">Total Posts</CardTitle>
                 <div className="p-2 bg-cyan-500/15 rounded-lg">
@@ -604,7 +604,7 @@ export default function NetworkPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-br from-pink-500/15 via-pink-600/10 to-slate-800/60 border-pink-500/30 hover:border-pink-400/50 transition-all duration-300 hover:shadow-xl hover:shadow-pink-500/20 hover:transform hover:scale-105 backdrop-blur-sm">
+            <Card className="bg-gradient-to-br from-pink-500/15 via-pink-600/10 to-card/60 border-pink-500/30 hover:border-pink-400/50 transition-all duration-300 hover:shadow-xl hover:shadow-pink-500/20 hover:transform hover:scale-105 backdrop-blur-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-pink-600 dark:text-pink-400">Total Reactions</CardTitle>
                 <div className="p-2 bg-pink-500/15 rounded-lg">
@@ -617,7 +617,7 @@ export default function NetworkPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-br from-emerald-500/15 via-emerald-600/10 to-slate-800/60 border-emerald-500/30 hover:border-emerald-400/50 transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/20 hover:transform hover:scale-105 backdrop-blur-sm">
+            <Card className="bg-gradient-to-br from-emerald-500/15 via-emerald-600/10 to-card/60 border-emerald-500/30 hover:border-emerald-400/50 transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/20 hover:transform hover:scale-105 backdrop-blur-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Active Connections</CardTitle>
                 <div className="p-2 bg-emerald-500/15 rounded-lg">
@@ -630,7 +630,7 @@ export default function NetworkPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-br from-violet-500/15 via-violet-600/10 to-slate-800/60 border-violet-500/30 hover:border-violet-400/50 transition-all duration-300 hover:shadow-xl hover:shadow-violet-500/20 hover:transform hover:scale-105 backdrop-blur-sm">
+            <Card className="bg-gradient-to-br from-violet-500/15 via-violet-600/10 to-card/60 border-violet-500/30 hover:border-violet-400/50 transition-all duration-300 hover:shadow-xl hover:shadow-violet-500/20 hover:transform hover:scale-105 backdrop-blur-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-violet-600 dark:text-violet-400">Avg Engagement</CardTitle>
                 <div className="p-2 bg-violet-500/15 rounded-lg">
@@ -645,7 +645,7 @@ export default function NetworkPage() {
           </div>
 
           {/* Connection Posts Table with enhanced background */}
-          <div className="bg-gradient-to-br from-gray-800/40 via-slate-800/20 to-gray-900/60 rounded-2xl p-6 border border-gray-700/30 shadow-lg shadow-slate-950/30">
+          <div className="bg-gradient-to-br from-card/40 via-muted/20 to-card/60 rounded-2xl p-6 border border-border/30 shadow-lg shadow-background/30">
             <ConnectionPostsTable 
               posts={connectionPosts} 
               stats={postsStats}

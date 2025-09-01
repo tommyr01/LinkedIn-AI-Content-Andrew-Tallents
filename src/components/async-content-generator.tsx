@@ -276,7 +276,7 @@ export function AsyncContentGenerator({ onContentGenerated }: AsyncContentGenera
       case 'completed': return 'text-green-600'
       case 'failed': return 'text-red-600'
       case 'processing': return 'text-blue-600'
-      default: return 'text-gray-600'
+      default: return 'text-muted-foreground'
     }
   }
 
@@ -285,7 +285,7 @@ export function AsyncContentGenerator({ onContentGenerated }: AsyncContentGenera
       case 'completed': return <CheckCircle className="h-4 w-4 text-green-600" />
       case 'failed': return <XCircle className="h-4 w-4 text-red-600" />
       case 'processing': return <RefreshCw className="h-4 w-4 text-blue-600 animate-spin" />
-      default: return <Clock className="h-4 w-4 text-gray-600" />
+      default: return <Clock className="h-4 w-4 text-muted-foreground" />
     }
   }
 
@@ -463,7 +463,7 @@ export function AsyncContentGenerator({ onContentGenerated }: AsyncContentGenera
                   
                   {/* Performance Insights */}
                   {draft.content.performance_prediction && (
-                    <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                    <div className="bg-muted rounded-lg p-4 mb-4">
                       <h4 className="font-semibold text-sm mb-2">📊 Performance Insights</h4>
                       <div className="grid grid-cols-2 gap-4 text-xs">
                         <div>
