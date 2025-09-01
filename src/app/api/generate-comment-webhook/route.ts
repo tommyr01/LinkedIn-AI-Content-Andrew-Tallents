@@ -58,27 +58,23 @@ function getVariedOpening(postContent: string, postId: string): string {
   
   const used = usedPatterns.get(sessionKey)!;
   
-  // Expanded opening categories with more variety
+  // Authentic Andrew openings from voice analysis
   const openingCategories = {
     agreement: [
-      "Love this", "Spot on", "So true", "This resonates", "💯",
-      "Yes!", "Exactly this", "Couldn't agree more", "This hits home",
-      "Beautifully said", "Such truth here"
+      "Love this", "Spot on", "So true", "This resonates deeply", "💯",
+      "Yes!", "Exactly this", "Such a clear truth", "This hits home"
     ],
     amplification: [
-      "This nails it", "Powerful!", "Sharp breakdown!", "Beautiful",
-      "Brilliant insight", "This is gold", "Such clarity here",
-      "Perfect framing", "This cuts through the noise", "Wisdom here"
+      "Such a", "This nails it", "Powerful!", "This is gold", 
+      "Perfect framing", "Such clarity here", "What stands out to me"
     ],
     impact: [
-      "This hits hard", "Oof. This one's a gut punch 👏", "🔥",
-      "This stopped me scrolling", "Damn, this is real", "Truth bomb",
-      "This one stings (in the best way)", "Raw truth here"
+      "This stopped me scrolling", "🔥", "Raw truth here", 
+      "This cuts through", "Truth bomb", "This one hits"
     ],
     vulnerability: [
-      "Thank you for this honesty", "Takes courage to share this",
-      "This vulnerability is powerful", "Appreciate the realness",
-      "Love the authentic share", "This transparency matters"
+      "Appreciate the realness", "Love the authentic share", 
+      "This transparency matters", "Thank you for this honesty"
     ]
   };
   
@@ -117,12 +113,12 @@ function generateAndrewStyleFallback(postContent: string, authorName: string, po
         vulnerability: ["Thank you for this honesty", "Takes courage to share"]
       },
       insights: [
-        "I've coached 100s of CEOs and the best ones lead from the inside out",
-        "self-leadership isn't a luxury skill - it's the foundation of sustainable success",
+        "in my coaching work with 100s of leaders, I've found self-leadership is the foundation everything else builds on",
         "the inner work isn't easy, but it's essential",
-        "took me years to learn that leadership is an inside-out game",
-        "clarity beats charisma every time",
-        "you can't give what you don't have - energy, focus, presence"
+        "took me years to learn that clarity beats charisma every time",
+        "you can't give what you don't have - energy, focus, presence",
+        "momentum beats motivation",
+        "for me, the shift from managing people to developing people changed everything"
       ],
       questions: [
         "What's helped you build psychological safety while maintaining high standards?",
@@ -142,12 +138,12 @@ function generateAndrewStyleFallback(postContent: string, authorName: string, po
         vulnerability: ["Appreciate the realness", "Love the authentic share"]
       },
       insights: [
-        "in my coaching work, I've found that clarity beats charisma every time",
-        "the best teams aren't built on perfection - they're built on trust",
+        "in my coaching work, I've found that energy is contagious - leaders set the temperature",
+        "the best teams aren't built on perfection - they're built on trust and clarity",
         "culture isn't what you say, it's what you do when no one's watching",
-        "energy is contagious - so is apathy",
         "momentum beats motivation every time",
-        "you can't scale what you don't share"
+        "you can't scale what you don't share",
+        "for me, self-leadership is about building others, not just business"
       ],
       questions: [
         "How do you maintain momentum when the team hits resistance?",
@@ -186,20 +182,20 @@ function generateAndrewStyleFallback(postContent: string, authorName: string, po
   switch (structure) {
     case "contrast_pattern":
       const contrasts = [
-        "Not about being perfect - but about being present",
+        "Not about perfection - but presence",
         "Not about having all the answers - but asking better questions",
-        "Not about control - but about influence",
-        "Not about title - but about impact",
-        "Not about the destination - but the direction",
-        "Not about volume - but about value"
+        "Not about control - but influence",
+        "Not about managing people - but developing people",
+        "Not about the title - but the impact",
+        "Not about motivation - but momentum"
       ];
       const contrast = contrasts[Math.floor(Math.random() * contrasts.length)];
       return `${opening}, ${authorName}. ${contrast}. ${question}`;
       
     case "personal_wisdom":
       const personalStarts = [
-        "For me,", "What I've found...", "Took me years to learn that",
-        "In my coaching work,", "Still learning that"
+        "For me,", "What I've found is", "took me years to learn that",
+        "In my coaching work,", "still learning that", "The shift that changed everything for me:"
       ];
       const personalStart = personalStarts[Math.floor(Math.random() * personalStarts.length)];
       return `${opening}, ${authorName}. ${personalStart} ${insight.toLowerCase()}. ${question}`;
@@ -228,55 +224,62 @@ async function callRAGAPI(
   const randomSeed = Math.floor(Math.random() * 1000);
   const now = new Date().toISOString();
   
-  // Enhanced RAG prompt with pattern analysis approach from historical-analysis-rag.ts
-  const prompt = `[UNIQUE_REQUEST_${randomSeed}_${now}] As Andrew Tallents, generate an authentic LinkedIn comment responding to this post by ${authorName}:
+  // Enhanced RAG prompt based on authentic Andrew voice patterns from tone-of-voice analysis
+  const prompt = `[UNIQUE_REQUEST_${randomSeed}_${now}] Generate an authentic LinkedIn comment as Andrew Tallents responding to this post by ${authorName}:
 
 "${postContent}"
 
-CONTEXT ANALYSIS REQUIRED:
-1. Analyze the post content for key themes (leadership, growth, team dynamics, challenges)
-2. Identify the emotional tone and vulnerability level
-3. Determine the most appropriate response structure
-4. Select varied opening pattern to avoid repetition
+ANDREW'S AUTHENTIC VOICE REQUIREMENTS:
+**TONE**: Confident mentor - authority with approachability, conversational not corporate
+**STRUCTURE**: Acknowledgment + Insight + Question (1-3 sentences, under 280 chars)
 
-ANDREW'S VOICE ANALYSIS FRAMEWORK:
-**OPENING PATTERN ROTATION** (select based on content analysis):
-• Agreement Signals: "Love this", "So true", "This resonates", "💯", "Yes!", "Exactly this"
-• Amplification: "This is gold", "Brilliant insight", "Perfect framing", "Such clarity here"  
-• Impact Markers: "This stopped me scrolling", "Raw truth here", "This cuts through"
-• Vulnerability Response: "Appreciate the realness", "Love the authentic share", "This transparency matters"
+**SIGNATURE PATTERNS TO USE**:
+• Agreement starters: "Love this", "Such a", "Spot on", "This resonates deeply"
+• Authority phrases: "I've coached 100s of CEOs/leaders", "In my coaching work"
+• Personal markers: "For me", "What I've found", "In my experience"
+• Core vocabulary: "self-leadership", "inner work", "clarity", "momentum", "energy"
+• Action verbs: "shift", "unlock", "build", "navigate", "cultivate"
+• "Not X, but Y" contrasts: "Not about perfection - but presence"
 
-**STRUCTURE VARIETY** (choose one that fits the post):
-• Acknowledgment + Insight + Question (standard)
-• Contrast Pattern: "Not X, but Y" + Question
-• Personal Wisdom: "For me/What I've found/Took me years to learn" + Application
-• Story-Lesson: Brief anecdote + Takeaway + Question
+**KEY THEMES TO WEAVE IN**:
+- Self-leadership precedes team leadership
+- Inner work drives outer results  
+- Authenticity beats perfection
+- Momentum > motivation
+- Leaders build others, not just business
 
-**CORE ANDREW INSIGHTS** (contextualize to post topic):
-• Self-leadership foundation: "you can't give what you don't have - energy, focus, presence"
-• Energy management: "Energy is the ultimate ROI", "protect energy", "energy multipliers"
-• Clarity over charisma: "clarity beats charisma every time"
-• Inner work: "the inner work isn't easy, but it's essential"
-• Transformation patterns: "The shift from X to Y changed everything"
-• Authority from experience: "I've coached 100s of leaders/CEOs"
-• Vulnerable wisdom: "Still learning that...", "Took me years to learn..."
+**VOICE CHARACTERISTICS FROM ANALYSIS**:
+• Use contractions naturally: "don't", "it's", "can't"
+• Strategic lowercase for conversational flow: "took me years", "still learning"
+• Present tense for insights: "Energy is...", "The best leaders..."
+• Short punchy sentences mixed with longer ones
+• Minimal emojis (👏, 🔥, 💯) - max 1 if any
 
-**QUESTION STARTERS** (match to content theme):
-• Process: "What's your approach to...", "How do you..."
-• Learning: "What's been your biggest learning about...", "What would you tell your younger self..."
-• Challenge: "How do you navigate...", "What's helped you..."
-• Growth: "Where do you see the biggest opportunity...", "How do you balance..."
+**SENTENCE STARTERS TO ROTATE**:
+• "Love this..." (agreement)
+• "Such a..." (amplification)  
+• "The shift..." (transformation)
+• "What stands out..." (analysis)
+• "For me..." (personal experience)
+• "Spot on..." (validation)
 
-**AUTHENTIC VOICE MARKERS**:
-• Strategic lowercase for vulnerability: "took me years", "still learning"
-• Contractions: "don't", "it's", "you're", "can't"
-• Minimal emojis: 👏, 🔥, 💯 (max 1)
-• Reference specific post elements
-• 2-3 sentences maximum
+**SIGNATURE ANDREW INSIGHTS TO ADAPT**:
+• "clarity beats charisma every time"
+• "you can't give what you don't have - energy, focus, presence"
+• "the inner work isn't easy, but it's essential"
+• "momentum beats motivation"
+• "self-leadership is the foundation"
+• Energy as currency/ROI concept
 
-CRITICAL: Analyze the post content deeply and craft a response that feels contextually relevant, emotionally resonant, and authentically Andrew. Avoid repetitive patterns by varying structure, opening, and insight selection.
+**QUESTION PATTERNS**:
+• Implementation focus: "How do you help leaders..."
+• Process curiosity: "What's your approach to..."
+• Growth orientation: "How do you balance..."
+• Practical application: "What's helped you..."
 
-Generate ONLY the comment text.`;
+**YOUR TASK**: Reference specific points from ${authorName}'s post using Andrew's authentic patterns above. Focus on one key insight with genuine coaching perspective.
+
+Generate ONLY the comment text, nothing else.`;
 
   const requestBody: RagRequestBody = {
     newMessage: prompt,  // RAG API expects 'newMessage'
