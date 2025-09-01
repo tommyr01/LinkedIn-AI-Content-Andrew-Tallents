@@ -4,7 +4,7 @@ import OpenAI from 'openai'
 
 // Initialize Supabase client with proper error handling
 const getSupabaseClient = () => {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   
   if (!url || !key) {
