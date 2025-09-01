@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import OpenAI from 'openai'
 
 // Initialize Supabase client with proper error handling
 const getSupabaseClient = () => {
@@ -14,9 +15,32 @@ const getSupabaseClient = () => {
   return createClient(url, key)
 }
 
+// Initialize OpenAI client for embeddings
+const getOpenAIClient = () => {
+  const apiKey = process.env.OPENAI_API_KEY
+  
+  if (!apiKey) {
+    console.warn('OpenAI API key not configured')
+    return null
+  }
+  
+  return new OpenAI({ apiKey })
+}
+
 interface VoiceChunk {
   content: string
   similarity_score?: number
+  document_title?: string
+  document_source?: string
+}
+
+interface MatchedChunk {
+  chunk_id: string
+  content: string
+  similarity: number
+  metadata: any
+  document_title: string
+  document_source: string
 }
 
 export async function POST(request: NextRequest) {
@@ -28,18 +52,44 @@ export async function POST(request: NextRequest) {
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          // Search for relevant voice chunks using Supabase vector search
-          const relevantChunks = await searchVoiceChunks(newMessage, 5)
+          // Search for relevant voice chunks using vector similarity search
+          console.log(`🔍 Searching for chunks relevant to: "${newMessage}"`)
+          const relevantChunks = await searchVoiceChunks(newMessage, 10)
+          
+          console.log(`📊 Found ${relevantChunks.length} relevant chunks`)
 
-          // Create context from relevant chunks
+          // Create context from relevant chunks with metadata
           const voiceContext = relevantChunks
-            .map(chunk => chunk.content)
-            .join('\n\n')
+            .map((chunk, index) => {
+              const similarity = chunk.similarity_score ? `(${(chunk.similarity_score * 100).toFixed(1)}% match)` : ''
+              const source = chunk.document_title ? `[${chunk.document_title}]` : ''
+              return `${source} ${similarity}\n${chunk.content}`
+            })
+            .join('\n\n---\n\n')
+
+          // Send tools used information first
+          if (relevantChunks.length > 0) {
+            const toolsData = `data: ${JSON.stringify({
+              type: 'tools',
+              tools: [{
+                tool_name: 'vector_search',
+                args: {
+                  query: newMessage,
+                  limit: 10,
+                  results_found: relevantChunks.length,
+                  avg_similarity: relevantChunks.length > 0 
+                    ? (relevantChunks.reduce((sum, chunk) => sum + (chunk.similarity_score || 0), 0) / relevantChunks.length * 100).toFixed(1) + '%'
+                    : '0%'
+                }
+              }]
+            })}\n\n`
+            controller.enqueue(new TextEncoder().encode(toolsData))
+          }
 
           // Generate response using the voice context
           const response = await generateRAGResponse(newMessage, voiceContext, messages)
 
-          // Stream the response
+          // Stream the response word by word
           const words = response.split(' ')
           for (let i = 0; i < words.length; i++) {
             const chunk = i === 0 ? words[i] : ' ' + words[i]
@@ -51,13 +101,15 @@ export async function POST(request: NextRequest) {
             
             controller.enqueue(new TextEncoder().encode(sseData))
             
-            // Add small delay to simulate streaming
-            await new Promise(resolve => setTimeout(resolve, 50))
+            // Reduced delay for better user experience
+            await new Promise(resolve => setTimeout(resolve, 30))
           }
 
           // Send completion message
-          const doneData = `data: [DONE]\n\n`
-          controller.enqueue(new TextEncoder().encode(doneData))
+          const endData = `data: ${JSON.stringify({
+            type: 'end'
+          })}\n\n`
+          controller.enqueue(new TextEncoder().encode(endData))
           controller.close()
 
         } catch (error) {
@@ -107,20 +159,23 @@ async function generateRAGResponse(query: string, voiceContext: string, conversa
       .map(msg => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`)
       .join('\n')
 
-    const systemPrompt = `You are Andrew's Strategic Intelligence AI assistant. You help create executive LinkedIn content and provide strategic business insights.
+    const systemPrompt = `You are Andrew Tallents' Strategic Intelligence AI assistant. You help provide executive LinkedIn content insights and strategic business analysis.
 
-Voice Context (Andrew's authentic voice patterns):
+VOICE CONTEXT - Andrew's Authentic Patterns:
 ${voiceContext}
 
-Conversation History:
+CONVERSATION HISTORY:
 ${conversationContext}
 
-Instructions:
-- Respond in Andrew's authentic voice and style based on the voice context provided
-- Focus on executive-level strategic insights
-- Keep responses practical and actionable for LinkedIn professionals
-- Use business terminology and strategic thinking patterns
-- Be concise but comprehensive in your analysis`
+INSTRUCTIONS:
+- Respond EXACTLY in Andrew's authentic voice and style based on the voice context provided above
+- Mirror his communication patterns, terminology, and perspective from the examples
+- Focus on executive-level strategic insights and LinkedIn content strategy
+- Keep responses practical, actionable, and authentically Andrew's perspective
+- Use his specific business terminology and strategic thinking patterns
+- Be insightful but conversational, matching his professional yet approachable tone
+- Reference specific examples or frameworks from the voice context when relevant
+- If the voice context doesn't contain relevant information, acknowledge this and provide general strategic guidance while maintaining his voice`
 
     if (anthropicKey) {
       // Use Anthropic Claude
@@ -191,7 +246,28 @@ Instructions:
   }
 }
 
-async function searchVoiceChunks(query: string, limit: number = 5): Promise<VoiceChunk[]> {
+async function generateQueryEmbedding(query: string): Promise<number[] | null> {
+  try {
+    const openai = getOpenAIClient()
+    
+    if (!openai) {
+      console.warn('OpenAI client not available for embedding generation')
+      return null
+    }
+
+    const response = await openai.embeddings.create({
+      model: 'text-embedding-3-small',
+      input: query,
+    })
+
+    return response.data[0].embedding
+  } catch (error) {
+    console.error('Failed to generate query embedding:', error)
+    return null
+  }
+}
+
+async function searchVoiceChunks(query: string, limit: number = 10): Promise<VoiceChunk[]> {
   try {
     const supabase = getSupabaseClient()
     
@@ -200,17 +276,61 @@ async function searchVoiceChunks(query: string, limit: number = 5): Promise<Voic
       return getFallbackContent(query)
     }
 
-    // First try to get voice chunks from the voice_chunks table
+    // Generate embedding for the query
+    const queryEmbedding = await generateQueryEmbedding(query)
+    
+    if (!queryEmbedding) {
+      console.warn('Could not generate embedding, falling back to text search')
+      return await fallbackTextSearch(supabase, query, limit)
+    }
+
+    // Use the match_chunks function for vector similarity search
+    const { data, error } = await supabase.rpc('match_chunks', {
+      query_embedding: queryEmbedding,
+      match_count: limit
+    })
+
+    if (error) {
+      console.error('Vector search error:', error)
+      // Fallback to text search if vector search fails
+      return await fallbackTextSearch(supabase, query, limit)
+    }
+
+    if (!data || data.length === 0) {
+      console.warn('No matching chunks found, trying fallback search')
+      return await fallbackTextSearch(supabase, query, limit)
+    }
+
+    // Convert matched chunks to VoiceChunk format
+    return data.map((chunk: MatchedChunk) => ({
+      content: chunk.content,
+      similarity_score: chunk.similarity,
+      document_title: chunk.document_title,
+      document_source: chunk.document_source
+    }))
+
+  } catch (error) {
+    console.error('Voice chunk search failed:', error)
+    return getFallbackContent(query)
+  }
+}
+
+async function fallbackTextSearch(supabase: any, query: string, limit: number): Promise<VoiceChunk[]> {
+  try {
+    // Try searching the chunks table with basic text search
     const { data, error } = await supabase
-      .from('voice_chunks')
-      .select('chunk_text')
-      .textSearch('chunk_text', query)
+      .from('chunks')
+      .select(`
+        content,
+        documents!inner(title, source)
+      `)
+      .textSearch('content', query, { type: 'websearch' })
       .limit(limit)
 
     if (error) {
-      console.error('Voice chunks search error:', error)
+      console.error('Text search error:', error)
       
-      // Fallback to recent posts if voice_chunks table doesn't exist
+      // Final fallback to recent posts
       const { data: fallbackData, error: fallbackError } = await supabase
         .from('andrew_posts')
         .select('content')
@@ -218,23 +338,25 @@ async function searchVoiceChunks(query: string, limit: number = 5): Promise<Voic
         .limit(limit)
 
       if (fallbackError) {
-        console.error('Fallback search error:', fallbackError)
-        return []
+        console.error('Final fallback search error:', fallbackError)
+        return getFallbackContent(query)
       }
 
-      return fallbackData?.map(post => ({ 
+      return fallbackData?.map((post: any) => ({ 
         content: post.content,
-        similarity_score: 0.7 
+        similarity_score: 0.6 
       })) || []
     }
 
-    return data?.map(chunk => ({ 
-      content: chunk.chunk_text,
-      similarity_score: 0.8 
+    return data?.map((chunk: any) => ({ 
+      content: chunk.content,
+      similarity_score: 0.7,
+      document_title: chunk.documents?.title,
+      document_source: chunk.documents?.source
     })) || []
 
   } catch (error) {
-    console.error('Voice chunk search failed:', error)
+    console.error('Fallback text search failed:', error)
     return getFallbackContent(query)
   }
 }
