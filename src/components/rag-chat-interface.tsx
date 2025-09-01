@@ -114,7 +114,7 @@ export function RagChatInterface({ onContentGenerated }: RagChatInterfaceProps) 
         user_id: "web_user"
       })
       
-      const response = await fetch('http://localhost:8058/chat/stream', {
+      const response = await fetch('/api/chat/stream', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
