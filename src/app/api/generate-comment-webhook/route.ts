@@ -218,7 +218,7 @@ async function callRAGAPI(
   authorName: string, 
   postId: string
 ): Promise<{ success: boolean; comment?: string; contextUsed?: any[]; sources?: string[]; error?: string }> {
-  const ragApiUrl = process.env.RAG_API_URL || 'http://localhost:8058';
+  const ragApiUrl = process.env.RAG_API_URL || `${process.env.VERCEL_URL ? 'https://' + process.env.VERCEL_URL : 'http://localhost:3000'}/api/chat/stream`;
   // Create unique conversation ID with timestamp and post hash to prevent caching
   const postHash = Buffer.from(postContent + authorName).toString('base64').slice(0, 8);
   const timestamp = Date.now();
@@ -287,13 +287,13 @@ Generate ONLY the comment text.`;
 
   try {
     console.log('🤖 Calling RAG API for comment generation:', {
-      url: `${ragApiUrl}/chat/stream`,
+      url: ragApiUrl,
       conversationId,
       authorName,
       postContentLength: postContent.length
     });
 
-    const response = await fetch(`${ragApiUrl}/chat/stream`, {
+    const response = await fetch(ragApiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
